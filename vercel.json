@@ -1,0 +1,8 @@
+{
+  "crons": [
+    { "path": "/api/cron/flash-cleanup", "schedule": "0 1 * * *" },
+    { "path": "/api/cron/package-lifecycle", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/daily-summary", "schedule": "30 2 * * *" },
+    { "path": "/api/cron/thursday-newsletter", "schedule": "0 12 * * 4" }
+  ]
+}
