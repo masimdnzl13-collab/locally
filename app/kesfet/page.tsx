@@ -1,3 +1,4 @@
+import { CloudSun } from "lucide-react";
 import { getDiscoverPackages } from "@/lib/packages/queries";
 import DiscoverView from "@/components/discover/discover-view";
 import FlashStripServer from "@/components/flash/flash-strip-server";
@@ -10,11 +11,13 @@ export default async function KesfetPage() {
       <div>
         <FlashStripServer />
         <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center px-6 text-center md:min-h-[calc(100dvh-4.5rem)]">
-          <div className="mb-4 text-4xl">🌤️</div>
-          <p className="font-medium text-dark-900">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <CloudSun className="h-7 w-7" strokeWidth={1.5} />
+          </div>
+          <p className="font-medium text-foreground">
             Bu kategoride şu an paket yok, yakında eklenecek
           </p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Bodrum&apos;daki işletmeler çok yakında burada.
           </p>
         </div>

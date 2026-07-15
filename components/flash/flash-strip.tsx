@@ -17,7 +17,7 @@ export default function FlashStrip({
   return (
     <Link
       href="/bu-aksam"
-      className="flex items-center justify-between gap-3 bg-accent px-4 py-2.5 text-sm font-semibold text-dark-950"
+      className="flex items-center justify-between gap-3 bg-gradient-to-r from-accent-400 to-accent-600 px-4 py-2.5 text-sm font-semibold text-dark-950 transition-opacity hover:opacity-95"
     >
       <span className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">

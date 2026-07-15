@@ -2,14 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #0b3d4c;
+@layer base {
+  :root {
+    --background: #fdfdfc;
+    --foreground: #0b3d4c;
+    --card: #ffffff;
+    --card-foreground: #0b3d4c;
+    --popover: #ffffff;
+    --popover-foreground: #0b3d4c;
+    --muted: #f4f5f6;
+    --muted-foreground: #5b636e;
+    --border: #e7e9eb;
+    --ring: #14a3b8;
+
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+  }
+
+  .dark {
+    --background: #0a0e11;
+    --foreground: #f2f4f5;
+    --card: #12171a;
+    --card-foreground: #f2f4f5;
+    --popover: #12171a;
+    --popover-foreground: #f2f4f5;
+    --muted: #1a2024;
+    --muted-foreground: #9aa4ac;
+    --border: #232a2f;
+    --ring: #43b2c4;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    color: var(--foreground);
+    background: var(--background);
+  }
 }
 
-body {
+::selection {
+  background: color-mix(in srgb, var(--ring) 30%, transparent);
   color: var(--foreground);
-  background: var(--background);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
 
 @layer utilities {
@@ -18,10 +77,37 @@ body {
   }
 
   .strike-price {
-    @apply text-slate-400 line-through decoration-2;
+    color: var(--muted-foreground);
+    @apply line-through decoration-2;
   }
 
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in srgb, var(--foreground) 6%, transparent) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-motion-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { joinWaitlistAction } from "@/lib/waitlist/actions";
-import SubmitButton from "@/components/ui/submit-button";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
 
 export default function FounderWaitlistForm() {
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +22,9 @@ export default function FounderWaitlistForm() {
 
   if (message) {
     return (
-      <div className="rounded-xl bg-white/10 px-5 py-4 text-center">
-        <p className="font-semibold text-white">✓ {message}</p>
+      <div className="flex items-center justify-center gap-2 rounded-xl bg-white/10 px-5 py-4 text-center">
+        <Check size={18} className="text-accent-300" />
+        <p className="font-semibold text-white">{message}</p>
       </div>
     );
   }
@@ -29,19 +32,22 @@ export default function FounderWaitlistForm() {
   return (
     <div>
       <form action={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
-        <input
+        <Input
           type="email"
           name="email"
           required
           placeholder="sen@ornek.com"
-          className="w-full flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3.5 text-sm text-white placeholder:text-white/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+          className="w-full flex-1 border-white/20 bg-white/10 text-white placeholder:text-white/50 focus-visible:border-accent focus-visible:ring-accent/40"
         />
-        <SubmitButton
-          pending={isPending}
-          className="w-full bg-accent text-dark-950 hover:bg-accent-400 sm:w-auto sm:px-6"
+        <Button
+          type="submit"
+          disabled={isPending}
+          variant="accent"
+          size="lg"
+          className="w-full sm:w-auto"
         >
-          Kurucu 500&apos;e Katıl
-        </SubmitButton>
+          {isPending ? "Bir saniye..." : "Kurucu 500'e Katıl"}
+        </Button>
       </form>
       {error && <p className="mt-2 text-sm text-accent-200">{error}</p>}
     </div>
