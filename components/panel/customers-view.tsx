@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { Customer } from "@/lib/customers/queries";
 import { SEGMENTS, matchesSegment, type Segment } from "@/lib/customers/segments";
 
@@ -41,18 +44,24 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
   return (
     <div>
       <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="text-xs text-slate-400">Toplam Müşteri</p>
-          <p className="mt-1 text-xl font-extrabold text-dark-900">{summary.total}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="text-xs text-slate-400">Bu Ay Yeni</p>
-          <p className="mt-1 text-xl font-extrabold text-dark-900">{summary.newThisMonth}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="text-xs text-slate-400">Bu Ay Tekrar</p>
-          <p className="mt-1 text-xl font-extrabold text-dark-900">{summary.repeatThisMonth}</p>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Toplam Müşteri</p>
+            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">{summary.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Bu Ay Yeni</p>
+            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">{summary.newThisMonth}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Bu Ay Tekrar</p>
+            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">{summary.repeatThisMonth}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <input
@@ -60,7 +69,7 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="İsim veya telefon ara..."
-        className="mb-3 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="mb-3 w-full rounded-md border border-border bg-card px-4 py-3 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -69,10 +78,10 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
             key={s.id}
             onClick={() => setSegment(s.id)}
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-xs font-semibold",
+              "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
               segment === s.id
                 ? "bg-primary text-white"
-                : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                : "bg-sand-100 text-sepia-700 hover:bg-sand-200"
             )}
           >
             {s.label}
@@ -81,26 +90,25 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-sm text-slate-500">
-            {customers.length === 0 ? "Henüz müşteri kaydı yok." : "Bu filtreyle eşleşen müşteri yok."}
-          </p>
-        </div>
+        <EmptyState
+          icon={Users}
+          title={customers.length === 0 ? "Henüz müşteri kaydı yok" : "Bu filtreyle eşleşen müşteri yok"}
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((c) => (
             <Link
               key={c.id}
               href={`/panel/musteriler/${c.id}`}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm"
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-sepia-300"
             >
               <div className="min-w-0">
-                <p className="truncate font-bold text-dark-900">{c.full_name || "İsimsiz"}</p>
-                <p className="text-xs text-slate-400">{c.phone}</p>
+                <p className="truncate font-bold text-ink-900">{c.full_name || "İsimsiz"}</p>
+                <p className="text-xs text-muted-foreground">{c.phone}</p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-sm font-semibold text-dark-900">{c.visit_count} ziyaret</p>
-                <p className="text-xs text-slate-400">Son: {formatDate(c.last_visit_at)}</p>
+                <p className="text-sm font-semibold text-ink-900">{c.visit_count} ziyaret</p>
+                <p className="text-xs text-muted-foreground">Son: {formatDate(c.last_visit_at)}</p>
               </div>
             </Link>
           ))}

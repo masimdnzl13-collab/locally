@@ -1,340 +1,147 @@
-# Liman — the Locally design system
+# Locally design system — "sıcak kış sahili" (warm winter coast)
 
-**Liman** (Turkish: *harbor*) is Locally's design language. Named for the place
-a coastal town actually lives in winter — not the beach, the harbor: boats
-pulled up, cafés lit, people still out at dusk. That is the emotional register
-every screen should hit.
-
-This document is the source of truth for phase-2 implementation. It
-supersedes the phase-1 tokens (`tailwind.config.ts` / `app/globals.css` as of
-the previous commit) — nothing from the old palette (bright SaaS turquoise,
-Fraunces + Plus Jakarta Sans, cool near-black dark mode) carries forward.
-**Do not mix old and new tokens in the same component.**
+This document supersedes the previous **Liman** spec in this file (cold
+ink/fog, dark-as-default ground). That direction is dropped. **Nothing from
+the Liman palette, type pairing, or "cold ground / rationed warmth" thesis
+carries forward.** Do not mix it with what's below.
 
 ---
 
 ## 0. Brand philosophy
 
-Locally's pitch is *"kasabanın kışı da güzel"* — the town's winter is
-beautiful too. That is a specific emotional idea, not generic warmth: **cold
-outside, warm inside.** The sea in December is grey-teal and moody. A café
-window glowing amber across a wet cobblestone street is precious *because*
-of that cold. The design language is built on that contrast, not on
-blanket "cozy minimalism."
-
-Concretely, this means:
-- The dominant ground is **cool** — deep harbor-ink, pale winter fog. Not
-  cream, not beige.
-- Warmth is **rationed**, not ambient. Two accent hues (lamplight amber,
-  ember coral) appear at moments that deserve them — a live deal, a price,
-  a badge — never as a background wash.
-- Confidence over cuteness. No travel clichés (sun emoji, palm trees,
-  postcard gradients), no corporate SaaS coldness either.
-
-**The recognizability test:** a screenshot with the logo cropped out should
-still read as Locally — because of the ink/fog contrast, the Newsreader
-display italic, and the amber "lamplight" moments, not because of a logo.
+Locally should feel like a coastal town that's still alive in winter — not a
+tech product. Local, trustworthy, warm, a little nostalgic, but built with
+modern craft. The ground is warm cream, not dark. Petrol ink and turquoise
+carry the brand's confidence; warm orange is saved for the moments that
+matter (today's price, flash urgency, the main call to action).
 
 **Anti-patterns — do not do these:**
-- Warm cream background + terracotta accent + generic serif (the default
-  "AI warm minimalism" look). Our ground is cool; warmth is a rare accent.
-- Flat, identical card components everywhere. Cards have *personalities*
-  by purpose (§7.2).
-- Cold-blue focus rings, gray drop shadows, emoji as icons or section
-  markers.
-- `rounded-2xl` applied uniformly. Radius communicates context (§4).
-- Decorative motion. Every animation in §6 exists to communicate state.
+- Dark backgrounds anywhere outside the one deliberate "Bu Akşam" band.
+- Pure black or pure gray for any neutral — every neutral is warm-tinted
+  (sand/sepia), never `#000` or cool `slate`/`gray`.
+- Glassmorphism, neon glow, purple-pink gradients, hollow decorative icons.
+- Heavy drop shadows for depth — depth comes from ground-tone contrast and
+  1px warm hairlines.
+- Identical "heading + three cards + list" template on every page. Landing
+  and showcase surfaces are editorial and asymmetric; the panel is calm and
+  gridded, but never a copy-pasted layout from another screen.
 
 ---
 
 ## 1. Typography
 
-Three roles, deliberately not matched to a single "safe" grotesk:
+Two-voice system:
 
-| Role | Typeface | Source | Use |
-|---|---|---|---|
-| **Display / Editorial** | **Newsreader** (variable, incl. italic) | Google Fonts | Hero headlines, storytelling moments, section openers, pull quotes. Editorial because Locally is literally publishing local businesses' stories — it should read like a well-set town gazette, not app copy. |
-| **UI / Body** | **Instrument Sans** | Google Fonts | Navigation, body copy, forms, buttons, dense UI. Humanist grotesk, warm without being rounded-and-cute; still uncommon enough (2024 release) to avoid the Inter/Manrope "default startup" read. |
-| **Utility / Numeric** | **IBM Plex Mono** | Google Fonts | Prices in tables, ticket/QR codes, timestamps, order refs. Used sparingly — it's the "receipt" texture, not a UI voice. |
+| Role | Typeface | Use |
+|---|---|---|
+| **Display / editorial** | **Fraunces** (variable, incl. italic, `opsz`/`SOFT` axes) | Hero headlines, section openers, big prices as a *statement*, pull quotes. Characterful, slightly retro serif — the magazine voice. |
+| **UI / body** | **Manrope** | Navigation, body copy, forms, buttons, dense UI, numerals in cards. Clean modern grotesk. Both fonts load via `next/font/google` in `app/layout.tsx` (`--font-display`, `--font-sans`) and are verified for full Turkish glyph coverage (ş ğ ı İ ö ü ç). |
 
-Fallback stack if Turkish glyph coverage (ş ğ ı İ ö ü ç) needs verification at
-implementation time: Newsreader → `Georgia, serif`; Instrument Sans →
-`Hanken Grotesk` (Google Fonts, confirmed full latin-ext) → `system-ui`.
-
-**Scale** (rem, 16px root):
-
-| Token | Size | Line-height | Tracking | Typical use |
-|---|---|---|---|---|
-| `text-xs` | 0.75 (12px) | 1.4 | +0.02em | mono labels, captions |
-| `text-sm` | 0.875 (14px) | 1.5 | 0 | secondary UI |
-| `text-base` | 1 (16px) | 1.6 | 0 | body |
-| `text-md` | 1.125 (18px) | 1.6 | 0 | lead paragraph |
-| `text-lg` | 1.375 (22px) | 1.35 | -0.01em | card/subsection titles |
-| `text-xl` | 1.75 (28px) | 1.2 | -0.01em | section headings |
-| `text-2xl` | 2.25 (36px) | 1.15 | -0.015em | page headings |
-| `text-3xl` | 3 (48px) | 1.08 | -0.02em | hero, mobile |
-| `text-4xl` | 4 (64px) | 1.05 | -0.02em | hero, desktop |
-| `text-5xl` | 5.5 (88px) | 1.02 | -0.025em | landing hero, desktop only |
-
-Rules: headings get `text-wrap: balance`. Uppercase eyebrow labels always
-carry the `+tracking` value above — never uppercase without added
-letter-spacing. Body copy max measure ~65ch.
+Hero headlines run one to two steps bigger than instinct feels safe, tight
+line-height, serif, `text-wrap: balance`. Prices and counters are always
+Manrope, bold, large — never apologetic. Uppercase eyebrow labels always
+carry `tracking-wide` or wider — never uppercase without added letter-spacing.
 
 ---
 
 ## 2. Color system
 
-Five named brand hues (light/dark both first-class, not inverted
-mechanically). All pairings below are checked for ≥4.5:1 text contrast
-minimum, ≥7:1 where the token is marked **AAA**.
+All tokens are consumed as CSS vars (`app/globals.css`) or Tailwind color
+scales (`tailwind.config.ts`). Never hardcode a raw hex in a component.
 
-| Name | Role | Hex | Notes |
-|---|---|---|---|
-| **Ink** | dominant dark ground | `#0E2323` | teal-black, "the sea at dusk" — not neutral black |
-| **Fog** | dominant light ground | `#EDF1EF` | cool pale stone — not cream |
-| **Harbor** | primary brand / interactive | `#1F7A72` | deep confident teal, refined down from bright SaaS turquoise |
-| **Lamplight** | accent — warmth, price, live state | `#E3A542` | rationed: badges, active prices, live pulse only |
-| **Ember** | secondary accent — rare delight | `#C85A42` | muted brick-coral, collectible badges, special CTAs only |
-
-### Full ramps (50–950, both brand hues + neutral)
-
-```
-harbor:    50 #EAF5F3  100 #CFE9E5  200 #9FD2CA  300 #6BB6AB  400 #3F978C
-           500 #1F7A72  600 #17615C  700 #144E4B  800 #123F3D  900 #103331
-           950 #0A2120
-
-lamplight: 50 #FDF6E9  100 #FAE7C4  200 #F4CE8B  300 #ECB158  400 #E89934
-           500 #E3A542* 600 #C2841F  700 #9C6819  800 #7C5419  900 #66451A
-           *500 tuned lighter than 600 deliberately — this is the "glow" step
-           950 #3A260D
-
-ember:     50 #FCEEEA  100 #F7D5CB  200 #EDAE9B  300 #E08669  400 #D26E4E
-           500 #C85A42  600 #A8452F  700 #863728  800 #6C2E23  900 #58271F
-           950 #301410
-
-ink:       50 #EEF2F1  100 #D3DBD9  200 #A9B8B5  300 #7C918D  400 #566E6A
-           500 #3D5450  600 #2B403D  700 #1F332F  800 #172724  900 #0E2323
-           950 #081615
-
-fog:       25 #F7F9F8  50 #EDF1EF  100 #DFE6E3  200 #C7D1CD  300 #A8B5B0
-           400 #86948F  500 #687673  600 #515D5A  700 #3F4947  800 #2E3634
-           900 #212726  950 #171B1A
-```
-
-### Semantic (functional — never used as brand accent)
-
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| success | `#4C7A56` | `#7FB88C` | confirmed booking, payment ok |
-| warning | `#B8862E` | `#E3B15C` | capacity almost full, expiring soon |
-| danger | `#B2453A` | `#E08276` | failed payment, error state |
-
-### Theme tokens (semantic, what components actually consume)
-
-```css
-:root {                              /* light */
-  --bg:            fog-25   #F7F9F8;
-  --surface:       #FFFFFF;
-  --surface-sunken: fog-50  #EDF1EF;
-  --border:        fog-200  #C7D1CD;
-  --fg:            ink-900  #0E2323;
-  --fg-muted:      ink-500  #3D5450;
-  --brand:         harbor-500 #1F7A72;
-  --brand-strong:  harbor-700 #144E4B;
-  --accent-warm:   lamplight-500 #E3A542;
-  --accent-ember:  ember-500 #C85A42;
-  --ring:          lamplight-500 #E3A542;  /* warm focus ring, never blue */
-}
-:root[data-theme="dark"] {
-  --bg:            ink-950  #081615;
-  --surface:       ink-900  #0E2323;
-  --surface-sunken: ink-800 #172724;
-  --border:        ink-700  #1F332F;
-  --fg:            fog-50   #EDF1EF;
-  --fg-muted:      fog-400  #86948F;
-  --brand:         harbor-400 #3F978C;
-  --brand-strong:  harbor-300 #6BB6AB;
-  --accent-warm:   lamplight-400 #E89934;
-  --accent-ember:  ember-400 #D26E4E;
-  --ring:          lamplight-400 #E89934;
-}
-```
-
-Gradients are named, not decorative: **Dusk** (`harbor-900 → ink-950`, hero
-backgrounds), **Lamplight glow** (radial `lamplight-500` at 12% opacity,
-behind primary CTAs and active/live cards only).
-
----
-
-## 3. Spacing system
-
-4px base unit. The philosophy has three tiers, and the tier — not the
-number — is what a reviewer should be checking for:
-
-1. **Micro** (4–16px) — inside a component: icon-to-label gap, input
-   padding, badge padding.
-2. **Element** (24–48px) — between related elements: card sections, form
-   field stacks, list rows.
-3. **Section** (64–160px) — between page sections. This is the tier that
-   carries the brand's "breathing room" — under-spacing here is the single
-   most common way a screen ends up feeling like a generic SaaS page.
-
-```
-0.25rem (4)  0.5rem (8)  0.75rem (12)  1rem (16)  1.5rem (24)
-2rem (32)    3rem (48)   4rem (64)     6rem (96)  8rem (128)  10rem (160)
-```
-
----
-
-## 4. Radius system
-
-Radius communicates *context*, not decoration. Two families:
-
-- **Product / utility** (business panel, dense UI, forms): tighter, quieter.
-  `xs 6px` (tags, chips) · `sm 10px` (inputs, buttons in-panel) ·
-  `md 14px` (cards, panels).
-- **Marketing / emotional** (landing, customer app storefront moments):
-  softer, more generous. `lg 20px` (feature cards) · `xl 28px` (hero
-  panels, bottom sheets) · `full 999px` (pill CTAs, avatars, badges).
-
-A button's radius is a *signal* of which persona it belongs to — panel
-buttons are never pills; marketing CTAs are (almost) always pills.
-
----
-
-## 5. Elevation — "Ambient Light"
-
-Shadows use warm-tinted ink (`rgba(14,35,35,…)`), never neutral gray, and
-read as *low, warm light* (a harbor lamp) rather than a generic drop shadow.
-
-| Level | Use | Value (light) |
+| Token | Hex (key step) | Role |
 |---|---|---|
-| resting | default card | `border: 1px solid var(--border)` only, no shadow |
-| lifted | hover, active row | `0 2px 8px rgb(14 35 35 / 0.06)` |
-| floating | dropdowns, popovers | `0 12px 32px rgb(14 35 35 / 0.10)` |
-| overlay | modals, sheets | `0 24px 64px rgb(14 35 35 / 0.18)` |
-| **glow-harbor** | primary CTA rest state | `0 8px 24px rgb(31 122 114 / 0.28)` |
-| **glow-lamplight** | live/active moment | `0 8px 24px rgb(227 165 66 / 0.35)` |
+| `--background` / `sand-50` | `#fbf6ec` | App ground — warm cream/ivory, never white, never dark |
+| `--card` | `#fffdf8` | Card/paper surface — barely-off-white, warm |
+| `ink` (500 `#0b3d4c`, alias `dark`) | `#0b3d4c` | Petrol — headlines, body text, "ink" blocks (the one deliberate dark surface: the Bu Akşam band, stamps, panel sidebar) |
+| `primary` (turquoise, 500 `#14a3b8`) | `#14a3b8` | Main interactive color: links, buttons, active states, focus ring |
+| `accent` (warm orange, 400 `#ffb35c`) | `#ffb35c` | Rationed: today's price, flash-deal urgency, hero CTAs only — never a background wash |
+| `sand` (50–950) | `#fbf6ec`…`#2c2415` | Warm kum/bej — section backgrounds, ticket stubs, dividing bands |
+| `primary-50`/`primary-100` | `#eefbfc` / `#d5f2f5` | Turquoise wash — pale tinted section backgrounds |
+| `sepia` (50–950) | `#f8f5f0`…`#1c1913` | Warm neutral scale — muted text, hairline borders. Replaces gray/slate entirely |
+| `tile` (50–900, "tuğla") | key `#b8492a` | Warm brick-red — errors, destructive actions. Never a raw/cool red |
+
+No pure black, no pure white, no cool gray anywhere in the app.
+
+### "Evening" mode
+The theme toggle stays, reskinned onto the same brand rather than a generic
+dark UI: background `ink-950 #062028`, card `ink-900 #0b3d4c`, text
+`sand-50`, ring shifts to `accent-400` (lamp glow). This is the *only* place
+outside the Bu Akşam band that a fully dark surface is acceptable.
 
 ---
 
-## 6. Motion system — "Tide & Breeze"
+## 3. Signature motifs (must recur across the app)
 
-Two movement qualities, used deliberately:
-- **Tide** — slow, large, settling (page reveals, hero entrances): weighted,
-  never bouncy.
-- **Breeze** — quick, small, responsive (hover, press, toggles): light,
-  immediate.
+1. **Ticket motif** — package cards, coupons, ticket/QR views are not plain
+   rectangles. Use `<TicketCard>` (`components/ui/ticket-card.tsx`): a
+   perforated dashed seam with punched circular notches (`.ticket-perforation`
+   utility in `globals.css`) separates the main body from a stub section.
+   The product is a right/ticket — its shape should say so.
+2. **Stamp motif** — verification, "used", "confirmed" states use
+   `<Stamp>` (`components/ui/stamp.tsx`): a rotated (~-7°), double-ringed
+   ink seal (`.stamp` utility), not a flat colored badge.
+3. **Hand-drawn accent** — section headings use `<Scribble>`
+   (`components/ui/scribble.tsx`), a short brush-stroke SVG underline
+   instead of a straight rule. Small, but load-bearing for warmth.
 
-```
-durations:  instant 120ms · quick 220ms · base 360ms · slow 600ms · cinematic 900ms
-easings:    settle  cubic-bezier(0.16, 1, 0.3, 1)   — default deceleration (Tide)
-            breeze  cubic-bezier(0.4, 0, 0.2, 1)     — standard (Breeze)
-springs:    gentle  { stiffness: 260, damping: 30 }  — hover/press feedback
-            snap    { stiffness: 420, damping: 34 }  — active indicators, toggles
-```
-
-Rules:
-- Every animation communicates state (arrival, selection, causality). No
-  spin/bounce for decoration.
-- **Reduced motion is CSS-first, never a React branch on
-  `useReducedMotion()` for initial render output.** Phase 1 shipped a
-  hydration-mismatch bug from exactly that pattern (SSR always resolves
-  `false`; a real reduced-motion client resolves `true` synchronously on
-  first render, so branching `initial`/state on the hook value diverges
-  server vs. client). The safe pattern: render motion elements identically
-  on server and client, tag them `data-motion-reveal`, and force the
-  visible end-state via `@media (prefers-reduced-motion: reduce) { [data-motion-reveal] { opacity: 1 !important; transform: none !important; } }`.
-  Only use the JS hook inside `useEffect` (post-mount), never to branch
-  render output before mount.
+These three motifs must be visible in at least: showcase/discover cards,
+package detail, "paketlerim" (my tickets), and confirmation screens.
 
 ---
 
-## 7. Component rules
+## 4. Spacing, radius, elevation
 
-### 7.1 Buttons
-Two shapes by persona, never mixed on one screen:
-- **Marketing/emotional** (landing, storefront CTAs): full pill, confident
-  harbor fill or lamplight outline, `glow-harbor`/`glow-lamplight` shadow.
-- **Product/utility** (business panel): `radius-sm/md` rounded-rect,
-  quieter fills, no glow.
-Tactile press: `scale(0.97)` + shadow compresses toward `resting` on press,
-spring `gentle`.
-
-### 7.2 Cards have personalities, not one template
-- **Showcase card** — packages/events, customer-facing: image-led,
-  generous, `radius-lg/xl`, editorial caption treatment (Newsreader for the
-  title).
-- **Data card** — dashboard stat tiles: tighter, `radius-md`, numerals in
-  IBM Plex Mono with `tabular-nums`, optional sparkline.
-- **List row** — CRM/customer rows: compact, avatar-forward, hover-lift
-  only (`lifted` elevation), never a full card border.
-- **Ledger row** — orders/transactions: right-aligned mono numerals, thin
-  `border` divider only — reads like a receipt line, not a card.
-
-### 7.3 Inputs
-Warm `--ring` focus (lamplight), never a cold blue ring. Label sits above
-the field; on focus it does a `quick`/`breeze` micro-settle, not a jump.
-
-### 7.4 Badges — "collectible," not a flat tag
-Small inset border + subtle top highlight (like an enamel pin or wax seal),
-never a flat single-color rounded rect.
-
-### 7.5 Navigation — two personas, two treatments
-- **Customer app**: sticky glass header, harbor-tinted blur, pill nav
-  items.
-- **Business panel**: quiet fixed sidebar (a workspace, not a storefront) —
-  different information density, different radius family (7.4 product
-  tier), no glass/blur.
-
-### 7.6 Maps
-Custom muted map style (teal water, warm stone land, no default
-red/blue pins) — a harbor-buoy shaped marker in `--brand`, map container
-gets `radius-lg`, never a hard rectangular crop against a white page.
-
-### 7.7 Progress / live indicators
-Soft pulsing `glow-lamplight`, never a harsh blinking dot or a flat
-percentage bar.
+- Spacing: 4px base unit. Section-to-section gaps are generous (64–160px) —
+  under-spacing is the fastest way back to "generic SaaS."
+- Radius: consistent but not extreme — `sm 10px · md 14px · lg 18px ·
+  xl 24px · 2xl 32px` (`--radius-*` vars). No sharp corners, no pill-everything.
+- Elevation: shadows are used only for true overlays (menus, modals,
+  dropdowns) at the reduced warm-tinted values in `tailwind.config.ts`
+  (`shadow-sm/md/lg/xl`, all `rgb(11 61 76 / …)`). Resting cards use a 1px
+  warm border (`border-border`) and a ground-tone shift (`bg-card` on
+  `bg-background`), not a shadow.
 
 ---
 
-## 8. Layout principles
+## 5. Layout principles
 
-- Container widths: content `72rem` max, editorial/reading measure `65ch`.
-- Section rhythm follows §3 tier 3 (64–160px) — this is non-negotiable
-  breathing room, not a "when there's room" nicety.
-- Landing/storytelling sections may break the symmetric grid (asymmetric
-  image/text splits, full-bleed moments) — the dashboard and panel never
-  do; they stay on a strict, calm grid (operational clarity > drama).
-
----
-
-## 9. Accessibility
-
-- Contrast: 4.5:1 minimum all text; body copy targets 7:1 (AAA) where the
-  palette allows (checked in §2 token table).
-- Focus is always visible — warm `--ring`, 2px offset, never `outline: none`
-  without a replacement.
-- Touch targets ≥44×44px.
-- Reduced motion via the CSS-first pattern in §6 — no exceptions.
-- Semantic HTML and keyboard operability for every interactive primitive
-  (buttons are `<button>`, links are `<a>`, custom controls get full
-  keyboard + ARIA).
+- Landing / discover / showcase surfaces are **editorial**: one full-width
+  headline moment, then asymmetric content (one large + two small, or
+  offset/staggered cards) — never a uniform three-up grid everywhere.
+- **"Bu Akşam" is the one deliberate dark band**: full-width `ink-900`
+  section sitting inside the cream page, orange countdown living inside it.
+  Because it's the only dark block on the page, it should pull the eye
+  immediately.
+- Business panel: calmer, denser, fewer motifs, strict grid — a workspace in
+  the same brand family, not a storefront. Sidebar may use the ink/petrol
+  surface; content area stays on the warm cream ground.
+- Container: content max `72rem`, editorial reading measure `~65ch`.
 
 ---
 
-## 10. Implementation notes (for the rebuild phase)
+## 6. States
 
-- Fonts: Newsreader, Instrument Sans, IBM Plex Mono are all on Google
-  Fonts — loadable via `next/font/google` exactly like phase 1's setup,
-  no self-hosting needed. Verify Turkish glyphs (ş ğ ı İ ö ü ç) render
-  correctly in all three at implementation time; fall back per §1 if not.
-- This replaces `tailwind.config.ts` color/font tokens and
-  `app/globals.css` CSS variables from phase 1 wholesale — not additive.
-  Every component touched in phase 1 (`components/ui/*`, `nav-bar.tsx`,
-  landing/discover/business-profile pages) gets rebuilt against these
-  tokens, not patched.
-- Do not reintroduce phase-1 tokens (`primary`/`accent`/`dark`/`ink`
-  Tailwind color names, Fraunces, Plus Jakarta Sans) anywhere once the
-  rebuild starts — mixing old and new is explicitly out of bounds per this
-  brief.
+- Hover: subtle lift (`-translate-y-0.5` at most) + tone-darken, not a hard
+  color swap.
+- Loading skeletons: shimmer in sand/cream tones (`bg-muted` + `.shimmer`),
+  never gray.
+- Empty states: warm copy + a small motif illustration (ticket/stamp line
+  art), never a cold "no data" message.
+- Errors/warnings: `tile` (brick) tones, never raw red; urgency countdowns
+  drift from `accent` (orange) toward `tile` (brick) as time runs out.
+- Focus ring: always `--ring` (turquoise in day mode, orange in evening
+  mode), 2px, visible — never suppressed.
+
+---
+
+## 7. Implementation notes
+
+- Fonts load in `app/layout.tsx` via `next/font/google` (Fraunces + Manrope).
+- Tokens live centrally in `tailwind.config.ts` (color ramps, radius,
+  shadow) and `app/globals.css` (CSS vars, `.ticket-perforation`, `.stamp`
+  utilities). Every component consumes these — no page may define its own
+  one-off palette.
+- `ink` is the new name for the petrol ramp; `dark` is kept as an identical
+  alias for existing call-sites. The old cool-gray `ink-*` scale (phase 1)
+  is renamed `sepia`.

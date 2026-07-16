@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getMyBusiness } from "@/lib/business/current";
 import { getMyEvents } from "@/lib/events/queries";
 import EventsTabs from "@/components/panel/events-tabs";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default async function PanelEventsPage() {
   const business = await getMyBusiness();
@@ -12,10 +14,12 @@ export default async function PanelEventsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight text-dark-900">Etkinlikler</h1>
+        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+          Etkinlikler
+        </h1>
         <Link
           href="/panel/etkinlikler/yeni"
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600"
+          className={cn(buttonVariants({ variant: "default", shape: "rect", size: "sm" }))}
         >
           + Yeni Etkinlik
         </Link>

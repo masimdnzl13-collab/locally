@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/lib/types";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
 
 const STEP_LABELS = ["İşletme", "Konum", "Görseller"];
 
@@ -74,19 +74,19 @@ export default function OnboardingWizard({
                   "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold",
                   active && "bg-primary text-white",
                   done && "bg-primary/20 text-primary-700",
-                  !active && !done && "bg-slate-100 text-slate-400"
+                  !active && !done && "bg-sand-100 text-sepia-400"
                 )}
               >
                 {done ? "✓" : n}
               </div>
-              {n < 3 && <div className="h-px w-6 bg-slate-200" />}
+              {n < 3 && <div className="h-px w-6 bg-border" />}
             </div>
           );
         })}
       </div>
 
       {error && (
-        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="mb-4 rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">
           {error}
         </p>
       )}
@@ -94,7 +94,7 @@ export default function OnboardingWizard({
       {step === 1 && (
         <form action={handleStepOne} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               İşletme Adı
             </label>
             <input
@@ -107,7 +107,7 @@ export default function OnboardingWizard({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Kategori
             </label>
             <select
@@ -127,7 +127,7 @@ export default function OnboardingWizard({
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Kısa Açıklama
             </label>
             <textarea
@@ -145,7 +145,7 @@ export default function OnboardingWizard({
       {step === 2 && (
         <form action={handleStepTwo} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Mahalle
             </label>
             <input
@@ -158,7 +158,7 @@ export default function OnboardingWizard({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Adres
             </label>
             <input
@@ -171,7 +171,7 @@ export default function OnboardingWizard({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Telefon
             </label>
             <input
@@ -184,7 +184,7 @@ export default function OnboardingWizard({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Instagram
             </label>
             <input
@@ -199,7 +199,7 @@ export default function OnboardingWizard({
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600"
+              className="rounded-md border border-border px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted"
             >
               Geri
             </button>
@@ -211,7 +211,7 @@ export default function OnboardingWizard({
       {step === 3 && (
         <form action={handleStepThree} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Logo
             </label>
             <input
@@ -219,11 +219,11 @@ export default function OnboardingWizard({
               name="logo"
               accept="image/*"
               required
-              className="w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700"
+              className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-dark-900">
+            <label className="mb-1.5 block text-sm font-medium text-ink-900">
               Kapak Görseli
             </label>
             <input
@@ -231,14 +231,14 @@ export default function OnboardingWizard({
               name="cover"
               accept="image/*"
               required
-              className="w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700"
+              className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700"
             />
           </div>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600"
+              className="rounded-md border border-border px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted"
             >
               Geri
             </button>

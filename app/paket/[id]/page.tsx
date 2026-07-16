@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPackageDetail } from "@/lib/packages/queries";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/types";
+import { TicketCard } from "@/components/ui/ticket-card";
+import { Badge } from "@/components/ui/badge";
+import { Scribble } from "@/components/ui/scribble";
+import { CategoryIcon } from "@/components/ui/category-icon";
+import { Reveal } from "@/components/motion/reveal";
 import BuyBar from "@/components/packages/buy-bar";
 
 function formatTL(n: number) {
@@ -29,7 +34,7 @@ export default async function PackageDetailPage({
 
   return (
     <div className="pb-40 md:pb-28">
-      <div className="relative h-56 bg-slate-100 sm:h-72">
+      <div className="relative h-56 sm:h-72">
         {pkg.business.cover_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -38,60 +43,80 @@ export default async function PackageDetailPage({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-6xl">
-            🏪
-          </div>
+          <CategoryIcon category={pkg.business.category} className="h-full" iconClassName="h-14 w-14" />
         )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/60 via-ink-950/5 to-transparent" />
       </div>
 
       <div className="mx-auto max-w-2xl px-6 py-6">
-        <Link
-          href={`/isletme/${pkg.business.slug}`}
-          className="text-sm font-medium text-primary-600 hover:underline"
-        >
-          {pkg.business.name}
-          {pkg.business.district ? ` · ${pkg.business.district}` : ""}
-        </Link>
+        <Reveal>
+          <Link
+            href={`/isletme/${pkg.business.slug}`}
+            className="text-sm font-medium text-primary-600 hover:underline"
+          >
+            {pkg.business.name}
+            {pkg.business.district ? ` · ${pkg.business.district}` : ""}
+          </Link>
 
-        <span className="mt-3 block text-xs font-semibold uppercase tracking-wide text-slate-400">
-          {BUSINESS_CATEGORY_LABELS[pkg.business.category]}
-        </span>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-dark-900">
-          {pkg.title}
-        </h1>
-        {pkg.description && (
-          <p className="mt-2 text-sm text-slate-600">{pkg.description}</p>
-        )}
-
-        <div className="mt-6 rounded-2xl bg-slate-50 p-6 text-center">
-          <p className="text-sm text-slate-400 line-through decoration-2">
-            Yaz fiyatı: {formatTL(pkg.summer_reference_price)}
-          </p>
-          <p className="mt-1 text-4xl font-extrabold text-accent-500">
-            Bugün: {formatTL(pkg.sale_price)}
-          </p>
-          <span className="mt-3 inline-block rounded-full bg-accent/10 px-3 py-1 text-sm font-bold text-accent-700">
-            %{savings} tasarruf
+          <span className="mt-3 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {BUSINESS_CATEGORY_LABELS[pkg.business.category]}
           </span>
-        </div>
+          <h1 className="mt-1 font-display text-3xl font-medium tracking-tight text-foreground">
+            {pkg.title}
+          </h1>
+          {pkg.description && (
+            <p className="mt-2 text-sm text-muted-foreground">{pkg.description}</p>
+          )}
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-slate-200 p-4 text-center">
-            <p className="text-2xl font-extrabold text-dark-900">{pkg.usage_count}</p>
-            <p className="text-xs text-slate-500">kullanım hakkı</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4 text-center">
-            <p className="text-sm font-bold text-dark-900">{formatDate(pkg.expires_at)}</p>
-            <p className="text-xs text-slate-500">son kullanma tarihi</p>
-          </div>
-        </div>
+          {/* Price contrast block — the ticket motif carries the money moment */}
+          <TicketCard
+            className="mt-6"
+            bodyClassName="py-8 text-center"
+            stubClassName="justify-center gap-10"
+            stub={
+              <>
+                <div className="text-center">
+                  <p className="text-2xl font-extrabold text-ink-900">{pkg.usage_count}</p>
+                  <p className="text-xs text-muted-foreground">kullanım hakkı</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-ink-900">{formatDate(pkg.expires_at)}</p>
+                  <p className="text-xs text-muted-foreground">son kullanma tarihi</p>
+                </div>
+              </>
+            }
+          >
+            <p className="strike-price text-sm">
+              Yaz fiyatı: {formatTL(pkg.summer_reference_price)}
+            </p>
+            <p className="mt-2 text-5xl font-extrabold tracking-tight text-accent-600">
+              {formatTL(pkg.sale_price)}
+            </p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Bugünün fiyatı
+            </p>
+            <Badge variant="accent" className="mt-4">
+              %{savings} tasarruf
+            </Badge>
+          </TicketCard>
+        </Reveal>
 
-        <section className="mt-8">
-          <h2 className="mb-2 font-bold text-dark-900">Kullanım Koşulları</h2>
-          <ul className="space-y-1.5 text-sm text-slate-600">
-            <li>• Paket, satın alma tarihinden itibaren son kullanma tarihine kadar geçerlidir.</li>
-            <li>• Her kullanım işletmede QR kodun okutulmasıyla gerçekleşir.</li>
-            <li>• Kullanılmayan haklar iade edilmez.</li>
+        <section className="mt-10">
+          <h2 className="font-display text-lg font-medium text-foreground">Kullanım Koşulları</h2>
+          <Scribble className="mt-1 text-primary-500" />
+          <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
+            <li className="flex gap-2.5">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400" />
+              Paket, satın alma tarihinden itibaren son kullanma tarihine kadar geçerlidir.
+            </li>
+            <li className="flex gap-2.5">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400" />
+              Her kullanım işletmede QR kodun okutulmasıyla gerçekleşir.
+            </li>
+            <li className="flex gap-2.5">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400" />
+              Kullanılmayan haklar iade edilmez.
+            </li>
           </ul>
         </section>
       </div>

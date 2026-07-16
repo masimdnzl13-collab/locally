@@ -68,13 +68,15 @@ export default function AnnouncementWizard() {
 
   if (sent !== null) {
     return (
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-8 text-center">
-        <div className="mb-3 text-4xl">✓</div>
-        <p className="text-lg font-bold text-dark-900">Duyuru gönderildi</p>
-        <p className="mt-1 text-sm text-slate-500">{sent} kişiye ulaştı.</p>
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-8 text-center">
+        <div className="stamp mx-auto mb-3 flex h-14 w-14 items-center justify-center text-2xl text-primary-700">
+          ✓
+        </div>
+        <p className="text-lg font-bold text-ink-900">Duyuru gönderildi</p>
+        <p className="mt-1 text-sm text-muted-foreground">{sent} kişiye ulaştı.</p>
         <button
           onClick={() => router.push("/panel/duyurular")}
-          className="mt-5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white"
+          className="mt-5 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
         >
           Duyurulara Dön
         </button>
@@ -97,45 +99,45 @@ export default function AnnouncementWizard() {
                 "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold",
                 n === step && "bg-primary text-white",
                 n < step && "bg-primary/20 text-primary-700",
-                n > step && "bg-slate-100 text-slate-400"
+                n > step && "bg-sand-100 text-sepia-400"
               )}
             >
               {n < step ? "✓" : n}
             </div>
-            {n < 3 && <div className="h-px w-8 bg-slate-200" />}
+            {n < 3 && <div className="h-px w-8 bg-border" />}
           </div>
         ))}
       </div>
 
       {error && (
-        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+        <p className="mb-4 rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">{error}</p>
       )}
 
       {step === 1 && (
         <div className="space-y-4">
-          <h2 className="text-sm font-bold text-dark-900">Hedef Kitle</h2>
+          <h2 className="text-sm font-bold text-ink-900">Hedef Kitle</h2>
           <div className="grid grid-cols-2 gap-2">
             {SEGMENTS.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setSegment(s.id)}
                 className={cn(
-                  "rounded-xl border px-4 py-3 text-left text-sm font-semibold",
+                  "rounded-md border px-4 py-3 text-left text-sm font-semibold transition-colors",
                   segment === s.id
                     ? "border-primary bg-primary/10 text-primary-700"
-                    : "border-slate-200 text-slate-600"
+                    : "border-border text-muted-foreground"
                 )}
               >
                 {s.id === "tumu" ? "Tüm müşterilerim" : s.label}
               </button>
             ))}
           </div>
-          <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p className="rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground">
             {count === null ? "Hesaplanıyor..." : `${count} kişiye ulaşacaksın`}
           </p>
           <button
             onClick={() => setStep(2)}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white"
+            className="w-full rounded-md bg-primary px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-600"
           >
             Devam Et
           </button>
@@ -144,15 +146,15 @@ export default function AnnouncementWizard() {
 
       {step === 2 && (
         <div className="space-y-4">
-          <h2 className="text-sm font-bold text-dark-900">Kanal ve İçerik</h2>
+          <h2 className="text-sm font-bold text-ink-900">Kanal ve İçerik</h2>
           <div className="flex gap-2">
             <button
               onClick={() => setChannel("sms")}
               className={cn(
-                "flex-1 rounded-xl border px-4 py-2.5 text-sm font-semibold",
+                "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
                 channel === "sms"
                   ? "border-primary bg-primary/10 text-primary-700"
-                  : "border-slate-200 text-slate-500"
+                  : "border-border text-muted-foreground"
               )}
             >
               SMS
@@ -160,10 +162,10 @@ export default function AnnouncementWizard() {
             <button
               onClick={() => setChannel("email")}
               className={cn(
-                "flex-1 rounded-xl border px-4 py-2.5 text-sm font-semibold",
+                "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
                 channel === "email"
                   ? "border-primary bg-primary/10 text-primary-700"
-                  : "border-slate-200 text-slate-500"
+                  : "border-border text-muted-foreground"
               )}
             >
               E-posta
@@ -176,10 +178,10 @@ export default function AnnouncementWizard() {
                 key={tpl.key}
                 onClick={() => applyTemplate(tpl.key)}
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-semibold",
+                  "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
                   templateKey === tpl.key
                     ? "border-primary bg-primary/10 text-primary-700"
-                    : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                    : "border-border text-muted-foreground hover:bg-muted"
                 )}
               >
                 {tpl.label}
@@ -193,10 +195,10 @@ export default function AnnouncementWizard() {
               onChange={(e) => setContent(e.target.value)}
               rows={5}
               placeholder="Duyuru metnini yaz... {{isim}} yazarak müşteri adını kişiselleştirebilirsin."
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-md border border-border bg-card px-4 py-3 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {channel === "sms" && (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {content.length} karakter · {smsSegments} SMS
               </p>
             )}
@@ -205,14 +207,14 @@ export default function AnnouncementWizard() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep(1)}
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600"
+              className="rounded-md border border-border px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted"
             >
               Geri
             </button>
             <button
               onClick={() => setStep(3)}
               disabled={!content.trim()}
-              className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+              className="flex-1 rounded-md bg-primary px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-600 disabled:opacity-60"
             >
               Devam Et
             </button>
@@ -222,30 +224,30 @@ export default function AnnouncementWizard() {
 
       {step === 3 && (
         <div className="space-y-4">
-          <h2 className="text-sm font-bold text-dark-900">Önizleme ve Gönderim</h2>
+          <h2 className="text-sm font-bold text-ink-900">Önizleme ve Gönderim</h2>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Örnek görünüm — {sampleName ?? "Ayşe Yılmaz"}
             </p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-dark-900">{previewText}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-ink-900">{previewText}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-slate-400">Toplam Alıcı</p>
-              <p className="text-lg font-extrabold text-dark-900">{count ?? "—"}</p>
+            <div className="rounded-md bg-muted p-3">
+              <p className="text-xs text-muted-foreground">Toplam Alıcı</p>
+              <p className="font-sans text-lg font-bold tabular-nums text-ink-900">{count ?? "—"}</p>
             </div>
             {estimatedCost && (
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-xs text-slate-400">Tahmini SMS Maliyeti</p>
-                <p className="text-lg font-extrabold text-dark-900">{estimatedCost}₺</p>
+              <div className="rounded-md bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Tahmini SMS Maliyeti</p>
+                <p className="font-sans text-lg font-bold tabular-nums text-ink-900">{estimatedCost}₺</p>
               </div>
             )}
           </div>
 
           {night && (
-            <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent-700">
+            <p className="rounded-md bg-accent/10 px-3 py-2 text-sm text-accent-700">
               Gece 21:00–09:00 arası duyuru gönderimi engellidir. Sabah 09:00&apos;dan sonra
               tekrar dene.
             </p>
@@ -254,14 +256,14 @@ export default function AnnouncementWizard() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep(2)}
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600"
+              className="rounded-md border border-border px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted"
             >
               Geri
             </button>
             <button
               onClick={handleSend}
               disabled={isPending || night}
-              className="flex-1 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-dark-950 disabled:opacity-60"
+              className="flex-1 rounded-md bg-accent px-4 py-3 text-sm font-bold text-ink-950 transition-all duration-200 hover:bg-accent-500 hover:-translate-y-0.5 disabled:opacity-60"
             >
               {isPending ? "Gönderiliyor..." : "Gönder"}
             </button>

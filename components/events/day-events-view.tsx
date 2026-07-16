@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CalendarX2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EventCard from "@/components/events/event-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { EventListItem } from "@/lib/events/queries";
 
 function dayKey(date: Date) {
@@ -30,7 +32,7 @@ export default function DayEventsView({ events }: { events: EventListItem[] }) {
 
   return (
     <div className="px-4 py-6 md:px-6">
-      <h1 className="mb-4 text-2xl font-extrabold tracking-tight text-dark-900">
+      <h1 className="mb-4 font-display text-2xl font-medium tracking-tight text-foreground">
         Etkinlikler
       </h1>
 
@@ -43,7 +45,7 @@ export default function DayEventsView({ events }: { events: EventListItem[] }) {
               "flex shrink-0 flex-col items-center rounded-2xl border px-4 py-2 text-sm font-medium transition-colors",
               selected === d.key
                 ? "border-primary bg-primary text-white"
-                : "border-slate-200 text-slate-600 hover:border-primary/40"
+                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
             )}
           >
             <span>{d.label}</span>
@@ -53,11 +55,11 @@ export default function DayEventsView({ events }: { events: EventListItem[] }) {
       </div>
 
       {shown.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="mb-4 text-4xl">🗓️</div>
-          <p className="font-medium text-dark-900">Bu gün için etkinlik yok</p>
-          <p className="mt-1 text-sm text-slate-500">Başka bir güne göz atabilirsin.</p>
-        </div>
+        <EmptyState
+          icon={CalendarX2}
+          title="Bu gün için etkinlik yok"
+          description="Başka bir güne göz atabilirsin."
+        />
       ) : (
         <div className="space-y-3">
           {shown.map((event) => (

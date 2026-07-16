@@ -10,7 +10,7 @@ export default function WeeklyBarChart({
 
   if (total === 0) {
     return (
-      <p className="py-8 text-center text-sm text-slate-400">
+      <p className="py-8 text-center text-sm text-muted-foreground">
         Henüz QR okutma yok, ilk kullanım burada görünecek.
       </p>
     );
@@ -23,14 +23,18 @@ export default function WeeklyBarChart({
         const heightPct = Math.max((d.count / max) * 100, d.count > 0 ? 8 : 2);
         return (
           <div key={d.date} className="flex flex-1 flex-col items-center gap-1.5">
-            <span className="text-xs font-semibold text-slate-500">{d.count || ""}</span>
+            <span className="font-sans text-xs font-bold tabular-nums text-muted-foreground">
+              {d.count || ""}
+            </span>
             <div className="flex h-24 w-full items-end">
               <div
-                className="w-full rounded-t-md bg-primary/80"
+                className="w-full rounded-t-sm bg-primary/80"
                 style={{ height: `${heightPct}%` }}
               />
             </div>
-            <span className="text-[10px] text-slate-400">{DAY_LABELS[day]}</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              {DAY_LABELS[day]}
+            </span>
           </div>
         );
       })}

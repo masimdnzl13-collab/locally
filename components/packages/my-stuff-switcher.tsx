@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 export default function MyStuffSwitcher({
   packagesView,
@@ -14,29 +14,17 @@ export default function MyStuffSwitcher({
 
   return (
     <div>
-      <div className="mx-auto flex max-w-2xl gap-2 px-6 pt-6">
-        <button
-          onClick={() => setSection("paketler")}
-          className={cn(
-            "rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide",
-            section === "paketler"
-              ? "border-dark-900 bg-dark-900 text-white"
-              : "border-slate-200 text-slate-400"
-          )}
-        >
-          Paketler
-        </button>
-        <button
-          onClick={() => setSection("biletler")}
-          className={cn(
-            "rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide",
-            section === "biletler"
-              ? "border-dark-900 bg-dark-900 text-white"
-              : "border-slate-200 text-slate-400"
-          )}
-        >
-          Biletler
-        </button>
+      <div className="mx-auto max-w-2xl px-6 pt-6">
+        <SegmentedControl
+          layoutId="my-stuff-switcher"
+          className="w-fit"
+          options={[
+            { value: "paketler", label: "Paketler" },
+            { value: "biletler", label: "Biletler" },
+          ]}
+          value={section}
+          onChange={setSection}
+        />
       </div>
 
       {section === "paketler" ? packagesView : ticketsView}

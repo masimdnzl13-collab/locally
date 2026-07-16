@@ -1,5 +1,7 @@
+import { Mail } from "lucide-react";
 import { getWaitlist } from "@/lib/admin/queries";
 import WaitlistExportButton from "@/components/admin/waitlist-export-button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("tr-TR", {
@@ -17,30 +19,28 @@ export default async function AdminWaitlistPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-xl font-extrabold tracking-tight text-dark-900">
+        <h1 className="text-xl font-bold tracking-tight text-ink-900">
           Bekleme Listesi ({entries.length})
         </h1>
         <WaitlistExportButton entries={entries} />
       </div>
 
       {entries.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-300 bg-white py-10 text-center text-sm text-slate-400">
-          Henüz kayıt yok.
-        </p>
+        <EmptyState icon={Mail} title="Henüz kayıt yok" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-100 text-xs text-slate-400">
+            <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-2.5 font-medium">E-posta</th>
                 <th className="px-4 py-2.5 font-medium">Kayıt Tarihi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {entries.map((entry) => (
-                <tr key={entry.email}>
-                  <td className="px-4 py-2.5 text-dark-900">{entry.email}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-400">
+                <tr key={entry.email} className="odd:bg-sand-50">
+                  <td className="px-4 py-2.5 text-ink-900">{entry.email}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground">
                     {formatDateTime(entry.created_at)}
                   </td>
                 </tr>

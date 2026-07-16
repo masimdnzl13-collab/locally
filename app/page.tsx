@@ -8,8 +8,11 @@ import { Reveal } from "@/components/motion/reveal";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 import { AnimatedCounter } from "@/components/motion/animated-counter";
 import { buttonVariants } from "@/components/ui/button";
+import { TicketCard } from "@/components/ui/ticket-card";
+import { Stamp } from "@/components/ui/stamp";
+import { Scribble } from "@/components/ui/scribble";
 import { cn } from "@/lib/utils";
-import { Ticket, Smartphone, Sun, Trophy } from "lucide-react";
+import { Ticket, Smartphone, Sun } from "lucide-react";
 
 const SHOWCASE_ITEMS: ShowcaseItem[] = [
   {
@@ -64,34 +67,38 @@ export default async function HomePage() {
       <FlashStripServer />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-dark-950 px-6 py-24 text-center text-white md:py-32">
-        <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 animate-float rounded-full bg-primary/30 blur-3xl" />
-        <div
-          className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 animate-float rounded-full bg-accent/20 blur-3xl"
-          style={{ animationDelay: "2s" }}
-        />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary-900/20 via-transparent to-transparent" />
+      <section className="relative overflow-hidden bg-background px-6 pb-20 pt-24 md:pb-28 md:pt-32">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-primary-100/70 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-accent-100/60 blur-3xl" />
 
-        <div className="relative mx-auto max-w-2xl">
-          <span className="mb-6 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium tracking-wide text-primary-200 backdrop-blur">
+        <div className="relative mx-auto max-w-4xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
             Bodrum · Sezon Dışı
           </span>
 
-          <h1 className="text-balance font-display text-5xl font-medium leading-[1.05] tracking-tight md:text-7xl">
+          <h1 className="mt-6 max-w-3xl text-balance font-display text-5xl font-medium leading-[1.03] tracking-tight text-ink-900 md:text-7xl">
             Kasabanın kışı da güzel
           </h1>
+          <Scribble className="mt-3 h-4 w-24 text-primary-500" />
 
-          <p className="mx-auto mt-6 max-w-md text-balance text-base text-white/70 md:text-lg">
+          <p className="mt-6 max-w-md text-balance text-base text-muted-foreground md:text-lg">
             Sezon dışında Bodrum&apos;un işletmelerini keşfet, yazın turiste
             ayrılan fiyatları kendine ayır.
           </p>
 
-          <div className="mt-10">
+          <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
             <a
               href="#kurucu-500"
-              className={cn(buttonVariants({ variant: "accent", size: "lg" }), "shadow-glow-accent")}
+              className={cn(buttonVariants({ variant: "accent", size: "lg" }))}
             >
               Kurucu 500&apos;e Katıl
+            </a>
+            <a
+              href="#nasil-calisir"
+              className="text-sm font-semibold text-primary-700 transition-colors hover:text-primary-800"
+            >
+              Nasıl çalışır? →
             </a>
           </div>
         </div>
@@ -104,15 +111,19 @@ export default async function HomePage() {
             <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
               Yaz fiyatı değil, kış fiyatı
             </h2>
+            <Scribble className="mx-auto mt-3" />
             <p className="mt-3 text-sm text-muted-foreground md:text-base">
               Bodrum&apos;daki gerçek işletmelerden birkaç örnek
             </p>
           </Reveal>
 
-          <StaggerContainer className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {SHOWCASE_ITEMS.map((item) => (
+          <StaggerContainer className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr">
+            <StaggerItem className="sm:col-span-2 lg:col-span-2 lg:row-span-2">
+              <ShowcaseCard item={SHOWCASE_ITEMS[0]} featured className="h-full" />
+            </StaggerItem>
+            {SHOWCASE_ITEMS.slice(1).map((item) => (
               <StaggerItem key={item.title}>
-                <ShowcaseCard item={item} />
+                <ShowcaseCard item={item} className="h-full" />
               </StaggerItem>
             ))}
           </StaggerContainer>
@@ -146,18 +157,19 @@ export default async function HomePage() {
       )}
 
       {/* Nasıl çalışır */}
-      <section className="bg-muted/60 px-6 py-20 md:py-28">
+      <section id="nasil-calisir" className="bg-muted/60 px-6 py-20 md:py-28">
         <div className="mx-auto max-w-4xl">
           <Reveal className="mb-14 text-center">
             <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
               Nasıl çalışır
             </h2>
+            <Scribble className="mx-auto mt-3" />
           </Reveal>
           <div className="relative grid gap-10 sm:grid-cols-3">
             <div className="pointer-events-none absolute left-0 right-0 top-7 hidden h-px bg-gradient-to-r from-transparent via-border to-transparent sm:block" />
             {HOW_IT_WORKS.map((step, i) => (
               <Reveal key={step.title} delay={i * 0.12} className="relative text-center">
-                <div className="relative z-10 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-card text-primary-600 shadow-md">
+                <div className="relative z-10 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card text-primary-600">
                   <step.icon className="h-6 w-6" strokeWidth={1.75} />
                 </div>
                 <p className="mb-1.5 text-xs font-bold tracking-wide text-primary-600">
@@ -172,38 +184,40 @@ export default async function HomePage() {
       </section>
 
       {/* Kurucu 500 */}
-      <section
-        id="kurucu-500"
-        className="relative overflow-hidden bg-dark-950 px-6 py-20 text-white md:py-28"
-      >
-        <div className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-        <Reveal className="relative mx-auto max-w-lg text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 text-accent-400">
-            <Trophy className="h-7 w-7" strokeWidth={1.75} />
-          </div>
-          <h2 className="text-balance font-display text-3xl font-medium tracking-tight md:text-4xl">
-            İlk 500 Kurucu Yerli&apos;ye ömür boyu ayrıcalık
-          </h2>
-          <p className="mt-3 text-sm text-white/70 md:text-base">
-            Kurucu 500 listesine katıl, lansmandan önce özel avantajlarla
-            tanış.
-          </p>
+      <section id="kurucu-500" className="px-6 py-20 md:py-28">
+        <Reveal className="mx-auto max-w-lg">
+          <TicketCard
+            className="text-center"
+            bodyClassName="flex flex-col items-center px-6 py-10 sm:px-10"
+            notchBg="var(--background)"
+            stub={
+              <div className="flex w-full flex-col gap-2">
+                <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                  <span>
+                    <AnimatedCounter value={127} /> katıldı
+                  </span>
+                  <span>500 kontenjan</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-sand-200">
+                  <div className="h-full w-[25%] rounded-full bg-gradient-to-r from-accent-400 to-accent-600" />
+                </div>
+              </div>
+            }
+          >
+            <Stamp label="Kurucu 500" tone="accent" className="mb-5" />
+            <h2 className="text-balance font-display text-3xl font-medium tracking-tight text-ink-900 md:text-4xl">
+              İlk 500 Kurucu Yerli&apos;ye ömür boyu ayrıcalık
+            </h2>
+            <Scribble className="mt-3" />
+            <p className="mt-4 text-sm text-muted-foreground md:text-base">
+              Kurucu 500 listesine katıl, lansmandan önce özel avantajlarla
+              tanış.
+            </p>
 
-          <div className="mx-auto mt-8 max-w-xs">
-            <div className="mb-1.5 flex justify-between text-xs text-white/60">
-              <span>
-                <AnimatedCounter value={127} /> katıldı
-              </span>
-              <span>500 kontenjan</span>
+            <div className="mt-8 w-full max-w-sm">
+              <FounderWaitlistForm />
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full w-[25%] rounded-full bg-gradient-to-r from-accent-400 to-accent-600" />
-            </div>
-          </div>
-
-          <div className="mx-auto mt-8 max-w-sm">
-            <FounderWaitlistForm />
-          </div>
+          </TicketCard>
         </Reveal>
       </section>
 
@@ -213,14 +227,15 @@ export default async function HomePage() {
           <h2 className="text-balance font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
             İşletmeniz mi var? Kış sezonunu birlikte kazanalım
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground md:text-base">
+          <Scribble className="mx-auto mt-3" />
+          <p className="mt-4 text-sm text-muted-foreground md:text-base">
             Sezon dışında boş kalan masalarınızı, odalarınızı ve
             şezlonglarınızı yerel halka açın.
           </p>
           <div className="mt-8">
             <a
               href="/kayit?rol=isletme"
-              className={cn(buttonVariants({ variant: "default", size: "lg" }), "shadow-glow-primary")}
+              className={cn(buttonVariants({ variant: "default", size: "lg" }))}
             >
               İşletmemi Kaydet
             </a>

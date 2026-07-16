@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Ticket, ChevronRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
+import { Card } from "@/components/ui/card";
 
 export default async function HesabimPage() {
   const supabase = createClient();
@@ -21,35 +23,41 @@ export default async function HesabimPage() {
 
   return (
     <section className="mx-auto max-w-md px-6 py-10">
-      <div className="mb-6 flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary-600">
+      <div className="mb-8 flex items-center gap-4">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-xl font-bold text-primary-700">
           {(profile?.full_name ?? user.email ?? "?").charAt(0).toUpperCase()}
         </div>
         <div>
-          <p className="font-semibold text-dark-900">
+          <p className="font-semibold text-foreground">
             {profile?.full_name ?? "Locally Kullanıcısı"}
           </p>
-          <p className="text-sm text-slate-500">{user.email}</p>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
       </div>
 
-      <Link
-        href="/hesabim/paketlerim"
-        className="flex items-center justify-between rounded-2xl border border-slate-200 p-4 text-sm font-semibold text-dark-900 hover:bg-slate-50"
-      >
-        🎟️ Paketlerim
-        <span className="text-slate-400">→</span>
+      <Link href="/hesabim/paketlerim" className="block">
+        <Card
+          hoverLift
+          className="flex items-center justify-between p-4 text-sm font-semibold text-foreground"
+        >
+          <span className="flex items-center gap-2.5">
+            <Ticket size={18} className="text-primary-600" strokeWidth={1.75} />
+            Paketlerim
+          </span>
+          <ChevronRight size={16} className="text-muted-foreground" />
+        </Card>
       </Link>
 
-      <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">
-        <p>Biletlerin ve hesap ayarların çok yakında burada olacak.</p>
-      </div>
+      <Card className="mt-3 p-4 text-sm text-muted-foreground">
+        Biletlerin ve hesap ayarların çok yakında burada olacak.
+      </Card>
 
       <form action={signOutAction} className="mt-6">
         <button
           type="submit"
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
         >
+          <LogOut size={15} strokeWidth={2} />
           Çıkış Yap
         </button>
       </form>

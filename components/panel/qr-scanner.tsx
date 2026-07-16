@@ -70,10 +70,10 @@ export default function QrScanner({
     <div>
       <div
         id={SCANNER_ELEMENT_ID}
-        className="mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-2xl bg-dark-950"
+        className="mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-xl bg-ink-950"
       />
       {cameraError && (
-        <p className="mt-3 text-center text-sm text-red-600">{cameraError}</p>
+        <p className="mt-3 text-center text-sm text-tile-600">{cameraError}</p>
       )}
     </div>
   );

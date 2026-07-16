@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { ChevronDown, CloudSun } from "lucide-react";
 import { BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/lib/types";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Scribble } from "@/components/ui/scribble";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 import PackageCard from "@/components/discover/package-card";
 import type { DiscoverPackage } from "@/lib/packages/queries";
@@ -63,25 +65,33 @@ export default function DiscoverView({ packages }: { packages: DiscoverPackage[]
       </div>
 
       <div className="px-4 py-6 md:px-6">
+        <div className="mb-5">
+          <h2 className="font-display text-xl font-medium text-foreground">
+            Bugünün fırsatları
+          </h2>
+          <Scribble className="mt-1 text-primary-500" />
+        </div>
+
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-              <CloudSun className="h-7 w-7" strokeWidth={1.5} />
-            </div>
-            <p className="font-medium text-foreground">
-              Bu kategoride şu an paket yok, yakında eklenecek
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Diğer kategorilere göz atabilirsin.
-            </p>
-          </div>
+          <EmptyState
+            icon={CloudSun}
+            title="Bu kategoride şu an paket yok, yakında eklenecek"
+            description="Diğer kategorilere göz atabilirsin."
+            className="py-20"
+          />
         ) : (
           <StaggerContainer className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((pkg) => (
-              <StaggerItem key={pkg.id}>
-                <PackageCard pkg={pkg} />
-              </StaggerItem>
-            ))}
+            {filtered.map((pkg, i) => {
+              const featured = i % 5 === 0;
+              return (
+                <StaggerItem
+                  key={pkg.id}
+                  className={featured ? "sm:col-span-2" : undefined}
+                >
+                  <PackageCard pkg={pkg} featured={featured} />
+                </StaggerItem>
+              );
+            })}
           </StaggerContainer>
         )}
       </div>

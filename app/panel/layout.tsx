@@ -25,5 +25,5 @@ export default async function PanelLayout({
     redirect("/");
   }
 
-  return <div className="min-h-dvh bg-slate-50">{children}</div>;
+  return <div className="min-h-dvh bg-background">{children}</div>;
 }

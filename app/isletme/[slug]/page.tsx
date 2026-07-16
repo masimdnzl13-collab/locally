@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { MapPin, AtSign } from "lucide-react";
+import { MapPin, AtSign, Ticket, CalendarClock } from "lucide-react";
 import { getBusinessBySlug } from "@/lib/business/queries";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/ui/category-icon";
+import { TicketCard } from "@/components/ui/ticket-card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Scribble } from "@/components/ui/scribble";
 import { Reveal } from "@/components/motion/reveal";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 
@@ -51,7 +54,7 @@ export default async function BusinessProfilePage({
         ) : (
           <CategoryIcon category={business.category} className="h-full" iconClassName="h-14 w-14" />
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-dark-950/70 via-dark-950/10 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/70 via-ink-950/10 to-transparent" />
       </div>
 
       <div className="mx-auto max-w-3xl px-6 py-6">
@@ -92,12 +95,15 @@ export default async function BusinessProfilePage({
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="mb-4 text-lg font-semibold text-foreground">Paketler</h2>
+            <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
+            <Scribble className="mt-1 mb-4 text-primary-500" />
           </Reveal>
           {business.packages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Bu işletmenin şu an aktif paketi yok, yakında eklenecek.
-            </p>
+            <EmptyState
+              icon={Ticket}
+              title="Bu işletmenin şu an aktif paketi yok"
+              description="Yakında eklenecek — daha sonra tekrar bak."
+            />
           ) : (
             <StaggerContainer className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {business.packages.map((pkg) => {
@@ -106,24 +112,28 @@ export default async function BusinessProfilePage({
                 );
                 return (
                   <StaggerItem key={pkg.id}>
-                    <Link href={`/paket/${pkg.id}`} className="block">
-                      <Card hoverLift className="flex flex-col p-4">
+                    <Link href={`/paket/${pkg.id}`} className="block h-full">
+                      <TicketCard
+                        className="h-full transition-all duration-300 hover:-translate-y-1 hover:border-sepia-300"
+                        stub={
+                          <>
+                            <div>
+                              <p className="strike-price text-xs">
+                                Yaz: {formatTL(pkg.summer_reference_price)}
+                              </p>
+                              <p className="font-display text-xl font-semibold text-accent-500">
+                                Bugün: {formatTL(pkg.sale_price)}
+                              </p>
+                            </div>
+                            <Badge variant="accent">%{savings}</Badge>
+                          </>
+                        }
+                      >
                         <Badge variant="neutral" className="mb-1 self-start">
                           {pkg.usage_count} kullanım
                         </Badge>
                         <h3 className="font-semibold text-foreground">{pkg.title}</h3>
-                        <div className="mt-3 flex items-end justify-between rounded-xl bg-muted p-3">
-                          <div>
-                            <p className="strike-price text-xs">
-                              Yaz: {formatTL(pkg.summer_reference_price)}
-                            </p>
-                            <p className="font-display text-xl font-semibold text-accent-500">
-                              Bugün: {formatTL(pkg.sale_price)}
-                            </p>
-                          </div>
-                          <Badge variant="accent">%{savings}</Badge>
-                        </div>
-                      </Card>
+                      </TicketCard>
                     </Link>
                   </StaggerItem>
                 );
@@ -134,14 +144,17 @@ export default async function BusinessProfilePage({
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="mb-4 text-lg font-semibold text-foreground">
+            <h2 className="text-lg font-semibold text-foreground">
               Yaklaşan Etkinlikler
             </h2>
+            <Scribble className="mt-1 mb-4 text-primary-500" />
           </Reveal>
           {business.events.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Şu an yaklaşan bir etkinlik yok.
-            </p>
+            <EmptyState
+              icon={CalendarClock}
+              title="Şu an yaklaşan bir etkinlik yok"
+              description="Yeni etkinlikler eklendiğinde burada görünecek."
+            />
           ) : (
             <StaggerContainer className="space-y-3">
               {business.events.map((event) => (

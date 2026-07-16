@@ -15,11 +15,11 @@ export default function NavBar() {
   return (
     <>
       {/* Masaüstü: üst menü */}
-      <header className="sticky top-0 z-40 hidden border-b border-border/70 bg-background/75 backdrop-blur-xl md:block">
+      <header className="sticky top-0 z-40 hidden border-b border-border bg-background/95 backdrop-blur md:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-foreground"
+            className="font-display text-xl font-semibold tracking-tight text-ink-900"
           >
             Locally
           </Link>
@@ -51,7 +51,7 @@ export default function NavBar() {
             <ThemeToggle />
             <Link
               href="/panel"
-              className="rounded-full bg-dark-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-dark-800"
+              className="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-ink-800"
             >
               İşletme Paneli
             </Link>
@@ -61,11 +61,11 @@ export default function NavBar() {
 
       {/* Mobil: yüzen tema anahtarı */}
       <div className="fixed right-4 top-4 z-40 md:hidden">
-        <ThemeToggle className="bg-card/80 shadow-sm backdrop-blur-xl" />
+        <ThemeToggle className="bg-card/90 backdrop-blur" />
       </div>
 
       {/* Mobil: alt gezinme çubuğu */}
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/90 backdrop-blur-xl md:hidden">
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur md:hidden">
         <div className="grid grid-cols-5">
           {navItems.map((item) => {
             const active = pathname === item.href;

@@ -31,10 +31,10 @@ export default async function KurulumPage() {
 
   return (
     <section className="mx-auto max-w-lg px-6 py-10">
-      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-dark-900">
+      <h1 className="mb-1 font-display text-2xl font-medium tracking-tight text-ink-900">
         İşletmeni Kur
       </h1>
-      <p className="mb-8 text-sm text-slate-500">
+      <p className="mb-8 text-sm text-muted-foreground">
         3 kısa adımda başvurunu tamamla, onaydan sonra yayına alalım.
       </p>
       <OnboardingWizard

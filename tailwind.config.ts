@@ -10,25 +10,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Semantic tokens — driven by CSS vars so components never hardcode slate/dark-900
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        // Semantic tokens — driven by CSS vars (stored as "R G B" triplets in
+        // globals.css) so opacity modifiers like `bg-background/95` work.
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
         card: {
-          DEFAULT: "var(--card)",
-          foreground: "var(--card-foreground)",
+          DEFAULT: "rgb(var(--card) / <alpha-value>)",
+          foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
         popover: {
-          DEFAULT: "var(--popover)",
-          foreground: "var(--popover-foreground)",
+          DEFAULT: "rgb(var(--popover) / <alpha-value>)",
+          foreground: "rgb(var(--popover-foreground) / <alpha-value>)",
         },
         muted: {
-          DEFAULT: "var(--muted)",
-          foreground: "var(--muted-foreground)",
+          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+          foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
         },
-        border: "var(--border)",
-        ring: "var(--ring)",
+        border: "rgb(var(--border) / <alpha-value>)",
+        ring: "rgb(var(--ring) / <alpha-value>)",
+        brick: "rgb(var(--brick) / <alpha-value>)",
 
-        // Brand ramps — kept for equity
+        // Turquoise — primary interaction color (links, buttons, active states)
         primary: {
           DEFAULT: "#14a3b8",
           50: "#eefbfc",
@@ -43,6 +45,22 @@ const config: Config = {
           900: "#174858",
           950: "#092e3a",
         },
+        // Petrol ink — headlines, body copy, "mürekkep" blocks. Never a page ground.
+        ink: {
+          DEFAULT: "#0b3d4c",
+          50: "#eaf4f6",
+          100: "#cde3e8",
+          200: "#9bc7d0",
+          300: "#68a6b3",
+          400: "#3f8494",
+          500: "#2c6e80",
+          600: "#1c5566",
+          700: "#164757",
+          800: "#123847",
+          900: "#0b3d4c",
+          950: "#062028",
+        },
+        // Alias of `ink` kept for existing call-sites (identical ramp) — prefer `ink` in new code
         dark: {
           DEFAULT: "#0b3d4c",
           50: "#eaf4f6",
@@ -57,6 +75,7 @@ const config: Config = {
           900: "#0b3d4c",
           950: "#062028",
         },
+        // Warm orange — rationed: today's price, flash urgency, primary CTAs only
         accent: {
           DEFAULT: "#ffb35c",
           50: "#fff8ef",
@@ -71,19 +90,46 @@ const config: Config = {
           900: "#7e4011",
           950: "#441f07",
         },
-        // Refined neutral scale — replaces ad hoc slate-* usage
-        ink: {
-          50: "#f6f7f8",
-          100: "#eceef0",
-          200: "#d7dbdf",
-          300: "#b6bdc4",
-          400: "#8f98a2",
-          500: "#717b86",
-          600: "#5b636e",
-          700: "#4b525b",
-          800: "#3a3f47",
-          900: "#26292e",
-          950: "#17181b",
+        // Sand — warm kum/bej ara tonu, section grounds and ticket-stub fills
+        sand: {
+          50: "#fbf7ee",
+          100: "#f6eedc",
+          200: "#eee0c2",
+          300: "#e2cda0",
+          400: "#d2b378",
+          500: "#be9757",
+          600: "#9c7a42",
+          700: "#7c6236",
+          800: "#63502f",
+          900: "#4f4128",
+          950: "#2c2415",
+        },
+        // Sepia — warm neutral scale replacing cool grays for muted text/borders
+        sepia: {
+          50: "#f8f5f0",
+          100: "#efe9df",
+          200: "#e1d8c8",
+          300: "#c9bca4",
+          400: "#a99a7e",
+          500: "#8c7c60",
+          600: "#6f6249",
+          700: "#59503b",
+          800: "#453e2e",
+          900: "#302b20",
+          950: "#1c1913",
+        },
+        // Tuğla — warm alert/danger tone (never a raw red)
+        tile: {
+          50: "#fdf1ee",
+          100: "#f9dcd3",
+          200: "#f0b5a3",
+          300: "#e3876b",
+          400: "#d1633f",
+          500: "#b8492a",
+          600: "#9a3b21",
+          700: "#7c301c",
+          800: "#602619",
+          900: "#4c1f16",
         },
       },
       fontFamily: {
@@ -98,13 +144,15 @@ const config: Config = {
         "2xl": "var(--radius-2xl)",
       },
       boxShadow: {
-        xs: "0 1px 2px 0 rgb(15 23 30 / 0.04)",
-        sm: "0 1px 3px 0 rgb(15 23 30 / 0.06), 0 1px 2px -1px rgb(15 23 30 / 0.04)",
-        md: "0 4px 12px -2px rgb(15 23 30 / 0.08), 0 2px 6px -2px rgb(15 23 30 / 0.05)",
-        lg: "0 12px 28px -6px rgb(15 23 30 / 0.12), 0 4px 10px -4px rgb(15 23 30 / 0.06)",
-        xl: "0 24px 48px -12px rgb(15 23 30 / 0.16)",
-        "glow-primary": "0 8px 30px -4px rgb(20 163 184 / 0.35)",
-        "glow-accent": "0 8px 30px -4px rgb(253 154 46 / 0.35)",
+        // Depth comes from ground-tone + hairline borders, not shadow. These
+        // exist only for true overlays that must visually detach (menus, modals).
+        xs: "0 1px 2px 0 rgb(11 61 76 / 0.05)",
+        sm: "0 1px 2px 0 rgb(11 61 76 / 0.06)",
+        md: "0 4px 12px -4px rgb(11 61 76 / 0.10)",
+        lg: "0 12px 28px -8px rgb(11 61 76 / 0.14)",
+        xl: "0 24px 48px -16px rgb(11 61 76 / 0.18)",
+        "glow-primary": "0 6px 20px -6px rgb(20 163 184 / 0.35)",
+        "glow-accent": "0 6px 20px -6px rgb(253 154 46 / 0.4)",
       },
       keyframes: {
         "fade-up": {

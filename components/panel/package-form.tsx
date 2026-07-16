@@ -6,8 +6,8 @@ import SubmitButton from "@/components/ui/submit-button";
 import type { Package } from "@/lib/types";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-const labelClass = "mb-1.5 block text-sm font-medium text-dark-900";
+  "w-full rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
+const labelClass = "mb-1.5 block text-sm font-medium text-ink-900";
 
 function toLocalDateInput(iso: string) {
   const d = new Date(iso);
@@ -25,9 +25,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 className="text-sm font-bold text-dark-900">{title}</h2>
-      {hint && <p className="mt-0.5 text-xs text-slate-400">{hint}</p>}
+    <div className="rounded-xl border border-border bg-card p-5">
+      <h2 className="text-sm font-bold text-ink-900">{title}</h2>
+      {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       <div className="mt-4 space-y-4">{children}</div>
     </div>
   );
@@ -60,11 +60,11 @@ export default function PackageForm({
       {isEdit && <input type="hidden" name="packageId" value={pkg!.id} />}
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+        <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">{error}</p>
       )}
 
       {hasSales && (
-        <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent-700">
+        <p className="rounded-md bg-accent/10 px-3 py-2 text-sm text-accent-700">
           Bu pakette satış var: hak sayısı düşürülemez, fiyat değişikliği yalnızca yeni
           satışları etkiler.
         </p>
@@ -98,9 +98,9 @@ export default function PackageForm({
             type="file"
             name="image"
             accept="image/*"
-            className="w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700"
+            className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700"
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-muted-foreground">
             Boş bırakılırsa {pkg?.image_url ? "mevcut görsel korunur" : "işletmenin kapak görseli kullanılır"}
             {!pkg?.image_url && !fallbackCoverUrl ? " (kapak görseli yoksa boş kalır)." : "."}
           </p>
@@ -131,7 +131,7 @@ export default function PackageForm({
             defaultValue={pkg?.summer_reference_price}
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-muted-foreground">
             Bu paketin içeriğinin yaz sezonundaki gerçek fiyatı; vitrinde karşılaştırma
             olarak gösterilir. Satış fiyatından yüksek olmalı.
           </p>
@@ -160,7 +160,7 @@ export default function PackageForm({
             defaultValue={pkg?.usage_count ?? 1}
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-muted-foreground">
             Paketin kaç kullanım içerdiği. {hasSales && "Satış olduğu için düşürülemez."}
           </p>
         </div>

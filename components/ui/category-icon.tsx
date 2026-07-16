@@ -3,12 +3,12 @@ import type { BusinessCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_STYLE: Record<BusinessCategory, { icon: LucideIcon; gradient: string }> = {
-  restoran: { icon: UtensilsCrossed, gradient: "from-dark-700 to-dark-950" },
+  restoran: { icon: UtensilsCrossed, gradient: "from-ink-700 to-ink-950" },
   kafe: { icon: Coffee, gradient: "from-primary-500 to-primary-800" },
-  otel: { icon: BedDouble, gradient: "from-dark-500 to-dark-900" },
+  otel: { icon: BedDouble, gradient: "from-ink-500 to-ink-900" },
   beach_club: { icon: Umbrella, gradient: "from-accent-400 to-accent-700" },
-  aktivite: { icon: Compass, gradient: "from-primary-400 to-accent-500" },
-  diger: { icon: Sparkles, gradient: "from-ink-500 to-ink-800" },
+  aktivite: { icon: Compass, gradient: "from-primary-400 to-ink-700" },
+  diger: { icon: Sparkles, gradient: "from-sepia-500 to-sepia-800" },
 };
 
 export function CategoryIcon({

@@ -22,9 +22,9 @@ export default function FounderWaitlistForm() {
 
   if (message) {
     return (
-      <div className="flex items-center justify-center gap-2 rounded-xl bg-white/10 px-5 py-4 text-center">
-        <Check size={18} className="text-accent-300" />
-        <p className="font-semibold text-white">{message}</p>
+      <div className="flex items-center justify-center gap-2 rounded-xl bg-primary-50 px-5 py-4 text-center">
+        <Check size={18} className="text-primary-600" />
+        <p className="font-semibold text-ink-900">{message}</p>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export default function FounderWaitlistForm() {
           name="email"
           required
           placeholder="sen@ornek.com"
-          className="w-full flex-1 border-white/20 bg-white/10 text-white placeholder:text-white/50 focus-visible:border-accent focus-visible:ring-accent/40"
+          className="w-full flex-1"
         />
         <Button
           type="submit"
@@ -49,7 +49,7 @@ export default function FounderWaitlistForm() {
           {isPending ? "Bir saniye..." : "Kurucu 500'e Katıl"}
         </Button>
       </form>
-      {error && <p className="mt-2 text-sm text-accent-200">{error}</p>}
+      {error && <p className="mt-2 text-sm text-tile-600">{error}</p>}
     </div>
   );
 }

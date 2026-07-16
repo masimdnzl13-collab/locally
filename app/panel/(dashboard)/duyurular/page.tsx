@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { Megaphone } from "lucide-react";
 import { getMyBusiness } from "@/lib/business/current";
 import { getAnnouncementHistory } from "@/lib/announcements/queries";
+import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const SEGMENT_LABEL: Record<string, string> = {
   tumu: "Tüm müşterilerim",
@@ -32,38 +37,34 @@ export default async function DuyurularPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight text-dark-900">Duyurular</h1>
+        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+          Duyurular
+        </h1>
         <Link
           href="/panel/duyurular/yeni"
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600"
+          className={cn(buttonVariants({ variant: "default", shape: "rect", size: "sm" }))}
         >
           + Yeni Duyuru
         </Link>
       </div>
 
       {history.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-sm text-slate-500">Henüz duyuru göndermedin.</p>
-        </div>
+        <EmptyState icon={Megaphone} title="Henüz duyuru göndermedin" />
       ) : (
         <div className="space-y-3">
           {history.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div key={item.id} className="rounded-xl border border-border bg-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary-700">
-                    {CHANNEL_LABEL[item.channel] ?? item.channel}
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
-                    {SEGMENT_LABEL[item.target_segment] ?? item.target_segment}
-                  </span>
+                  <Badge variant="primary">{CHANNEL_LABEL[item.channel] ?? item.channel}</Badge>
+                  <Badge variant="neutral">{SEGMENT_LABEL[item.target_segment] ?? item.target_segment}</Badge>
                 </div>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-muted-foreground">
                   {item.sent_at ? formatDateTime(item.sent_at) : formatDateTime(item.created_at)}
                 </span>
               </div>
-              <p className="mt-2 line-clamp-2 text-sm text-dark-900">{item.content}</p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">
+              <p className="mt-2 line-clamp-2 text-sm text-ink-900">{item.content}</p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
                 {item.recipient_count} alıcı
               </p>
             </div>

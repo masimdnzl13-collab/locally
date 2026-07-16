@@ -4,16 +4,22 @@
 
 @layer base {
   :root {
-    --background: #fdfdfc;
-    --foreground: #0b3d4c;
-    --card: #ffffff;
-    --card-foreground: #0b3d4c;
-    --popover: #ffffff;
-    --popover-foreground: #0b3d4c;
-    --muted: #f4f5f6;
-    --muted-foreground: #5b636e;
-    --border: #e7e9eb;
-    --ring: #14a3b8;
+    /* Warm winter-coast ground: cream/ivory, never pure white, never gray.
+       Values are space-separated RGB triplets (not hex) so Tailwind's
+       `bg-background/50` etc. opacity modifiers can wrap them in
+       `rgb(var(--x) / <alpha-value>)` — see tailwind.config.ts. Any raw CSS
+       usage below must wrap these in rgb(...) too. */
+    --background: 251 246 236; /* #fbf6ec */
+    --foreground: 11 61 76; /* #0b3d4c */
+    --card: 255 253 248; /* #fffdf8 */
+    --card-foreground: 11 61 76; /* #0b3d4c */
+    --popover: 255 253 248; /* #fffdf8 */
+    --popover-foreground: 11 61 76; /* #0b3d4c */
+    --muted: 246 238 220; /* #f6eedc */
+    --muted-foreground: 111 98 73; /* #6f6249 */
+    --border: 225 216 200; /* #e1d8c8 */
+    --ring: 20 163 184; /* #14a3b8 */
+    --brick: 184 73 42; /* #b8492a */
 
     --radius-sm: 10px;
     --radius-md: 14px;
@@ -22,36 +28,46 @@
     --radius-2xl: 32px;
   }
 
+  /* "Evening" mode — the same brand, lamp-lit rather than daylit. Reskinned
+     off the petrol ink ramp, not a generic slate dark theme. */
   .dark {
-    --background: #0a0e11;
-    --foreground: #f2f4f5;
-    --card: #12171a;
-    --card-foreground: #f2f4f5;
-    --popover: #12171a;
-    --popover-foreground: #f2f4f5;
-    --muted: #1a2024;
-    --muted-foreground: #9aa4ac;
-    --border: #232a2f;
-    --ring: #43b2c4;
+    --background: 6 32 40; /* #062028 */
+    --foreground: 251 246 236; /* #fbf6ec */
+    --card: 11 61 76; /* #0b3d4c */
+    --card-foreground: 251 246 236; /* #fbf6ec */
+    --popover: 11 61 76; /* #0b3d4c */
+    --popover-foreground: 251 246 236; /* #fbf6ec */
+    --muted: 18 56 71; /* #123847 */
+    --muted-foreground: 201 188 164; /* #c9bca4 */
+    --border: 22 71 87; /* #164757 */
+    --ring: 255 179 92; /* #ffb35c */
+    --brick: 227 135 107; /* #e3876b */
   }
 
   * {
-    border-color: var(--border);
+    border-color: rgb(var(--border));
   }
 
   body {
-    color: var(--foreground);
-    background: var(--background);
+    color: rgb(var(--foreground));
+    background: rgb(var(--background));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
   }
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--ring) 30%, transparent);
-  color: var(--foreground);
+  background: rgb(var(--ring) / 0.3);
+  color: rgb(var(--foreground));
 }
 
 :focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid rgb(var(--ring));
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -64,11 +80,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: rgb(var(--border));
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
+  background: rgb(var(--muted-foreground));
 }
 
 @layer utilities {
@@ -77,7 +93,7 @@
   }
 
   .strike-price {
-    color: var(--muted-foreground);
+    color: rgb(var(--muted-foreground));
     @apply line-through decoration-2;
   }
 
@@ -89,10 +105,55 @@
     background: linear-gradient(
       100deg,
       transparent 30%,
-      color-mix(in srgb, var(--foreground) 6%, transparent) 50%,
+      rgb(var(--foreground) / 0.08) 50%,
       transparent 70%
     );
     background-size: 200% 100%;
+  }
+
+  /* Perforated tear-line: sits between a ticket's body and its stub.
+     The circular notches are punched using the page background color.
+     Pass `notchBg` on <TicketCard> as an "R G B" triplet (e.g. "6 32 40")
+     to match a non-default surface behind the card. */
+  .ticket-perforation {
+    position: relative;
+    border-top: 1px dashed rgb(var(--border));
+  }
+  .ticket-perforation::before,
+  .ticket-perforation::after {
+    content: "";
+    position: absolute;
+    top: -8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: rgb(var(--ticket-notch-bg, var(--background)));
+  }
+  .ticket-perforation::before {
+    left: -8px;
+  }
+  .ticket-perforation::after {
+    right: -8px;
+  }
+
+  /* Ink-stamp: an approval/verification seal, slightly rotated, double ring */
+  .stamp {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid currentColor;
+    border-radius: 999px;
+    transform: rotate(-7deg);
+    letter-spacing: 0.08em;
+  }
+  .stamp::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    opacity: 0.6;
   }
 }
 

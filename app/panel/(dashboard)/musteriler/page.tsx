@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getMyBusiness } from "@/lib/business/current";
 import { getCustomers } from "@/lib/customers/queries";
 import CustomersView from "@/components/panel/customers-view";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default async function PanelCustomersPage() {
   const business = await getMyBusiness();
@@ -12,10 +14,12 @@ export default async function PanelCustomersPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight text-dark-900">Müşteriler</h1>
+        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+          Müşteriler
+        </h1>
         <Link
           href="/panel/musteriler/yeni"
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600"
+          className={cn(buttonVariants({ variant: "default", shape: "rect", size: "sm" }))}
         >
           + Müşteri Ekle
         </Link>
@@ -23,7 +27,7 @@ export default async function PanelCustomersPage() {
 
       <CustomersView customers={customers} />
 
-      <p className="mt-8 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
+      <p className="mt-8 rounded-md bg-muted px-4 py-3 text-xs text-muted-foreground">
         🔒 Bu müşteri verileri yalnızca senin işletmene ait ve gizlidir. Veriler
         işletmeler arasında hiçbir şekilde paylaşılmaz.
       </p>

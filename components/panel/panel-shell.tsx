@@ -17,14 +17,14 @@ export default function PanelShell({
   const pathname = usePathname();
 
   return (
-    <div className="md:flex">
-      {/* Masaüstü: sol menü */}
-      <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white md:flex md:flex-col">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <span className="text-lg font-extrabold tracking-tight text-dark-900">
-            Locally <span className="text-primary-600">İşletme</span>
+    <div className="md:flex md:min-h-screen">
+      {/* Masaüstü: sol menü (ink workspace surface) */}
+      <aside className="hidden w-60 shrink-0 bg-ink-900 md:flex md:flex-col">
+        <div className="border-b border-white/10 px-5 py-4">
+          <span className="text-lg font-extrabold tracking-tight text-white">
+            Locally <span className="text-primary-300">İşletme</span>
           </span>
-          <p className="mt-1 truncate text-xs text-slate-400">{business.name}</p>
+          <p className="mt-1 truncate text-xs text-ink-300">{business.name}</p>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {panelNavItems.map((item) => {
@@ -35,36 +35,36 @@ export default function PanelShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                   active
-                    ? "bg-primary/10 text-primary-700"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-dark-900"
+                    ? "bg-white/10 text-white"
+                    : "text-ink-300 hover:bg-white/5 hover:text-white"
                 )}
               >
-                <Icon size={18} />
+                <Icon size={18} className={active ? "text-primary-300" : undefined} />
                 {item.label}
               </Link>
             );
           })}
         </nav>
-        <form action={signOutAction} className="border-t border-slate-100 p-3">
+        <form action={signOutAction} className="border-t border-white/10 p-3">
           <button
             type="submit"
-            className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-500 hover:bg-slate-50"
+            className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-ink-300 transition-colors hover:bg-white/5 hover:text-white"
           >
             Çıkış Yap
           </button>
         </form>
       </aside>
 
-      <div className="flex-1">
+      <div className="flex-1 bg-background">
         {/* Mobil üst bar */}
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-          <span className="font-extrabold tracking-tight text-dark-900">
-            Locally <span className="text-primary-600">İşletme</span>
+        <header className="flex items-center justify-between border-b border-border bg-ink-900 px-4 py-3 md:hidden">
+          <span className="font-extrabold tracking-tight text-white">
+            Locally <span className="text-primary-300">İşletme</span>
           </span>
           <form action={signOutAction}>
-            <button type="submit" className="text-xs font-medium text-slate-500">
+            <button type="submit" className="text-xs font-medium text-ink-300">
               Çıkış
             </button>
           </form>
@@ -73,7 +73,7 @@ export default function PanelShell({
         <main className="pb-20 md:pb-0">{children}</main>
 
         {/* Mobil: kaydırmalı alt sekmeler */}
-        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 overflow-x-auto border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 overflow-x-auto border-t border-border bg-card/95 backdrop-blur md:hidden">
           <div className="flex min-w-max">
             {panelNavItems.map((item) => {
               const active = pathname === item.href;
@@ -84,7 +84,7 @@ export default function PanelShell({
                   href={item.href}
                   className={cn(
                     "flex w-20 flex-col items-center gap-1 py-2.5 text-[10px] font-medium",
-                    active ? "text-primary-600" : "text-slate-400"
+                    active ? "text-primary-600" : "text-muted-foreground"
                   )}
                 >
                   <Icon size={20} strokeWidth={active ? 2.4 : 2} />

@@ -14,7 +14,7 @@ export default async function AdminBusinessesPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:px-8 md:py-8">
-      <h1 className="mb-6 text-xl font-extrabold tracking-tight text-dark-900">
+      <h1 className="mb-6 text-xl font-bold tracking-tight text-ink-900">
         İşletme Onayları
       </h1>
       <BusinessTabs pending={pending} approved={approved} suspended={suspended} />

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Badge } from "@/components/ui/badge";
 import { removeContentAction } from "@/lib/admin/actions";
 import type { ContentItem } from "@/lib/admin/queries";
 
@@ -22,14 +23,14 @@ function RemoveButton({ item }: { item: ContentItem }) {
   const [isPending, startTransition] = useTransition();
 
   if (item.removedByAdmin) {
-    return <span className="text-xs font-semibold text-red-600">Kaldırıldı</span>;
+    return <span className="text-xs font-semibold text-tile-600">Kaldırıldı</span>;
   }
 
   if (!confirming) {
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="text-xs font-semibold text-red-600 underline"
+        className="text-xs font-semibold text-tile-600 underline"
       >
         Kaldır
       </button>
@@ -51,11 +52,11 @@ function RemoveButton({ item }: { item: ContentItem }) {
       <button
         onClick={handleRemove}
         disabled={isPending}
-        className="font-bold text-red-600 disabled:opacity-60"
+        className="font-bold text-tile-600 disabled:opacity-60"
       >
         {isPending ? "..." : "Emin misin?"}
       </button>
-      <button onClick={() => setConfirming(false)} className="text-slate-400">
+      <button onClick={() => setConfirming(false)} className="text-muted-foreground">
         Vazgeç
       </button>
     </span>
@@ -69,24 +70,21 @@ export default function ContentModerationView({ items }: { items: ContentItem[] 
 
   return (
     <div>
-      <div className="mb-4 flex gap-2">
-        {(["tumu", "paket", "flas", "etkinlik"] as const).map((k) => (
-          <button
-            key={k}
-            onClick={() => setFilter(k)}
-            className={cn(
-              "rounded-full px-3.5 py-1.5 text-xs font-semibold",
-              filter === k ? "bg-primary text-white" : "bg-slate-100 text-slate-500"
-            )}
-          >
-            {k === "tumu" ? "Tümü" : KIND_LABEL[k]}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        className="mb-4 w-fit"
+        options={[
+          { value: "tumu", label: "Tümü" },
+          { value: "paket", label: KIND_LABEL.paket },
+          { value: "flas", label: KIND_LABEL.flas },
+          { value: "etkinlik", label: KIND_LABEL.etkinlik },
+        ]}
+        value={filter}
+        onChange={setFilter}
+      />
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-100 text-xs text-slate-400">
+          <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-2.5 font-medium">Tür</th>
               <th className="px-4 py-2.5 font-medium">İçerik</th>
@@ -96,25 +94,20 @@ export default function ContentModerationView({ items }: { items: ContentItem[] 
               <th className="px-4 py-2.5 font-medium"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {shown.map((item) => (
-              <tr key={`${item.kind}-${item.id}`} className="hover:bg-slate-50">
-                <td className="px-4 py-2.5 text-slate-500">{KIND_LABEL[item.kind]}</td>
-                <td className="max-w-[220px] truncate px-4 py-2.5 font-medium text-dark-900">
+              <tr key={`${item.kind}-${item.id}`} className="odd:bg-sand-50 hover:bg-muted">
+                <td className="px-4 py-2.5 text-muted-foreground">{KIND_LABEL[item.kind]}</td>
+                <td className="max-w-[220px] truncate px-4 py-2.5 font-medium text-ink-900">
                   {item.title}
                 </td>
-                <td className="px-4 py-2.5 text-slate-600">{item.businessName}</td>
+                <td className="px-4 py-2.5 text-foreground">{item.businessName}</td>
                 <td className="px-4 py-2.5">
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-xs font-bold",
-                      item.isActive ? "bg-primary/10 text-primary-700" : "bg-slate-100 text-slate-500"
-                    )}
-                  >
+                  <Badge variant={item.isActive ? "primary" : "neutral"}>
                     {item.isActive ? "Aktif" : "Pasif"}
-                  </span>
+                  </Badge>
                 </td>
-                <td className="px-4 py-2.5 text-xs text-slate-400">{formatDate(item.createdAt)}</td>
+                <td className="px-4 py-2.5 text-xs text-muted-foreground">{formatDate(item.createdAt)}</td>
                 <td className="px-4 py-2.5 text-right">
                   <RemoveButton item={item} />
                 </td>

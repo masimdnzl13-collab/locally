@@ -25,5 +25,9 @@ export default function IyzicoCheckoutEmbed({ formContent }: { formContent: stri
     });
   }, [formContent]);
 
-  return <div id="iyzipay-checkout-form" className="responsive" ref={containerRef} />;
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card p-2">
+      <div id="iyzipay-checkout-form" className="responsive" ref={containerRef} />
+    </div>
+  );
 }

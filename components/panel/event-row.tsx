@@ -16,11 +16,11 @@ function formatDateTime(iso: string) {
 
 function statusOf(event: PanelEvent) {
   if (event.removed_by_admin) {
-    return { label: "Admin Tarafından Kaldırıldı", cls: "bg-red-100 text-red-700" };
+    return { label: "Admin Tarafından Kaldırıldı", cls: "bg-tile-100 text-tile-700" };
   }
-  if (event.is_cancelled) return { label: "İptal Edildi", cls: "bg-red-50 text-red-600" };
+  if (event.is_cancelled) return { label: "İptal Edildi", cls: "bg-tile-50 text-tile-600" };
   if (new Date(event.event_at) < new Date()) {
-    return { label: "Geçmiş", cls: "bg-slate-100 text-slate-500" };
+    return { label: "Geçmiş", cls: "bg-sand-100 text-sepia-700" };
   }
   if (event.capacity !== null && event.ticket_count >= event.capacity) {
     return { label: "Kontenjan Doldu", cls: "bg-accent/10 text-accent-700" };
@@ -34,9 +34,9 @@ export default function EventRow({ event }: { event: PanelEvent }) {
   return (
     <Link
       href={`/panel/etkinlikler/${event.id}`}
-      className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm"
+      className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-sepia-300"
     >
-      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
         {event.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={event.image_url} alt={event.title} className="h-full w-full object-cover" />
@@ -47,13 +47,13 @@ export default function EventRow({ event }: { event: PanelEvent }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="truncate font-bold text-dark-900">{event.title}</h3>
+          <h3 className="truncate font-bold text-ink-900">{event.title}</h3>
           <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${status.cls}`}>
             {status.label}
           </span>
         </div>
-        <p className="mt-1 text-xs text-slate-400">{formatDateTime(event.event_at)}</p>
-        <p className="mt-0.5 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(event.event_at)}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
           {event.ticket_count} katılımcı{event.capacity !== null ? ` / ${event.capacity} kontenjan` : ""}{" "}
           · {event.is_paid ? formatTL(event.ticket_price ?? 0) : "Ücretsiz"}
         </p>

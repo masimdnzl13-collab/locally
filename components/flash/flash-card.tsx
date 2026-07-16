@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useCountdown } from "@/components/flash/use-countdown";
 import { reserveFlashDealAction } from "@/lib/flash-deals/actions";
+import { Button } from "@/components/ui/button";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { cn } from "@/lib/utils";
 import type { FlashDeal } from "@/lib/flash-deals/queries";
 
@@ -26,12 +28,21 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
   const full = remaining <= 0;
   const ratio = remaining / Math.max(deal.total_quota, 1);
   const urgency = full
-    ? "bg-slate-200 text-slate-500"
+    ? "bg-ink-800 text-sand-400"
     : ratio <= 0.25
-      ? "bg-red-100 text-red-700"
+      ? "bg-tile-500 text-white"
       : ratio <= 0.5
-        ? "bg-accent/15 text-accent-700"
-        : "bg-primary/10 text-primary-700";
+        ? "bg-accent-500 text-ink-950"
+        : "bg-primary-500/20 text-primary-200";
+
+  const totalMinutes = countdown.hours * 60 + countdown.minutes;
+  const timeCritical = totalMinutes < 5;
+  const timeUrgent = !timeCritical && totalMinutes < 15;
+  const countdownBadge = timeCritical
+    ? "bg-tile-500 text-white"
+    : timeUrgent
+      ? "bg-accent-500 text-ink-950"
+      : "bg-ink-950/80 text-sand-50";
 
   function handleReserve() {
     setError(null);
@@ -54,11 +65,11 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-opacity",
+        "overflow-hidden rounded-xl border border-ink-700 bg-ink-800 transition-opacity",
         full && "opacity-60"
       )}
     >
-      <div className="relative h-32 bg-slate-100">
+      <div className="relative h-32">
         {deal.business.cover_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -67,20 +78,25 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-4xl">🔥</div>
+          <CategoryIcon category={deal.business.category} className="h-full" />
         )}
-        <span className="absolute right-3 top-3 rounded-full bg-dark-950/80 px-2.5 py-1 text-xs font-bold text-white">
+        <span
+          className={cn(
+            "absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold",
+            countdownBadge
+          )}
+        >
           {countdown.label}
         </span>
       </div>
 
       <div className="p-4">
-        <p className="text-sm font-medium text-slate-500">
+        <p className="text-sm font-medium text-sand-300">
           {deal.business.name}
           {deal.business.district ? ` · ${deal.business.district}` : ""}
         </p>
-        <p className="mt-1 font-bold text-dark-900">{deal.offer_text}</p>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 font-semibold text-sand-50">{deal.offer_text}</p>
+        <p className="mt-1 text-xs text-sand-400">
           Geçerlilik: {formatWindow(deal.starts_at, deal.ends_at)}
         </p>
 
@@ -90,21 +106,23 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
           </span>
 
           {reserved ? (
-            <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary-700">
+            <span className="rounded-full border border-primary-500/40 bg-primary-500/15 px-3 py-1.5 text-xs font-bold text-primary-200">
               ✓ Yerin ayrıldı · {code}
             </span>
           ) : (
-            <button
+            <Button
               onClick={handleReserve}
               disabled={full || isPending}
-              className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-white disabled:bg-slate-200 disabled:text-slate-400"
+              variant="accent"
+              shape="pill"
+              size="sm"
             >
               {isPending ? "Bir saniye..." : full ? "Doldu" : "Yerimi Ayır"}
-            </button>
+            </Button>
           )}
         </div>
 
-        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-xs text-tile-400">{error}</p>}
       </div>
     </div>
   );

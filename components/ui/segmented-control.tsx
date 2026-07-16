@@ -22,7 +22,7 @@ export function SegmentedControl<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={cn("flex gap-1.5 overflow-x-auto", className)}>
+    <div className={cn("flex gap-1.5 overflow-x-auto rounded-full bg-muted p-1", className)}>
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -38,7 +38,7 @@ export function SegmentedControl<T extends string>({
             {active && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute inset-0 rounded-full bg-primary shadow-md shadow-primary/25"
+                className="absolute inset-0 rounded-full bg-primary"
                 transition={{ type: "spring", stiffness: 420, damping: 34 }}
               />
             )}

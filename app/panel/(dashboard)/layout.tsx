@@ -16,18 +16,18 @@ export default async function DashboardLayout({
 
   if (business.approval_status === "pending") {
     return (
-      <section className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-3xl">
+      <section className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
+        <div className="stamp mb-5 flex h-16 w-16 items-center justify-center text-3xl text-accent-700">
           ⏳
         </div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-dark-900">
+        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
           Başvurun inceleniyor
         </h1>
-        <p className="mt-3 max-w-sm text-balance text-sm text-slate-500">
+        <p className="mt-3 max-w-sm text-balance text-sm text-muted-foreground">
           {business.name} için başvurunu aldık, en kısa sürede onaylanacak.
         </p>
         <form action={signOutAction} className="mt-8">
-          <button type="submit" className="text-sm font-medium text-slate-400 underline">
+          <button type="submit" className="text-sm font-medium text-muted-foreground underline underline-offset-4">
             Çıkış Yap
           </button>
         </form>
@@ -37,18 +37,18 @@ export default async function DashboardLayout({
 
   if (business.approval_status === "rejected") {
     return (
-      <section className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-3xl">
+      <section className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
+        <div className="stamp mb-5 flex h-16 w-16 items-center justify-center text-3xl text-tile-600">
           ⚠️
         </div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-dark-900">
+        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
           Başvurun onaylanmadı
         </h1>
-        <p className="mt-3 max-w-sm text-balance text-sm text-slate-500">
+        <p className="mt-3 max-w-sm text-balance text-sm text-muted-foreground">
           Detaylar için bizimle iletişime geçebilirsin.
         </p>
         <form action={signOutAction} className="mt-8">
-          <button type="submit" className="text-sm font-medium text-slate-400 underline">
+          <button type="submit" className="text-sm font-medium text-muted-foreground underline underline-offset-4">
             Çıkış Yap
           </button>
         </form>

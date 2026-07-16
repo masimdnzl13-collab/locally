@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 import { IYZICO_ONBOARDING_LABELS, type Business } from "@/lib/types";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-const labelClass = "mb-1.5 block text-sm font-medium text-dark-900";
+  "w-full rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
+const labelClass = "mb-1.5 block text-sm font-medium text-ink-900";
 
 const STATUS_CLASS: Record<Business["iyzico_onboarding_status"], string> = {
-  not_started: "bg-slate-100 text-slate-500",
+  not_started: "bg-sand-100 text-sepia-700",
   pending: "bg-accent/10 text-accent-700",
   approved: "bg-primary/10 text-primary-700",
-  rejected: "bg-red-50 text-red-600",
+  rejected: "bg-tile-50 text-tile-600",
 };
 
 export default function PaymentAccountForm({ business }: { business: Business }) {
@@ -38,10 +38,10 @@ export default function PaymentAccountForm({ business }: { business: Business })
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
         <div>
-          <p className="text-sm font-bold text-dark-900">Kayıt Durumu</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-sm font-bold text-ink-900">Kayıt Durumu</p>
+          <p className="text-xs text-muted-foreground">
             Onaylanmadan paketlerin satışa kapalı kalır ve vitrinde &quot;yakında&quot; görünür.
           </p>
         </div>
@@ -56,15 +56,15 @@ export default function PaymentAccountForm({ business }: { business: Business })
       </div>
 
       {business.iyzico_onboarding_status === "rejected" && business.iyzico_reject_reason && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">
           Red gerekçesi: {business.iyzico_reject_reason}
         </p>
       )}
 
-      <form action={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      <form action={handleSubmit} className="space-y-4 rounded-xl border border-border bg-card p-5">
+        {error && <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">{error}</p>}
         {success && (
-          <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-700">
+          <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary-700">
             Kaydedildi.
           </p>
         )}
@@ -74,10 +74,10 @@ export default function PaymentAccountForm({ business }: { business: Business })
             type="button"
             onClick={() => setType("PERSONAL")}
             className={cn(
-              "flex-1 rounded-xl border px-4 py-2.5 text-sm font-semibold",
+              "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
               type === "PERSONAL"
                 ? "border-primary bg-primary/10 text-primary-700"
-                : "border-slate-200 text-slate-500"
+                : "border-border text-muted-foreground"
             )}
           >
             Şahıs
@@ -86,10 +86,10 @@ export default function PaymentAccountForm({ business }: { business: Business })
             type="button"
             onClick={() => setType("PRIVATE_COMPANY")}
             className={cn(
-              "flex-1 rounded-xl border px-4 py-2.5 text-sm font-semibold",
+              "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
               type === "PRIVATE_COMPANY"
                 ? "border-primary bg-primary/10 text-primary-700"
-                : "border-slate-200 text-slate-500"
+                : "border-border text-muted-foreground"
             )}
           >
             Şirket

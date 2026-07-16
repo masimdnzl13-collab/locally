@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import type { WaitlistEntry } from "@/lib/admin/queries";
 
 export default function WaitlistExportButton({ entries }: { entries: WaitlistEntry[] }) {
@@ -18,12 +19,8 @@ export default function WaitlistExportButton({ entries }: { entries: WaitlistEnt
   }
 
   return (
-    <button
-      onClick={handleExport}
-      disabled={entries.length === 0}
-      className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-    >
+    <Button onClick={handleExport} disabled={entries.length === 0} shape="rect" size="sm">
       CSV Olarak Dışa Aktar
-    </button>
+    </Button>
   );
 }
