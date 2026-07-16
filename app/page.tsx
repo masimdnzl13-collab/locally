@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { getDiscoverPackages, type DiscoverPackage } from "@/lib/packages/queries";
 import { getActiveFlashDeals } from "@/lib/flash-deals/queries";
 import { getUpcomingEventsForHome } from "@/lib/events/queries";
 import { getWaitlistCount } from "@/lib/waitlist/queries";
 import FounderWaitlistForm from "@/components/landing/founder-waitlist-form";
 import EventCard from "@/components/events/event-card";
+import FlashCard from "@/components/flash/flash-card";
 import { SearchBar } from "@/components/ui/search-bar";
 import { CategoryGrid } from "@/components/ui/category-grid";
 import { DealCard } from "@/components/ui/deal-card";
@@ -14,26 +14,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/motion/reveal";
 import { AnimatedCounter } from "@/components/motion/animated-counter";
 import type { BusinessCategory } from "@/lib/types";
-import { Ticket, Smartphone, Sun, Zap } from "lucide-react";
+import { Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const HOW_IT_WORKS = [
-  {
-    icon: Ticket,
-    title: "Paketini al",
-    description: "Bodrum'daki işletmelerden sana uygun paketi seç, güvenle satın al.",
-  },
-  {
-    icon: Smartphone,
-    title: "QR ile kullan",
-    description: "İşletmeye gittiğinde telefonundaki QR kodunu okut, hakkın anında düşsün.",
-  },
-  {
-    icon: Sun,
-    title: "Kışın tadını çıkar",
-    description: "Yazın turiste ayrılan keyfi, kasabanda sen keşfet.",
-  },
-];
 
 function byCategory(pkgs: DiscoverPackage[], category: BusinessCategory) {
   return pkgs.filter((p) => p.business.category === category);
@@ -42,6 +24,8 @@ function byCategory(pkgs: DiscoverPackage[], category: BusinessCategory) {
 function savingsPercent(p: DiscoverPackage) {
   return 1 - p.sale_price / p.summer_reference_price;
 }
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default async function HomePage() {
   const [packages, flashDeals, weekEvents, waitlistCount] = await Promise.all([
@@ -55,61 +39,85 @@ export default async function HomePage() {
   const recentlyAdded = packages.slice(0, 8); // getDiscoverPackages already orders by created_at desc
   const restaurants = byCategory(packages, "restoran").slice(0, 8);
   const cafes = byCategory(packages, "kafe").slice(0, 8);
+  const beachClubs = byCategory(packages, "beach_club").slice(0, 8);
   const experiences = byCategory(packages, "aktivite").slice(0, 8);
+  const now = Date.now();
+  const endingSoon = [...packages]
+    .filter((p) => {
+      const t = new Date(p.expires_at).getTime();
+      return t - now > 0 && t - now <= WEEK_MS;
+    })
+    .sort((a, b) => new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime())
+    .slice(0, 8);
   const waitlistProgress = Math.min(100, Math.round((waitlistCount / 500) * 100));
 
   return (
     <>
-      {/* Search-first hero — no giant illustration, real content starts immediately below */}
-      <section className="border-b border-border bg-card px-6 py-12 md:py-16">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-teal-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-discount-500" />
-            Bodrum · Sezon Dışı
-          </span>
-          <h1 className="mt-5 text-balance text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
-            Yerel işletmelerde <span className="font-serif italic text-teal-700">özel fırsatlar</span> keşfet
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-balance text-base text-muted-foreground md:text-lg">
-            Sezon dışında Bodrum&apos;un işletmelerini keşfet, yazın turiste ayrılan fiyatları kendine ayır.
-          </p>
-          <div className="mx-auto mt-8 max-w-xl">
-            <SearchBar size="lg" />
-          </div>
+      {/* Slim search row — no headline hero, real content starts immediately */}
+      <section className="border-b border-border bg-card px-4 py-4 md:px-10 md:py-5">
+        <div className="mx-auto max-w-7xl">
+          <SearchBar size="md" className="mx-auto max-w-2xl" />
         </div>
       </section>
 
-      <section className="px-6 py-6 md:px-10">
+      <section className="px-4 py-4 md:px-10">
         <div className="mx-auto max-w-7xl">
           <CategoryGrid />
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl divide-y divide-border px-6 md:px-10">
-        {trending.length > 0 && (
-          <Shelf title="Trend kampanyalar" href="/kesfet">
-            <ShelfGrid className="sm:grid-cols-2 lg:grid-cols-4">
-              {trending.map((pkg, i) => (
-                <div key={pkg.id} className={i === 0 ? "col-span-2 row-span-2" : undefined}>
-                  <DealCard pkg={pkg} variant={i === 0 ? "featured" : "compact"} className="h-full" />
-                </div>
+      <div className="mx-auto max-w-7xl divide-y divide-border px-4 md:px-10">
+        {/* Bugünün fırsatları: real flash deals when live, otherwise the highest real discounts — never empty placeholders */}
+        {(flashDeals.length > 0 || trending.length > 0) && (
+          <Shelf
+            title={
+              <span className="inline-flex items-center gap-2">
+                <Flame size={22} className="text-discount-500" />
+                Bugünün Fırsatları
+              </span>
+            }
+            href={flashDeals.length > 0 ? "/bu-aksam" : "/kesfet"}
+          >
+            {flashDeals.length > 0 ? (
+              <ShelfGrid className="sm:grid-cols-2 lg:grid-cols-4">
+                {flashDeals.slice(0, 8).map((deal) => (
+                  <FlashCard key={deal.id} deal={deal} />
+                ))}
+              </ShelfGrid>
+            ) : (
+              <ShelfGrid className="sm:grid-cols-2 lg:grid-cols-4">
+                {trending.map((pkg, i) => (
+                  <div key={pkg.id} className={i === 0 ? "col-span-2 row-span-2" : undefined}>
+                    <DealCard pkg={pkg} variant={i === 0 ? "featured" : "compact"} className="h-full" />
+                  </div>
+                ))}
+              </ShelfGrid>
+            )}
+          </Shelf>
+        )}
+
+        {endingSoon.length > 0 && (
+          <Shelf title="Bu Hafta Bitiyor" href="/kesfet">
+            <ShelfScroller>
+              {endingSoon.map((pkg) => (
+                <DealCard key={pkg.id} pkg={pkg} className="w-56 shrink-0" />
               ))}
-            </ShelfGrid>
+            </ShelfScroller>
           </Shelf>
         )}
 
         {recentlyAdded.length > 0 && (
-          <Shelf title="Yeni eklenenler" href="/kesfet">
+          <Shelf title="Son Eklenenler" href="/kesfet">
             <ShelfScroller>
               {recentlyAdded.map((pkg) => (
-                <DealCard key={pkg.id} pkg={pkg} className="w-64 shrink-0" />
+                <DealCard key={pkg.id} pkg={pkg} className="w-56 shrink-0" />
               ))}
             </ShelfScroller>
           </Shelf>
         )}
 
         {restaurants.length > 0 && (
-          <Shelf title="Popüler restoranlar" href="/kesfet?category=restoran">
+          <Shelf title="Popüler Restoranlar" href="/kesfet?category=restoran">
             <ShelfGrid>
               {restaurants.map((pkg) => (
                 <DealCard key={pkg.id} pkg={pkg} />
@@ -119,7 +127,7 @@ export default async function HomePage() {
         )}
 
         {cafes.length > 0 && (
-          <Shelf title="Popüler kafeler" href="/kesfet?category=kafe">
+          <Shelf title="Kafeler" href="/kesfet?category=kafe">
             <ShelfGrid>
               {cafes.map((pkg) => (
                 <DealCard key={pkg.id} pkg={pkg} />
@@ -128,8 +136,18 @@ export default async function HomePage() {
           </Shelf>
         )}
 
+        {beachClubs.length > 0 && (
+          <Shelf title="Beach Club" href="/kesfet?category=beach_club">
+            <ShelfGrid>
+              {beachClubs.map((pkg) => (
+                <DealCard key={pkg.id} pkg={pkg} />
+              ))}
+            </ShelfGrid>
+          </Shelf>
+        )}
+
         {experiences.length > 0 && (
-          <Shelf title="Deneyimler" href="/kesfet?category=aktivite">
+          <Shelf title="Aktiviteler" href="/kesfet?category=aktivite">
             <ShelfGrid>
               {experiences.map((pkg) => (
                 <DealCard key={pkg.id} pkg={pkg} />
@@ -138,29 +156,9 @@ export default async function HomePage() {
           </Shelf>
         )}
 
-        {flashDeals.length > 0 && (
-          <Shelf title="Bugünün fırsatları" href="/bu-aksam" hrefLabel="Bu akşama git">
-            <Link
-              href="/bu-aksam"
-              className="flex items-center gap-4 rounded-lg bg-navy-900 p-6 text-white transition-colors hover:bg-navy-800"
-            >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-discount-500">
-                <Zap size={20} className="text-white" fill="currentColor" />
-              </span>
-              <div className="flex-1">
-                <p className="font-semibold">
-                  {flashDeals.length} işletmede süreli flaş fırsat aktif
-                </p>
-                <p className="text-sm text-navy-200">Kontenjan dolmadan yakala</p>
-              </div>
-              <Badge variant="discount">Canlı</Badge>
-            </Link>
-          </Shelf>
-        )}
-
         {weekEvents.length > 0 && (
-          <Shelf title="Bu hafta etkinlikler" href="/etkinlikler">
-            <div className="space-y-3">
+          <Shelf title="Bu Hafta Etkinlikler" href="/etkinlikler">
+            <div className="space-y-3 py-1">
               {weekEvents.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
@@ -169,33 +167,8 @@ export default async function HomePage() {
         )}
       </div>
 
-      {/* Nasıl çalışır */}
-      <section className="border-y border-border bg-muted px-6 py-16 md:py-20">
-        <div className="mx-auto max-w-4xl">
-          <Reveal className="mb-12 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              Nasıl çalışır
-            </h2>
-          </Reveal>
-          <div className="grid gap-10 sm:grid-cols-3">
-            {HOW_IT_WORKS.map((step, i) => (
-              <Reveal key={step.title} delay={i * 0.1} className="text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-card text-teal-700">
-                  <step.icon className="h-5 w-5" strokeWidth={1.75} />
-                </div>
-                <p className="mb-1.5 text-xs font-bold tracking-wide text-teal-700">
-                  ADIM {i + 1}
-                </p>
-                <h3 className="mb-2 font-semibold text-foreground">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Kurucu 500 — real waitlist, real count */}
-      <section id="kurucu-500" className="px-6 py-16 md:py-20">
+      <section id="kurucu-500" className="px-4 py-14 md:px-10 md:py-16">
         <Reveal className="mx-auto max-w-lg rounded-xl border border-border bg-card p-8 text-center shadow-card sm:p-10">
           <Badge variant="discount" className="mx-auto">
             Kurucu 500
@@ -231,7 +204,7 @@ export default async function HomePage() {
       </section>
 
       {/* İşletmeler için çağrı */}
-      <section className="px-6 py-16 text-center md:py-20">
+      <section className="px-4 py-14 text-center md:px-10 md:py-16">
         <Reveal className="mx-auto max-w-lg">
           <h2 className="text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             İşletmeniz mi var? Kış sezonunu birlikte kazanalım

@@ -9,7 +9,7 @@ export function Shelf({
   children,
   className,
 }: {
-  title: string;
+  title: React.ReactNode;
   href?: string;
   hrefLabel?: string;
   children: React.ReactNode;
