@@ -16,7 +16,7 @@ export default function SubmitButton({
       type="submit"
       disabled={pending}
       className={cn(
-        "flex w-full items-center justify-center rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-600 disabled:opacity-60",
+        "flex w-full items-center justify-center rounded-md bg-navy-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-navy-800 disabled:opacity-60",
         className
       )}
     >

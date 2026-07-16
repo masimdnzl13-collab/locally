@@ -3,8 +3,22 @@ import { getDiscoverPackages } from "@/lib/packages/queries";
 import DiscoverView from "@/components/discover/discover-view";
 import FlashStripServer from "@/components/flash/flash-strip-server";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { BusinessCategory } from "@/lib/types";
 
-export default async function KesfetPage() {
+const VALID_CATEGORIES: BusinessCategory[] = [
+  "restoran",
+  "kafe",
+  "otel",
+  "beach_club",
+  "aktivite",
+  "diger",
+];
+
+export default async function KesfetPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; category?: string };
+}) {
   const packages = await getDiscoverPackages();
 
   if (packages.length === 0) {
@@ -23,10 +37,20 @@ export default async function KesfetPage() {
     );
   }
 
+  const initialCategory = VALID_CATEGORIES.includes(
+    searchParams.category as BusinessCategory
+  )
+    ? (searchParams.category as BusinessCategory)
+    : "tumu";
+
   return (
     <div>
       <FlashStripServer />
-      <DiscoverView packages={packages} />
+      <DiscoverView
+        packages={packages}
+        initialQuery={searchParams.q ?? ""}
+        initialCategory={initialCategory}
+      />
     </div>
   );
 }

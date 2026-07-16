@@ -41,7 +41,7 @@ export default function BusinessTabs({
       {shown.length === 0 ? (
         <EmptyState icon={Building2} title="Bu kategoride işletme yok" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -53,9 +53,9 @@ export default function BusinessTabs({
             </thead>
             <tbody className="divide-y divide-border">
               {shown.map((b) => (
-                <tr key={b.id} className="odd:bg-sand-50 hover:bg-muted">
+                <tr key={b.id} className="odd:bg-muted/60 hover:bg-muted">
                   <td className="px-4 py-2.5">
-                    <Link href={`/admin/isletmeler/${b.id}`} className="font-semibold text-primary-700">
+                    <Link href={`/admin/isletmeler/${b.id}`} className="font-semibold text-teal-700 hover:underline">
                       {b.name}
                     </Link>
                     <p className="text-xs text-muted-foreground">

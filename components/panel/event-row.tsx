@@ -16,16 +16,16 @@ function formatDateTime(iso: string) {
 
 function statusOf(event: PanelEvent) {
   if (event.removed_by_admin) {
-    return { label: "Admin Tarafından Kaldırıldı", cls: "bg-tile-100 text-tile-700" };
+    return { label: "Admin Tarafından Kaldırıldı", cls: "bg-danger-100 text-danger-700" };
   }
-  if (event.is_cancelled) return { label: "İptal Edildi", cls: "bg-tile-50 text-tile-600" };
+  if (event.is_cancelled) return { label: "İptal Edildi", cls: "bg-danger-50 text-danger-600" };
   if (new Date(event.event_at) < new Date()) {
-    return { label: "Geçmiş", cls: "bg-sand-100 text-sepia-700" };
+    return { label: "Geçmiş", cls: "bg-stone-100 text-stone-700" };
   }
   if (event.capacity !== null && event.ticket_count >= event.capacity) {
-    return { label: "Kontenjan Doldu", cls: "bg-accent/10 text-accent-700" };
+    return { label: "Kontenjan Doldu", cls: "bg-discount-50 text-discount-700" };
   }
-  return { label: "Yaklaşıyor", cls: "bg-primary/10 text-primary-700" };
+  return { label: "Yaklaşıyor", cls: "bg-teal-50 text-teal-700" };
 }
 
 export default function EventRow({ event }: { event: PanelEvent }) {
@@ -34,7 +34,7 @@ export default function EventRow({ event }: { event: PanelEvent }) {
   return (
     <Link
       href={`/panel/etkinlikler/${event.id}`}
-      className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-sepia-300"
+      className="flex items-center gap-4 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover"
     >
       <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
         {event.image_url ? (
@@ -47,7 +47,7 @@ export default function EventRow({ event }: { event: PanelEvent }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="truncate font-bold text-ink-900">{event.title}</h3>
+          <h3 className="truncate font-bold text-foreground">{event.title}</h3>
           <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${status.cls}`}>
             {status.label}
           </span>

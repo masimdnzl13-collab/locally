@@ -1,13 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, CloudSun } from "lucide-react";
+import { ChevronDown, CloudSun, Search } from "lucide-react";
 import { BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/lib/types";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Scribble } from "@/components/ui/scribble";
+import { DealCard } from "@/components/ui/deal-card";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
-import PackageCard from "@/components/discover/package-card";
 import type { DiscoverPackage } from "@/lib/packages/queries";
 
 const CATEGORY_FILTERS: { value: BusinessCategory | "tumu"; label: string }[] = [
@@ -19,8 +18,17 @@ const CATEGORY_FILTERS: { value: BusinessCategory | "tumu"; label: string }[] = 
   { value: "aktivite", label: BUSINESS_CATEGORY_LABELS.aktivite },
 ];
 
-export default function DiscoverView({ packages }: { packages: DiscoverPackage[] }) {
-  const [category, setCategory] = useState<BusinessCategory | "tumu">("tumu");
+export default function DiscoverView({
+  packages,
+  initialQuery = "",
+  initialCategory = "tumu",
+}: {
+  packages: DiscoverPackage[];
+  initialQuery?: string;
+  initialCategory?: BusinessCategory | "tumu";
+}) {
+  const [category, setCategory] = useState<BusinessCategory | "tumu">(initialCategory);
+  const [query, setQuery] = useState(initialQuery);
 
   const cities = useMemo(() => {
     const set = new Set(packages.map((p) => p.business.city));
@@ -28,31 +36,52 @@ export default function DiscoverView({ packages }: { packages: DiscoverPackage[]
   }, [packages]);
   const [city, setCity] = useState(cities[0]);
 
-  const filtered = packages.filter(
-    (p) =>
-      p.business.city === city &&
-      (category === "tumu" || p.business.category === category)
-  );
+  const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
+
+  const filtered = packages.filter((p) => {
+    if (p.business.city !== city) return false;
+    if (category !== "tumu" && p.business.category !== category) return false;
+    if (!normalizedQuery) return true;
+    return (
+      p.title.toLocaleLowerCase("tr-TR").includes(normalizedQuery) ||
+      p.business.name.toLocaleLowerCase("tr-TR").includes(normalizedQuery)
+    );
+  });
 
   return (
     <div>
-      <div className="sticky top-0 z-30 space-y-3 border-b border-border/70 bg-background/90 px-4 pb-3 pt-4 backdrop-blur-xl md:top-[57px] md:px-6">
-        <div className="relative w-full sm:w-auto sm:max-w-[220px]">
-          <select
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="w-full appearance-none rounded-xl border border-border bg-card px-4 py-2.5 pr-9 text-sm font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {cities.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            size={16}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
+      <div className="sticky top-0 z-30 space-y-3 border-b border-border bg-background/95 px-4 pb-3 pt-4 backdrop-blur-md md:top-[57px] md:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex h-11 flex-1 items-center rounded-input border border-border bg-card px-3.5 transition-shadow focus-within:ring-2 focus-within:ring-ring">
+            <Search size={17} className="shrink-0 text-muted-foreground" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="İşletme veya kampanya ara"
+              aria-label="İşletme veya kampanya ara"
+              className="w-full bg-transparent px-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+            />
+          </div>
+
+          <div className="relative w-full sm:w-auto sm:max-w-[200px]">
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              aria-label="Şehir seç"
+              className="w-full appearance-none rounded-input border border-border bg-card px-4 py-2.5 pr-9 text-sm font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {cities.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={16}
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+          </div>
         </div>
 
         <SegmentedControl
@@ -65,12 +94,9 @@ export default function DiscoverView({ packages }: { packages: DiscoverPackage[]
       </div>
 
       <div className="px-4 py-6 md:px-6">
-        <div className="mb-5">
-          <h2 className="font-display text-xl font-medium text-foreground">
-            Bugünün fırsatları
-          </h2>
-          <Scribble className="mt-1 text-primary-500" />
-        </div>
+        <h1 className="mb-5 text-xl font-semibold tracking-tight text-foreground">
+          Bugünün fırsatları
+        </h1>
 
         {filtered.length === 0 ? (
           <EmptyState
@@ -84,11 +110,8 @@ export default function DiscoverView({ packages }: { packages: DiscoverPackage[]
             {filtered.map((pkg, i) => {
               const featured = i % 5 === 0;
               return (
-                <StaggerItem
-                  key={pkg.id}
-                  className={featured ? "sm:col-span-2" : undefined}
-                >
-                  <PackageCard pkg={pkg} featured={featured} />
+                <StaggerItem key={pkg.id} className={featured ? "sm:col-span-2" : undefined}>
+                  <DealCard pkg={pkg} variant={featured ? "featured" : "compact"} />
                 </StaggerItem>
               );
             })}

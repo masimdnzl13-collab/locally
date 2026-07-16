@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { panelNavItems } from "@/lib/panel-nav-items";
 import { signOutAction } from "@/lib/auth/actions";
@@ -18,13 +19,13 @@ export default function PanelShell({
 
   return (
     <div className="md:flex md:min-h-screen">
-      {/* Masaüstü: sol menü (ink workspace surface) */}
-      <aside className="hidden w-60 shrink-0 bg-ink-900 md:flex md:flex-col">
+      {/* Masaüstü: sol menü (navy workspace surface) */}
+      <aside className="hidden w-60 shrink-0 bg-navy-900 md:flex md:flex-col">
         <div className="border-b border-white/10 px-5 py-4">
           <span className="text-lg font-extrabold tracking-tight text-white">
-            Locally <span className="text-primary-300">İşletme</span>
+            Locally <span className="text-teal-300">İşletme</span>
           </span>
-          <p className="mt-1 truncate text-xs text-ink-300">{business.name}</p>
+          <p className="mt-1 truncate text-xs text-navy-300">{business.name}</p>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {panelNavItems.map((item) => {
@@ -38,10 +39,10 @@ export default function PanelShell({
                   "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                   active
                     ? "bg-white/10 text-white"
-                    : "text-ink-300 hover:bg-white/5 hover:text-white"
+                    : "text-navy-300 hover:bg-white/5 hover:text-white"
                 )}
               >
-                <Icon size={18} className={active ? "text-primary-300" : undefined} />
+                <Icon size={18} className={active ? "text-teal-300" : undefined} />
                 {item.label}
               </Link>
             );
@@ -50,8 +51,9 @@ export default function PanelShell({
         <form action={signOutAction} className="border-t border-white/10 p-3">
           <button
             type="submit"
-            className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-ink-300 transition-colors hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium text-navy-300 transition-colors hover:bg-white/5 hover:text-white"
           >
+            <LogOut size={18} />
             Çıkış Yap
           </button>
         </form>
@@ -59,12 +61,12 @@ export default function PanelShell({
 
       <div className="flex-1 bg-background">
         {/* Mobil üst bar */}
-        <header className="flex items-center justify-between border-b border-border bg-ink-900 px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between border-b border-border bg-navy-900 px-4 py-3 md:hidden">
           <span className="font-extrabold tracking-tight text-white">
-            Locally <span className="text-primary-300">İşletme</span>
+            Locally <span className="text-teal-300">İşletme</span>
           </span>
           <form action={signOutAction}>
-            <button type="submit" className="text-xs font-medium text-ink-300">
+            <button type="submit" className="text-xs font-medium text-navy-300">
               Çıkış
             </button>
           </form>
@@ -84,7 +86,7 @@ export default function PanelShell({
                   href={item.href}
                   className={cn(
                     "flex w-20 flex-col items-center gap-1 py-2.5 text-[10px] font-medium",
-                    active ? "text-primary-600" : "text-muted-foreground"
+                    active ? "text-teal-600" : "text-muted-foreground"
                   )}
                 >
                   <Icon size={20} strokeWidth={active ? 2.4 : 2} />

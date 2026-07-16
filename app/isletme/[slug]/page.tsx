@@ -1,16 +1,15 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { MapPin, AtSign, Ticket, CalendarClock } from "lucide-react";
-import { getBusinessBySlug } from "@/lib/business/queries";
+import { getBusinessBySlug, type BusinessProfile, type BusinessProfilePackage } from "@/lib/business/queries";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/types";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/ui/category-icon";
-import { TicketCard } from "@/components/ui/ticket-card";
+import { DealCard } from "@/components/ui/deal-card";
+import { Shelf, ShelfGrid } from "@/components/ui/shelf";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Scribble } from "@/components/ui/scribble";
 import { Reveal } from "@/components/motion/reveal";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
+import type { DiscoverPackage } from "@/lib/packages/queries";
 
 function formatTL(n: number) {
   return n.toLocaleString("tr-TR") + "₺";
@@ -23,6 +22,29 @@ function formatEventDate(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function toDiscoverPackage(
+  pkg: BusinessProfilePackage,
+  business: BusinessProfile
+): DiscoverPackage {
+  return {
+    id: pkg.id,
+    title: pkg.title,
+    sale_price: pkg.sale_price,
+    summer_reference_price: pkg.summer_reference_price,
+    usage_count: pkg.usage_count,
+    expires_at: "",
+    purchasable: true,
+    business: {
+      name: business.name,
+      slug: business.slug,
+      district: business.district,
+      city: business.city,
+      category: business.category,
+      cover_url: business.cover_url,
+    },
+  };
 }
 
 export default async function BusinessProfilePage({
@@ -54,15 +76,14 @@ export default async function BusinessProfilePage({
         ) : (
           <CategoryIcon category={business.category} className="h-full" iconClassName="h-14 w-14" />
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/70 via-ink-950/10 to-transparent" />
       </div>
 
       <div className="mx-auto max-w-3xl px-6 py-6">
         <Reveal>
-          <span className="text-xs font-semibold uppercase tracking-wide text-primary-600">
+          <span className="text-xs font-semibold uppercase tracking-wide text-teal-700">
             {BUSINESS_CATEGORY_LABELS[business.category]}
           </span>
-          <h1 className="mt-1 font-display text-3xl font-medium tracking-tight text-foreground">
+          <h1 className="mt-1 font-serif text-3xl italic tracking-tight text-foreground">
             {business.name}
           </h1>
           {business.description && (
@@ -93,11 +114,7 @@ export default async function BusinessProfilePage({
           </div>
         </Reveal>
 
-        <section className="mt-12">
-          <Reveal>
-            <h2 className="text-lg font-semibold text-foreground">Paketler</h2>
-            <Scribble className="mt-1 mb-4 text-primary-500" />
-          </Reveal>
+        <Shelf title="Paketler" className="mt-6">
           {business.packages.length === 0 ? (
             <EmptyState
               icon={Ticket}
@@ -105,49 +122,17 @@ export default async function BusinessProfilePage({
               description="Yakında eklenecek — daha sonra tekrar bak."
             />
           ) : (
-            <StaggerContainer className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {business.packages.map((pkg) => {
-                const savings = Math.round(
-                  (1 - pkg.sale_price / pkg.summer_reference_price) * 100
-                );
-                return (
-                  <StaggerItem key={pkg.id}>
-                    <Link href={`/paket/${pkg.id}`} className="block h-full">
-                      <TicketCard
-                        className="h-full transition-all duration-300 hover:-translate-y-1 hover:border-sepia-300"
-                        stub={
-                          <>
-                            <div>
-                              <p className="strike-price text-xs">
-                                Yaz: {formatTL(pkg.summer_reference_price)}
-                              </p>
-                              <p className="font-display text-xl font-semibold text-accent-500">
-                                Bugün: {formatTL(pkg.sale_price)}
-                              </p>
-                            </div>
-                            <Badge variant="accent">%{savings}</Badge>
-                          </>
-                        }
-                      >
-                        <Badge variant="neutral" className="mb-1 self-start">
-                          {pkg.usage_count} kullanım
-                        </Badge>
-                        <h3 className="font-semibold text-foreground">{pkg.title}</h3>
-                      </TicketCard>
-                    </Link>
-                  </StaggerItem>
-                );
-              })}
-            </StaggerContainer>
+            <ShelfGrid className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
+              {business.packages.map((pkg) => (
+                <DealCard key={pkg.id} pkg={toDiscoverPackage(pkg, business)} />
+              ))}
+            </ShelfGrid>
           )}
-        </section>
+        </Shelf>
 
-        <section className="mt-12">
+        <section className="mt-4">
           <Reveal>
-            <h2 className="text-lg font-semibold text-foreground">
-              Yaklaşan Etkinlikler
-            </h2>
-            <Scribble className="mt-1 mb-4 text-primary-500" />
+            <h2 className="mb-4 text-lg font-semibold text-foreground">Yaklaşan Etkinlikler</h2>
           </Reveal>
           {business.events.length === 0 ? (
             <EmptyState
@@ -166,7 +151,7 @@ export default async function BusinessProfilePage({
                         {formatEventDate(event.event_at)}
                       </p>
                     </div>
-                    <span className="text-sm font-semibold text-primary-600">
+                    <span className="text-sm font-semibold text-teal-700">
                       {event.is_paid ? formatTL(event.ticket_price ?? 0) : "Ücretsiz"}
                     </span>
                   </Card>

@@ -38,7 +38,7 @@ export function SegmentedControl<T extends string>({
             {active && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute inset-0 rounded-full bg-primary"
+                className="absolute inset-0 rounded-full bg-navy-900"
                 transition={{ type: "spring", stiffness: 420, damping: 34 }}
               />
             )}

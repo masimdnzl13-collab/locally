@@ -2,13 +2,15 @@ import { UtensilsCrossed, Coffee, BedDouble, Umbrella, Sparkles, Compass, type L
 import type { BusinessCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const CATEGORY_STYLE: Record<BusinessCategory, { icon: LucideIcon; gradient: string }> = {
-  restoran: { icon: UtensilsCrossed, gradient: "from-ink-700 to-ink-950" },
-  kafe: { icon: Coffee, gradient: "from-primary-500 to-primary-800" },
-  otel: { icon: BedDouble, gradient: "from-ink-500 to-ink-900" },
-  beach_club: { icon: Umbrella, gradient: "from-accent-400 to-accent-700" },
-  aktivite: { icon: Compass, gradient: "from-primary-400 to-ink-700" },
-  diger: { icon: Sparkles, gradient: "from-sepia-500 to-sepia-800" },
+// Solid fills only — no gradients, per the design system's "no random
+// gradients" rule. Used as a placeholder tile when a business has no photo.
+const CATEGORY_STYLE: Record<BusinessCategory, { icon: LucideIcon; fill: string }> = {
+  restoran: { icon: UtensilsCrossed, fill: "bg-navy-800" },
+  kafe: { icon: Coffee, fill: "bg-teal-700" },
+  otel: { icon: BedDouble, fill: "bg-navy-600" },
+  beach_club: { icon: Umbrella, fill: "bg-teal-600" },
+  aktivite: { icon: Compass, fill: "bg-navy-700" },
+  diger: { icon: Sparkles, fill: "bg-stone-600" },
 };
 
 export function CategoryIcon({
@@ -20,16 +22,10 @@ export function CategoryIcon({
   className?: string;
   iconClassName?: string;
 }) {
-  const { icon: Icon, gradient } = CATEGORY_STYLE[category] ?? CATEGORY_STYLE.diger;
+  const { icon: Icon, fill } = CATEGORY_STYLE[category] ?? CATEGORY_STYLE.diger;
 
   return (
-    <div
-      className={cn(
-        "flex items-center justify-center bg-gradient-to-br",
-        gradient,
-        className
-      )}
-    >
+    <div className={cn("flex items-center justify-center", fill, className)}>
       <Icon className={cn("h-10 w-10 text-white/90", iconClassName)} strokeWidth={1.5} />
     </div>
   );

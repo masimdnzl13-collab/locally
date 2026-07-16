@@ -32,7 +32,7 @@ export default function DayEventsView({ events }: { events: EventListItem[] }) {
 
   return (
     <div className="px-4 py-6 md:px-6">
-      <h1 className="mb-4 font-display text-2xl font-medium tracking-tight text-foreground">
+      <h1 className="mb-4 text-2xl font-semibold tracking-tight text-foreground">
         Etkinlikler
       </h1>
 
@@ -42,10 +42,10 @@ export default function DayEventsView({ events }: { events: EventListItem[] }) {
             key={d.key}
             onClick={() => setSelected(d.key)}
             className={cn(
-              "flex shrink-0 flex-col items-center rounded-2xl border px-4 py-2 text-sm font-medium transition-colors",
+              "flex shrink-0 flex-col items-center rounded-xl border px-4 py-2 text-sm font-medium transition-colors",
               selected === d.key
-                ? "border-primary bg-primary text-white"
-                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                ? "border-navy-900 bg-navy-900 text-white"
+                : "border-border text-muted-foreground hover:border-teal-400/50 hover:text-foreground"
             )}
           >
             <span>{d.label}</span>

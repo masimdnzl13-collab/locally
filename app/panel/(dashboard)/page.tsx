@@ -43,11 +43,11 @@ export default async function PanelDashboardPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">Hoş geldin,</p>
-          <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {business.name}
           </h1>
         </div>
-        <Badge variant="primary">
+        <Badge variant="teal">
           ✓ Yayında · {BUSINESS_CATEGORY_LABELS[business.category]}
         </Badge>
       </div>
@@ -57,7 +57,7 @@ export default async function PanelDashboardPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground">Bu ay satış</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {metrics.monthlySalesCount}
             </p>
             <p className="text-xs text-muted-foreground/80">{formatTL(metrics.monthlySalesAmount)}</p>
@@ -66,7 +66,7 @@ export default async function PanelDashboardPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground">Kullanılan hak</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {metrics.totalRedemptions}
             </p>
             <p className="text-xs text-muted-foreground/80">toplam QR okutma</p>
@@ -75,7 +75,7 @@ export default async function PanelDashboardPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground">Aktif paket</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {metrics.activePackagesCount}
             </p>
             <p className="text-xs text-muted-foreground/80">satışta</p>
@@ -84,10 +84,10 @@ export default async function PanelDashboardPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground">Bu akşam</p>
-            <p className="mt-1 font-sans text-xl font-bold text-ink-900">
+            <p className="mt-1 text-xl font-bold text-foreground">
               {metrics.hasActiveFlashToday ? "Flaş var 🔥" : "Flaş yok"}
             </p>
-            <Link href="/panel/bu-aksam" className="text-xs font-semibold text-primary-600 hover:underline">
+            <Link href="/panel/bu-aksam" className="text-xs font-semibold text-teal-700 hover:underline">
               {metrics.hasActiveFlashToday ? "Görüntüle" : "Oluştur"}
             </Link>
           </CardContent>
@@ -97,30 +97,30 @@ export default async function PanelDashboardPage() {
       {/* Haftalık QR grafiği */}
       <Card className="mt-6">
         <CardContent className="p-5">
-          <h2 className="mb-4 text-sm font-bold text-ink-900">Son 7 gün QR okutma</h2>
+          <h2 className="mb-4 text-sm font-bold text-foreground">Son 7 gün QR okutma</h2>
           <WeeklyBarChart data={metrics.dailyRedemptions} />
         </CardContent>
       </Card>
 
       {/* Hızlı işlemler */}
       <div className="mt-6">
-        <h2 className="mb-3 text-sm font-bold text-ink-900">Hızlı İşlemler</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Hızlı İşlemler</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Link
             href="/panel/bu-aksam"
-            className={cn(buttonVariants({ variant: "accent", shape: "rect", size: "lg" }), "w-full")}
+            className={cn(buttonVariants({ variant: "teal", size: "lg" }), "w-full")}
           >
             🔥 Bu Akşam Flaşı Oluştur
           </Link>
           <Link
             href="/panel/paketler/yeni"
-            className={cn(buttonVariants({ variant: "outline", shape: "rect", size: "lg" }), "w-full")}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
           >
             + Yeni Paket Ekle
           </Link>
           <Link
             href="/panel/duyurular"
-            className={cn(buttonVariants({ variant: "outline", shape: "rect", size: "lg" }), "w-full")}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
           >
             📣 Duyuru Gönder
           </Link>
@@ -130,7 +130,7 @@ export default async function PanelDashboardPage() {
       {/* Son hareketler */}
       <Card className="mt-6">
         <CardHeader className="pb-2">
-          <h2 className="text-sm font-bold text-ink-900">Son Hareketler</h2>
+          <h2 className="text-sm font-bold text-foreground">Son Hareketler</h2>
         </CardHeader>
         <CardContent>
           {activity.length === 0 ? (
@@ -142,7 +142,7 @@ export default async function PanelDashboardPage() {
               {activity.map((item) => (
                 <li key={item.id} className="flex items-center gap-3 py-2.5 text-sm">
                   <span className="text-lg">{ACTIVITY_ICON[item.type]}</span>
-                  <span className="flex-1 text-ink-900">{item.label}</span>
+                  <span className="flex-1 text-foreground">{item.label}</span>
                   <span className="text-xs text-muted-foreground">{formatRelative(item.at)}</span>
                 </li>
               ))}

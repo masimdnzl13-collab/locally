@@ -17,10 +17,10 @@ export default async function DashboardLayout({
   if (business.approval_status === "pending") {
     return (
       <section className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
-        <div className="stamp mb-5 flex h-16 w-16 items-center justify-center text-3xl text-accent-700">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-discount-50 text-3xl text-discount-700">
           ⏳
         </div>
-        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Başvurun inceleniyor
         </h1>
         <p className="mt-3 max-w-sm text-balance text-sm text-muted-foreground">
@@ -38,10 +38,10 @@ export default async function DashboardLayout({
   if (business.approval_status === "rejected") {
     return (
       <section className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
-        <div className="stamp mb-5 flex h-16 w-16 items-center justify-center text-3xl text-tile-600">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-danger-50 text-3xl text-danger-700">
           ⚠️
         </div>
-        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Başvurun onaylanmadı
         </h1>
         <p className="mt-3 max-w-sm text-balance text-sm text-muted-foreground">

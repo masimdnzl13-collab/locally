@@ -23,14 +23,14 @@ function RemoveButton({ item }: { item: ContentItem }) {
   const [isPending, startTransition] = useTransition();
 
   if (item.removedByAdmin) {
-    return <span className="text-xs font-semibold text-tile-600">Kaldırıldı</span>;
+    return <span className="text-xs font-semibold text-danger-600">Kaldırıldı</span>;
   }
 
   if (!confirming) {
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="text-xs font-semibold text-tile-600 underline"
+        className="text-xs font-semibold text-danger-600 underline underline-offset-2"
       >
         Kaldır
       </button>
@@ -52,7 +52,7 @@ function RemoveButton({ item }: { item: ContentItem }) {
       <button
         onClick={handleRemove}
         disabled={isPending}
-        className="font-bold text-tile-600 disabled:opacity-60"
+        className="font-bold text-danger-600 disabled:opacity-60"
       >
         {isPending ? "..." : "Emin misin?"}
       </button>
@@ -82,7 +82,7 @@ export default function ContentModerationView({ items }: { items: ContentItem[] 
         onChange={setFilter}
       />
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-card">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -96,14 +96,14 @@ export default function ContentModerationView({ items }: { items: ContentItem[] 
           </thead>
           <tbody className="divide-y divide-border">
             {shown.map((item) => (
-              <tr key={`${item.kind}-${item.id}`} className="odd:bg-sand-50 hover:bg-muted">
+              <tr key={`${item.kind}-${item.id}`} className="odd:bg-muted/60 hover:bg-muted">
                 <td className="px-4 py-2.5 text-muted-foreground">{KIND_LABEL[item.kind]}</td>
-                <td className="max-w-[220px] truncate px-4 py-2.5 font-medium text-ink-900">
+                <td className="max-w-[220px] truncate px-4 py-2.5 font-medium text-navy-900">
                   {item.title}
                 </td>
                 <td className="px-4 py-2.5 text-foreground">{item.businessName}</td>
                 <td className="px-4 py-2.5">
-                  <Badge variant={item.isActive ? "primary" : "neutral"}>
+                  <Badge variant={item.isActive ? "teal" : "neutral"}>
                     {item.isActive ? "Aktif" : "Pasif"}
                   </Badge>
                 </td>

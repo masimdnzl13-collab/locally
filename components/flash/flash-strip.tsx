@@ -17,16 +17,16 @@ export default function FlashStrip({
   return (
     <Link
       href="/bu-aksam"
-      className="flex items-center justify-between gap-3 bg-gradient-to-r from-accent-400 to-accent-600 px-4 py-2.5 text-sm font-semibold text-ink-950 transition-opacity hover:opacity-95"
+      className="flex items-center justify-between gap-3 bg-discount-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-discount-600"
     >
       <span className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink-950/40" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-ink-950" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/50" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
         </span>
         Bodrum&apos;da bu akşam {count} flaş fırsat var
       </span>
-      <span className="whitespace-nowrap rounded-full bg-ink-950/10 px-2.5 py-1 text-xs">
+      <span className="whitespace-nowrap rounded-full bg-white/20 px-2.5 py-1 text-xs">
         {countdown.label}
       </span>
     </Link>

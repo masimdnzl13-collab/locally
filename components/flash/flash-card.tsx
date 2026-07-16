@@ -28,21 +28,21 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
   const full = remaining <= 0;
   const ratio = remaining / Math.max(deal.total_quota, 1);
   const urgency = full
-    ? "bg-ink-800 text-sand-400"
+    ? "bg-navy-800 text-stone-400"
     : ratio <= 0.25
-      ? "bg-tile-500 text-white"
+      ? "bg-danger-500 text-white"
       : ratio <= 0.5
-        ? "bg-accent-500 text-ink-950"
-        : "bg-primary-500/20 text-primary-200";
+        ? "bg-discount-500 text-white"
+        : "bg-teal-500/20 text-teal-200";
 
   const totalMinutes = countdown.hours * 60 + countdown.minutes;
   const timeCritical = totalMinutes < 5;
   const timeUrgent = !timeCritical && totalMinutes < 15;
   const countdownBadge = timeCritical
-    ? "bg-tile-500 text-white"
+    ? "bg-danger-500 text-white"
     : timeUrgent
-      ? "bg-accent-500 text-ink-950"
-      : "bg-ink-950/80 text-sand-50";
+      ? "bg-discount-500 text-white"
+      : "bg-navy-950/80 text-white";
 
   function handleReserve() {
     setError(null);
@@ -65,7 +65,7 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-ink-700 bg-ink-800 transition-opacity",
+        "overflow-hidden rounded-lg border border-navy-700 bg-navy-800 transition-opacity",
         full && "opacity-60"
       )}
     >
@@ -91,12 +91,12 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
       </div>
 
       <div className="p-4">
-        <p className="text-sm font-medium text-sand-300">
+        <p className="text-sm font-medium text-stone-300">
           {deal.business.name}
           {deal.business.district ? ` · ${deal.business.district}` : ""}
         </p>
-        <p className="mt-1 font-semibold text-sand-50">{deal.offer_text}</p>
-        <p className="mt-1 text-xs text-sand-400">
+        <p className="mt-1 font-semibold text-white">{deal.offer_text}</p>
+        <p className="mt-1 text-xs text-stone-400">
           Geçerlilik: {formatWindow(deal.starts_at, deal.ends_at)}
         </p>
 
@@ -106,15 +106,14 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
           </span>
 
           {reserved ? (
-            <span className="rounded-full border border-primary-500/40 bg-primary-500/15 px-3 py-1.5 text-xs font-bold text-primary-200">
+            <span className="rounded-full border border-teal-500/40 bg-teal-500/15 px-3 py-1.5 text-xs font-bold text-teal-200">
               ✓ Yerin ayrıldı · {code}
             </span>
           ) : (
             <Button
               onClick={handleReserve}
               disabled={full || isPending}
-              variant="accent"
-              shape="pill"
+              variant="teal"
               size="sm"
             >
               {isPending ? "Bir saniye..." : full ? "Doldu" : "Yerimi Ayır"}
@@ -122,7 +121,7 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
           )}
         </div>
 
-        {error && <p className="mt-2 text-xs text-tile-400">{error}</p>}
+        {error && <p className="mt-2 text-xs text-danger-400">{error}</p>}
       </div>
     </div>
   );

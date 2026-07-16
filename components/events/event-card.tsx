@@ -27,7 +27,7 @@ export default function EventCard({ event }: { event: EventListItem }) {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-500 to-primary-800">
+            <div className="flex h-full w-full items-center justify-center bg-navy-800">
               <CalendarDays className="h-6 w-6 text-white/90" strokeWidth={1.5} />
             </div>
           )}
@@ -41,9 +41,9 @@ export default function EventCard({ event }: { event: EventListItem }) {
           {full ? (
             <Badge variant="neutral">Kontenjan doldu</Badge>
           ) : event.is_paid ? (
-            <Badge variant="primary">{formatTL(event.ticket_price ?? 0)}</Badge>
+            <Badge variant="teal">{formatTL(event.ticket_price ?? 0)}</Badge>
           ) : (
-            <Badge variant="accent">Ücretsiz</Badge>
+            <Badge variant="discount">Ücretsiz</Badge>
           )}
         </div>
       </Card>

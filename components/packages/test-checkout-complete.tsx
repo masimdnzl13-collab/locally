@@ -19,17 +19,16 @@ export default function TestCheckoutComplete({ purchaseId }: { purchaseId: strin
   }
 
   return (
-    <div className="rounded-2xl border border-dashed border-accent-400/60 bg-accent-50 p-6 text-center">
-      <p className="text-sm font-semibold text-accent-700">Test Modu</p>
+    <div className="rounded-xl border border-dashed border-discount-400/60 bg-discount-50 p-6 text-center">
+      <p className="text-sm font-semibold text-discount-700">Test Modu</p>
       <p className="mt-1 text-xs text-muted-foreground">
         iyzico anahtarları tanımlı değil; gerçek bir ödeme alınmayacak.
       </p>
-      {error && <p className="mt-2 text-sm text-tile-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-danger-600">{error}</p>}
       <Button
         onClick={handleClick}
         disabled={isPending}
-        variant="secondary"
-        shape="pill"
+        variant="outline"
         className="mt-4 w-full"
       >
         {isPending ? "İşleniyor..." : "Test Ödemeyi Tamamla"}

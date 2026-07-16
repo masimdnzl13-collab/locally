@@ -102,11 +102,11 @@ export const PACKAGE_STATUS_LABELS: Record<PackageStatus, string> = {
 };
 
 export const PACKAGE_STATUS_CLASSES: Record<PackageStatus, string> = {
-  aktif: "bg-primary/10 text-primary-700",
-  pasif: "bg-sand-100 text-sepia-600",
-  suresi_doldu: "bg-tile-50 text-tile-600",
-  kontenjan_doldu: "bg-accent/10 text-accent-700",
-  admin_kaldirdi: "bg-tile-100 text-tile-700",
+  aktif: "bg-teal-50 text-teal-700",
+  pasif: "bg-stone-100 text-stone-600",
+  suresi_doldu: "bg-danger-50 text-danger-600",
+  kontenjan_doldu: "bg-discount-50 text-discount-700",
+  admin_kaldirdi: "bg-danger-100 text-danger-700",
 };
 
 export const BUSINESS_CATEGORY_LABELS: Record<BusinessCategory, string> = {

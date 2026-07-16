@@ -45,10 +45,10 @@ export default async function PanelEventDetailPage({
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {event.title}
             </h1>
-            {event.is_cancelled && <Badge variant="brick">İptal Edildi</Badge>}
+            {event.is_cancelled && <Badge variant="danger">İptal Edildi</Badge>}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{formatDateTime(event.event_at)}</p>
         </div>
@@ -56,7 +56,7 @@ export default async function PanelEventDetailPage({
           {!event.is_cancelled && (
             <Link
               href={`/panel/etkinlikler/${event.id}/duzenle`}
-              className={cn(buttonVariants({ variant: "outline", shape: "rect", size: "sm" }))}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               Düzenle
             </Link>
@@ -69,7 +69,7 @@ export default async function PanelEventDetailPage({
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Katılımcı</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {event.ticket_count}
               {event.capacity !== null ? ` / ${event.capacity}` : ""}
             </p>
@@ -78,7 +78,7 @@ export default async function PanelEventDetailPage({
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Tür</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {event.is_paid ? formatTL(event.ticket_price ?? 0) : "Ücretsiz"}
             </p>
           </CardContent>
@@ -86,7 +86,7 @@ export default async function PanelEventDetailPage({
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Durum</p>
-            <p className="mt-1 font-sans text-xl font-bold text-ink-900">
+            <p className="mt-1 text-xl font-bold text-foreground">
               {event.is_cancelled ? "İptal" : started ? "Başladı" : "Yaklaşıyor"}
             </p>
           </CardContent>
@@ -95,7 +95,7 @@ export default async function PanelEventDetailPage({
 
       <Card>
         <CardContent className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-ink-900">
+          <h2 className="mb-3 text-sm font-bold text-foreground">
             Katılımcılar — kapıda yoklama için QR Doğrula sekmesini kullan
           </h2>
           {event.participants.length === 0 ? (
@@ -105,7 +105,7 @@ export default async function PanelEventDetailPage({
               {event.participants.map((p) => (
                 <li key={p.ticket_id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-ink-900">
+                    <p className="truncate font-medium text-foreground">
                       {p.full_name || p.phone || "İsimsiz katılımcı"}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -116,10 +116,10 @@ export default async function PanelEventDetailPage({
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
                       p.status === "used"
-                        ? "bg-primary/10 text-primary-700"
+                        ? "bg-success-50 text-success-700"
                         : p.status === "cancelled"
-                          ? "bg-tile-50 text-tile-600"
-                          : "bg-sand-100 text-sepia-700"
+                          ? "bg-danger-50 text-danger-600"
+                          : "bg-teal-50 text-teal-700"
                     }`}
                   >
                     {p.refund_status === "iade_sureci_baslatildi"

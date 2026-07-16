@@ -1,147 +1,180 @@
-# Locally design system — "sıcak kış sahili" (warm winter coast)
+# Locally design system — local discovery marketplace
 
-This document supersedes the previous **Liman** spec in this file (cold
-ink/fog, dark-as-default ground). That direction is dropped. **Nothing from
-the Liman palette, type pairing, or "cold ground / rationed warmth" thesis
-carries forward.** Do not mix it with what's below.
-
----
-
-## 0. Brand philosophy
-
-Locally should feel like a coastal town that's still alive in winter — not a
-tech product. Local, trustworthy, warm, a little nostalgic, but built with
-modern craft. The ground is warm cream, not dark. Petrol ink and turquoise
-carry the brand's confidence; warm orange is saved for the moments that
-matter (today's price, flash urgency, the main call to action).
-
-**Anti-patterns — do not do these:**
-- Dark backgrounds anywhere outside the one deliberate "Bu Akşam" band.
-- Pure black or pure gray for any neutral — every neutral is warm-tinted
-  (sand/sepia), never `#000` or cool `slate`/`gray`.
-- Glassmorphism, neon glow, purple-pink gradients, hollow decorative icons.
-- Heavy drop shadows for depth — depth comes from ground-tone contrast and
-  1px warm hairlines.
-- Identical "heading + three cards + list" template on every page. Landing
-  and showcase surfaces are editorial and asymmetric; the panel is calm and
-  gridded, but never a copy-pasted layout from another screen.
+This document replaces every prior design spec in this repo (the "Liman"
+cold-harbor spec and the "sıcak kış sahili" warm-coast spec). Neither
+carries forward. **Delete on sight**: `TicketCard`, `Stamp`, `Scribble`,
+any `ink-*`/`sand-*`/`sepia-*`/`tile-*`/`accent-*` Tailwind color usage,
+Fraunces, Manrope. None of it is reused.
 
 ---
 
-## 1. Typography
+## 0. What Locally is
 
-Two-voice system:
+Locally is a **local discovery marketplace**: businesses post seasonal
+campaigns (discounted packages, flash deals, ticketed events), users
+browse and buy. It is not a tourism site, not a hotel site, not an
+agency brochure. The reference points are Groupon, Yelp, DoorDash, Airbnb
+Experiences, Apple/Google Maps — real product, content-first, scannable,
+trustworthy. A first-time visitor should understand "local deals
+marketplace" within 3 seconds, from the interface alone.
 
-| Role | Typeface | Use |
-|---|---|---|
-| **Display / editorial** | **Fraunces** (variable, incl. italic, `opsz`/`SOFT` axes) | Hero headlines, section openers, big prices as a *statement*, pull quotes. Characterful, slightly retro serif — the magazine voice. |
-| **UI / body** | **Manrope** | Navigation, body copy, forms, buttons, dense UI, numerals in cards. Clean modern grotesk. Both fonts load via `next/font/google` in `app/layout.tsx` (`--font-display`, `--font-sans`) and are verified for full Turkish glyph coverage (ş ğ ı İ ö ü ç). |
-
-Hero headlines run one to two steps bigger than instinct feels safe, tight
-line-height, serif, `text-wrap: balance`. Prices and counters are always
-Manrope, bold, large — never apologetic. Uppercase eyebrow labels always
-carry `tracking-wide` or wider — never uppercase without added letter-spacing.
+**Anti-patterns:**
+- A big empty hero with a single headline and nothing to browse below the
+  fold. Real inventory (cards, deals, categories) appears immediately.
+- Marketing buzzwords, giant illustrations, decorative gradients.
+- Any fabricated data: no fake star ratings, no fake review counts, no
+  fake "open now" status, no invented categories. If the backend doesn't
+  have it, the UI doesn't claim it (see §8).
 
 ---
 
-## 2. Color system
+## 1. Color system
 
-All tokens are consumed as CSS vars (`app/globals.css`) or Tailwind color
-scales (`tailwind.config.ts`). Never hardcode a raw hex in a component.
+CSS vars in `app/globals.css` are **"R G B" triplets**, consumed via
+`rgb(var(--x) / <alpha-value>)` in `tailwind.config.ts` so opacity
+modifiers (`bg-background/80`) work correctly — never revert to plain
+hex strings in a CSS var.
 
 | Token | Hex (key step) | Role |
 |---|---|---|
-| `--background` / `sand-50` | `#fbf6ec` | App ground — warm cream/ivory, never white, never dark |
-| `--card` | `#fffdf8` | Card/paper surface — barely-off-white, warm |
-| `ink` (500 `#0b3d4c`, alias `dark`) | `#0b3d4c` | Petrol — headlines, body text, "ink" blocks (the one deliberate dark surface: the Bu Akşam band, stamps, panel sidebar) |
-| `primary` (turquoise, 500 `#14a3b8`) | `#14a3b8` | Main interactive color: links, buttons, active states, focus ring |
-| `accent` (warm orange, 400 `#ffb35c`) | `#ffb35c` | Rationed: today's price, flash-deal urgency, hero CTAs only — never a background wash |
-| `sand` (50–950) | `#fbf6ec`…`#2c2415` | Warm kum/bej — section backgrounds, ticket stubs, dividing bands |
-| `primary-50`/`primary-100` | `#eefbfc` / `#d5f2f5` | Turquoise wash — pale tinted section backgrounds |
-| `sepia` (50–950) | `#f8f5f0`…`#1c1913` | Warm neutral scale — muted text, hairline borders. Replaces gray/slate entirely |
-| `tile` (50–900, "tuğla") | key `#b8492a` | Warm brick-red — errors, destructive actions. Never a raw/cool red |
+| `--background` | `#FAFAF9` | App ground — warm white, not stark `#fff`, not cream |
+| `--card` | `#FFFFFF` | Card/surface — clean white, sits just above the ground |
+| `--muted` | `#F4F3F1` | Sunken section backgrounds, table stripes |
+| `--border` | `#E8E6E1` | 1px hairlines everywhere |
+| `navy` (900 `#101B29`) | typography, icons, nav/footer/panel-sidebar dark surfaces |
+| `teal` (500 `#1D8A8B`) | **the** interactive color — links, active states, primary buttons. Subtle, desaturated, never neon turquoise |
+| `discount` (500 `#DD6B0F`) | orange, **rationed**: discount badges, "save ₺X" amounts only |
+| `success` (500 `#189A57`) | green, **rationed**: confirmed purchase, successful deal states only |
+| `danger` (500 `#C1432A`) | errors/destructive actions |
+| `stone` (50–950) | warm-neutral scale — replaces gray/slate/zinc entirely for text and borders |
 
-No pure black, no pure white, no cool gray anywhere in the app.
-
-### "Evening" mode
-The theme toggle stays, reskinned onto the same brand rather than a generic
-dark UI: background `ink-950 #062028`, card `ink-900 #0b3d4c`, text
-`sand-50`, ring shifts to `accent-400` (lamp glow). This is the *only* place
-outside the Bu Akşam band that a fully dark surface is acceptable.
+No pure black, no default Tailwind gray/slate/zinc, no purple/pink
+gradients, no glassmorphism, no neon glow.
 
 ---
 
-## 3. Signature motifs (must recur across the app)
+## 2. Typography
 
-1. **Ticket motif** — package cards, coupons, ticket/QR views are not plain
-   rectangles. Use `<TicketCard>` (`components/ui/ticket-card.tsx`): a
-   perforated dashed seam with punched circular notches (`.ticket-perforation`
-   utility in `globals.css`) separates the main body from a stub section.
-   The product is a right/ticket — its shape should say so.
-2. **Stamp motif** — verification, "used", "confirmed" states use
-   `<Stamp>` (`components/ui/stamp.tsx`): a rotated (~-7°), double-ringed
-   ink seal (`.stamp` utility), not a flat colored badge.
-3. **Hand-drawn accent** — section headings use `<Scribble>`
-   (`components/ui/scribble.tsx`), a short brush-stroke SVG underline
-   instead of a straight rule. Small, but load-bearing for warmth.
+| Role | Typeface | Use |
+|---|---|---|
+| **UI / body / everything** | **Inter** (`--font-sans`) | Navigation, body copy, forms, buttons, card content, numbers/prices. The default for ~95% of the interface. |
+| **Emphasis only** | **Newsreader** italic (`--font-serif`) | Sparingly: a hero headline, a section opener, a large "you saved ₺X" moment. Not a heading font used everywhere — if more than one or two elements per screen use it, that's too many. |
 
-These three motifs must be visible in at least: showcase/discover cards,
-package detail, "paketlerim" (my tickets), and confirmation screens.
+Large, clear hierarchy; comfortable measure; no oversized paragraphs.
+Prices are bold Inter, tabular where they're compared (`tabular-nums`),
+never in the serif.
 
 ---
 
-## 4. Spacing, radius, elevation
+## 3. Spacing & radius
 
-- Spacing: 4px base unit. Section-to-section gaps are generous (64–160px) —
-  under-spacing is the fastest way back to "generic SaaS."
-- Radius: consistent but not extreme — `sm 10px · md 14px · lg 18px ·
-  xl 24px · 2xl 32px` (`--radius-*` vars). No sharp corners, no pill-everything.
-- Elevation: shadows are used only for true overlays (menus, modals,
-  dropdowns) at the reduced warm-tinted values in `tailwind.config.ts`
-  (`shadow-sm/md/lg/xl`, all `rgb(11 61 76 / …)`). Resting cards use a 1px
-  warm border (`border-border`) and a ground-tone shift (`bg-card` on
-  `bg-background`), not a shadow.
+- 8pt spacing system — Tailwind's default scale already aligns (`p-2`=8,
+  `p-4`=16, `p-6`=24, `p-8`=32...). Use it consistently; no arbitrary
+  odd-pixel padding.
+- Radius is role-based, not uniform:
+  - Cards: `rounded-lg` (20px, `--radius-lg`)
+  - Buttons: `rounded-md` (14px, `--radius-md`)
+  - Inputs: `rounded-input` (16px, `--radius-input`)
+  - Badges/pills/avatars: `rounded-full`
+  - Large sheets/modals/hero panels: `rounded-xl` (24px)
 
----
+## 4. Elevation
 
-## 5. Layout principles
-
-- Landing / discover / showcase surfaces are **editorial**: one full-width
-  headline moment, then asymmetric content (one large + two small, or
-  offset/staggered cards) — never a uniform three-up grid everywhere.
-- **"Bu Akşam" is the one deliberate dark band**: full-width `ink-900`
-  section sitting inside the cream page, orange countdown living inside it.
-  Because it's the only dark block on the page, it should pull the eye
-  immediately.
-- Business panel: calmer, denser, fewer motifs, strict grid — a workspace in
-  the same brand family, not a storefront. Sidebar may use the ink/petrol
-  surface; content area stays on the warm cream ground.
-- Container: content max `72rem`, editorial reading measure `~65ch`.
+Shadows are real but restrained — `shadow-card` for resting cards
+(barely-there), `shadow-card-hover` on hover/focus (a clear but not
+dramatic lift), `shadow-md/lg/xl` for menus/popovers/modals. Never a
+default Tailwind gray shadow — all shadow tokens in
+`tailwind.config.ts` are navy-tinted (`rgb(16 27 41 / …)`).
 
 ---
 
-## 6. States
+## 5. Navigation
 
-- Hover: subtle lift (`-translate-y-0.5` at most) + tone-darken, not a hard
-  color swap.
-- Loading skeletons: shimmer in sand/cream tones (`bg-muted` + `.shimmer`),
-  never gray.
-- Empty states: warm copy + a small motif illustration (ticket/stamp line
-  art), never a cold "no data" message.
-- Errors/warnings: `tile` (brick) tones, never raw red; urgency countdowns
-  drift from `accent` (orange) toward `tile` (brick) as time runs out.
-- Focus ring: always `--ring` (turquoise in day mode, orange in evening
-  mode), 2px, visible — never suppressed.
+Full rewrite (`components/nav-bar.tsx`), desktop layout:
+
+```
+[Logo]  [Search bar]  [Location selector]     Keşfet  Kampanyalar     ♡ 🔔  [Profile]  [İşletme Paneli CTA]
+```
+
+- Sticky. Transparent over the homepage hero, solid `bg-background/95`
+  + `backdrop-blur` + `shadow-sm` once scrolled past the hero (see
+  `useScrollSolid`-style pattern — track scrollY, toggle a class).
+- Active nav link gets an animated underline (teal), not a filled pill.
+- Business-panel CTA is a quiet outlined/ghost button, not a loud
+  competing CTA against the primary teal actions.
+- Mobile: logo + search icon + menu; category/search expands into a
+  full-width sheet, not cramped into the header.
+
+## 6. Cards
+
+One card component family, variant-driven — **do not build separate
+"BusinessCard" and "CampaignCard" components that duplicate the same
+image/badge/price layout**. `components/ui/deal-card.tsx` takes a
+`variant="compact" | "featured"` prop:
+- Image-first (aspect-[4/3] compact, aspect-[16/10] featured), category
+  badge and discount badge overlaid on the image, save (♡) button
+  top-right.
+- Body: category label, business name + district, title, price row
+  (struck-through reference price + bold current price + "%X" savings
+  in `discount` orange).
+- Hover: `shadow-card` → `shadow-card-hover` + slight `-translate-y-1`,
+  image scales slightly. GPU-accelerated (`transform`/`opacity` only),
+  150–200ms, no bounce.
+- **Do not add rating stars, review counts, "open now" status, or a
+  price-level (`$$$`) indicator — the schema has none of this data.**
+  If it's not real, it's not on the card.
+
+## 7. Sections ("shelves")
+
+Homepage/discover pages are built from a reusable
+`components/ui/shelf.tsx`: heading + optional "Tümünü gör" link + a
+responsive grid (or horizontal scroll on mobile, `no-scrollbar`
+utility). Every shelf must be backed by a real query — see §8 for the
+homepage's actual data mapping.
 
 ---
 
-## 7. Implementation notes
+## 8. Data reality — what's real vs. what had to be adapted
 
-- Fonts load in `app/layout.tsx` via `next/font/google` (Fraunces + Manrope).
-- Tokens live centrally in `tailwind.config.ts` (color ramps, radius,
-  shadow) and `app/globals.css` (CSS vars, `.ticket-perforation`, `.stamp`
-  utilities). Every component consumes these — no page may define its own
-  one-off palette.
-- `ink` is the new name for the petrol ramp; `dark` is kept as an identical
-  alias for existing call-sites. The old cool-gray `ink-*` scale (phase 1)
-  is renamed `sepia`.
+The schema (see `lib/types.ts`, `lib/*/queries.ts`) has: packages
+(discounted campaigns), flash deals (time-boxed tonight-only offers),
+events (ticketed), businesses with **6** categories (`restoran`, `kafe`,
+`otel`, `beach_club`, `aktivite`, `diger`), and city/district text
+fields. It does **not** have: ratings/reviews, business hours,
+geolocation-based distance (lat/lng columns exist but nothing computes
+distance), favorites, notifications, or curated "collections."
+
+Adaptations made, not fabrications:
+- "Nearby businesses" → **city-scoped**, not geo-distance (no real
+  distance data exists). Label accordingly, e.g. "Şehrindeki fırsatlar."
+- "Spa," "Bakery," "Bar," "Museum," etc. category shelves → **not
+  built**; the category enum only has 6 values. Category shelves are
+  Restoran / Kafe / Otel / Beach Club / Aktivite only.
+- "Today's Deals" → flash deals (`getActiveFlashDeals`), which are
+  literally time-boxed same-day offers — the closest real match.
+- "Recently Added" → packages ordered by `created_at desc` (already the
+  default query order).
+- "Collections" → not a real curated concept; folded into the
+  category-based shelves instead of inventing fake curation.
+- Favorites (♡) → implemented for real via `lib/favorites` (a small
+  `useFavorites` localStorage hook), not backed by Supabase. It works,
+  it's just device-local rather than account-synced — that's the honest
+  scope of a redesign task that shouldn't silently add a new DB table.
+- Notifications (🔔) → no in-app notification feed exists in the
+  backend. The icon is present per the requested nav layout but opens an
+  honest empty state, not fabricated notification content.
+
+---
+
+## 9. Motion
+
+Framer Motion, small durations (150–300ms), `cubic-bezier(0.16, 1, 0.3,
+1)` easing, GPU-accelerated properties only. Reduced motion is CSS-first
+per the existing `[data-motion-reveal]` pattern in `globals.css` — never
+branch initial render output on `useReducedMotion()`.
+
+## 10. Accessibility
+
+4.5:1 minimum text contrast, visible focus rings (`--ring`, teal),
+44×44px touch targets, semantic HTML, full keyboard operability on every
+custom control (search, category chips, save button).

@@ -23,12 +23,12 @@ export default function WeeklyBarChart({
         const heightPct = Math.max((d.count / max) * 100, d.count > 0 ? 8 : 2);
         return (
           <div key={d.date} className="flex flex-1 flex-col items-center gap-1.5">
-            <span className="font-sans text-xs font-bold tabular-nums text-muted-foreground">
+            <span className="text-xs font-bold tabular-nums text-muted-foreground">
               {d.count || ""}
             </span>
             <div className="flex h-24 w-full items-end">
               <div
-                className="w-full rounded-t-sm bg-primary/80"
+                className="w-full rounded-t-sm bg-teal-600"
                 style={{ height: `${heightPct}%` }}
               />
             </div>

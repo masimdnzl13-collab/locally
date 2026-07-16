@@ -16,7 +16,7 @@ export default async function BuAksamPage() {
           title="Bu akşam henüz flaş yok — akşam saatlerinde tekrar bak"
           description="O sırada yaklaşan etkinliklere göz atabilirsin."
           action={
-            <Link href="/etkinlikler" className={buttonVariants({ variant: "default", shape: "pill" })}>
+            <Link href="/etkinlikler" className={buttonVariants({ variant: "teal" })}>
               Etkinliklere Git
             </Link>
           }
@@ -26,12 +26,12 @@ export default async function BuAksamPage() {
   }
 
   return (
-    <div className="bg-ink-900 px-4 py-8 md:px-6 md:py-10">
+    <div className="bg-navy-900 px-4 py-8 md:px-6 md:py-10">
       <div className="mx-auto max-w-6xl">
-        <h1 className="font-display text-2xl font-medium tracking-tight text-sand-50 md:text-3xl">
+        <h1 className="font-serif text-2xl italic tracking-tight text-white md:text-3xl">
           Bu Akşam
         </h1>
-        <p className="mt-1 text-sm text-sand-300">
+        <p className="mt-1 text-sm text-stone-300">
           Bodrum&apos;da bu akşam geçerli {deals.length} flaş fırsat
         </p>
 

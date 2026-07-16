@@ -37,12 +37,12 @@ export default async function DuyurularPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Duyurular
         </h1>
         <Link
           href="/panel/duyurular/yeni"
-          className={cn(buttonVariants({ variant: "default", shape: "rect", size: "sm" }))}
+          className={cn(buttonVariants({ variant: "teal", size: "sm" }))}
         >
           + Yeni Duyuru
         </Link>
@@ -53,17 +53,17 @@ export default async function DuyurularPage() {
       ) : (
         <div className="space-y-3">
           {history.map((item) => (
-            <div key={item.id} className="rounded-xl border border-border bg-card p-4">
+            <div key={item.id} className="rounded-lg border border-border bg-card p-4 shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Badge variant="primary">{CHANNEL_LABEL[item.channel] ?? item.channel}</Badge>
+                  <Badge variant="teal">{CHANNEL_LABEL[item.channel] ?? item.channel}</Badge>
                   <Badge variant="neutral">{SEGMENT_LABEL[item.target_segment] ?? item.target_segment}</Badge>
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {item.sent_at ? formatDateTime(item.sent_at) : formatDateTime(item.created_at)}
                 </span>
               </div>
-              <p className="mt-2 line-clamp-2 text-sm text-ink-900">{item.content}</p>
+              <p className="mt-2 line-clamp-2 text-sm text-foreground">{item.content}</p>
               <p className="mt-1 text-xs font-semibold text-muted-foreground">
                 {item.recipient_count} alıcı
               </p>

@@ -38,19 +38,18 @@ export default async function EventDetailPage({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-500 to-primary-800">
+          <div className="flex h-full w-full items-center justify-center bg-navy-800">
             <PartyPopper className="h-14 w-14 text-white/90" strokeWidth={1.5} />
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/60 via-ink-950/5 to-transparent" />
       </div>
 
       <div className="mx-auto max-w-2xl px-6 py-6">
         <Reveal>
-          <h1 className="font-display text-3xl font-medium tracking-tight text-foreground">
+          <h1 className="font-serif text-3xl italic tracking-tight text-foreground">
             {event.title}
           </h1>
-          <p className="mt-1 text-sm font-medium text-primary-600">
+          <p className="mt-1 text-sm font-medium text-teal-700">
             {formatDateTime(event.event_at)}
           </p>
 
@@ -67,7 +66,7 @@ export default async function EventDetailPage({
           )}
 
           {event.capacity !== null && (
-            <Badge variant={full ? "neutral" : "primary"} className="mt-4">
+            <Badge variant={full ? "neutral" : "teal"} className="mt-4">
               {full
                 ? "Kontenjan doldu"
                 : `${event.capacity - event.ticket_count} / ${event.capacity} yer kaldı`}

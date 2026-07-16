@@ -22,7 +22,7 @@ export default function LoginForm({ next }: { next?: string }) {
     <form action={handleSubmit} className="space-y-4">
       {next && <input type="hidden" name="next" value={next} />}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
           E-posta
         </label>
         <Input
@@ -34,10 +34,10 @@ export default function LoginForm({ next }: { next?: string }) {
       </div>
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <label className="block text-sm font-medium text-ink-900">
+          <label className="block text-sm font-medium text-foreground">
             Şifre
           </label>
-          <Link href="/sifremi-unuttum" className="text-xs font-medium text-primary-600">
+          <Link href="/sifremi-unuttum" className="text-xs font-medium text-teal-700">
             Şifremi unuttum
           </Link>
         </div>
@@ -50,7 +50,7 @@ export default function LoginForm({ next }: { next?: string }) {
       </div>
 
       {error && (
-        <p className="rounded-lg bg-tile-50 px-3 py-2 text-sm text-tile-600">
+        <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {error}
         </p>
       )}
@@ -59,7 +59,7 @@ export default function LoginForm({ next }: { next?: string }) {
 
       <p className="text-center text-sm text-muted-foreground">
         Hesabın yok mu?{" "}
-        <Link href="/kayit" className="font-semibold text-primary-600">
+        <Link href="/kayit" className="font-semibold text-teal-700">
           Kayıt ol
         </Link>
       </p>

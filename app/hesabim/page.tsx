@@ -24,7 +24,7 @@ export default async function HesabimPage() {
   return (
     <section className="mx-auto max-w-md px-6 py-10">
       <div className="mb-8 flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-xl font-bold text-primary-700">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-50 text-xl font-bold text-teal-700">
           {(profile?.full_name ?? user.email ?? "?").charAt(0).toUpperCase()}
         </div>
         <div>
@@ -41,7 +41,7 @@ export default async function HesabimPage() {
           className="flex items-center justify-between p-4 text-sm font-semibold text-foreground"
         >
           <span className="flex items-center gap-2.5">
-            <Ticket size={18} className="text-primary-600" strokeWidth={1.75} />
+            <Ticket size={18} className="text-teal-600" strokeWidth={1.75} />
             Paketlerim
           </span>
           <ChevronRight size={16} className="text-muted-foreground" />

@@ -19,7 +19,7 @@ export default function WaitlistExportButton({ entries }: { entries: WaitlistEnt
   }
 
   return (
-    <Button onClick={handleExport} disabled={entries.length === 0} shape="rect" size="sm">
+    <Button onClick={handleExport} disabled={entries.length === 0} variant="teal" size="sm">
       CSV Olarak Dışa Aktar
     </Button>
   );

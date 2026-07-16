@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { verifyCodeAction, type VerifyResult } from "@/lib/verification/actions";
 import QrScanner from "@/components/panel/qr-scanner";
-import { Stamp } from "@/components/ui/stamp";
+import { Badge } from "@/components/ui/badge";
 import type { VerificationLogItem } from "@/lib/verification/queries";
 
 const CODE_TYPE_LABEL: Record<string, string> = {
@@ -32,21 +32,24 @@ function ResultScreen({ result, onClose }: { result: VerifyResult; onClose: () =
     }
 
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl bg-primary-600 px-6 py-10 text-center text-white">
-        <div className="stamp mb-4 flex h-16 w-16 items-center justify-center border-white/60 text-3xl">
+      <div className="flex flex-col items-center justify-center rounded-lg bg-success-50 px-6 py-10 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-success-600 text-3xl text-success-600">
           ✓
         </div>
+        <Badge variant="success" className="mb-3">
+          Doğrulandı
+        </Badge>
         {result.customer_name && (
-          <p className="text-sm font-medium text-white/80">{result.customer_name}</p>
+          <p className="text-sm font-medium text-success-700/80">{result.customer_name}</p>
         )}
-        <p className="mt-1 font-sans text-2xl font-bold tabular-nums">{result.detail}</p>
-        <p className="mt-2 text-lg font-bold text-white/90">{title}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-success-800">{result.detail}</p>
+        <p className="mt-2 text-lg font-bold text-success-700">{title}</p>
         {subtitle && result.code_type === "package" && (
-          <p className="text-sm text-white/80">{subtitle}</p>
+          <p className="text-sm text-success-700/80">{subtitle}</p>
         )}
         <button
           onClick={onClose}
-          className="mt-8 w-full max-w-xs rounded-md bg-white px-4 py-3 text-sm font-bold text-primary-700"
+          className="mt-8 w-full max-w-xs rounded-md bg-success-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-success-700"
         >
           Tamam
         </button>
@@ -64,20 +67,23 @@ function ResultScreen({ result, onClose }: { result: VerifyResult; onClose: () =
   };
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl bg-tile-500 px-6 py-10 text-center text-white">
-      <div className="stamp mb-4 flex h-16 w-16 items-center justify-center border-white/60 text-3xl">
+    <div className="flex flex-col items-center justify-center rounded-lg bg-danger-50 px-6 py-10 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-danger-600 text-3xl text-danger-600">
         ✕
       </div>
+      <Badge variant="danger" className="mb-3">
+        Doğrulanamadı
+      </Badge>
       {result.customer_name && (
-        <p className="text-sm font-medium text-white/80">{result.customer_name}</p>
+        <p className="text-sm font-medium text-danger-700/80">{result.customer_name}</p>
       )}
-      {result.detail && <p className="mt-1 text-lg font-bold">{result.detail}</p>}
-      <p className="mt-2 text-base font-semibold text-white/95">
+      {result.detail && <p className="mt-1 text-lg font-bold text-danger-800">{result.detail}</p>}
+      <p className="mt-2 text-base font-semibold text-danger-700">
         {ERROR_LABEL[result.error_code ?? ""] ?? result.message ?? "Doğrulanamadı"}
       </p>
       <button
         onClick={onClose}
-        className="mt-8 w-full max-w-xs rounded-md bg-white px-4 py-3 text-sm font-bold text-tile-700"
+        className="mt-8 w-full max-w-xs rounded-md bg-danger-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-danger-700"
       >
         Tamam
       </button>
@@ -130,7 +136,7 @@ export default function QrVerifyView({ initialHistory }: { initialHistory: Verif
 
   return (
     <div className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-4 text-center font-display text-xl font-medium tracking-tight text-ink-900">
+      <h1 className="mb-4 text-center text-xl font-bold tracking-tight text-foreground">
         QR Doğrula
       </h1>
 
@@ -147,7 +153,7 @@ export default function QrVerifyView({ initialHistory }: { initialHistory: Verif
           <QrScanner onScan={runVerify} paused={isPending} />
 
           {error && (
-            <p className="mt-3 rounded-md bg-tile-50 px-3 py-2 text-center text-sm text-tile-600">
+            <p className="mt-3 rounded-md bg-danger-50 px-3 py-2 text-center text-sm text-danger-600">
               {error}
             </p>
           )}
@@ -158,12 +164,12 @@ export default function QrVerifyView({ initialHistory }: { initialHistory: Verif
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value.toUpperCase())}
               placeholder="Kodu elle gir (LCL / FLA / TKT)"
-              className="w-full rounded-md border border-border bg-card px-4 py-3 text-sm uppercase tracking-wide focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-input border border-border bg-card px-4 py-3 text-sm uppercase tracking-wide focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <button
               type="submit"
               disabled={isPending}
-              className="shrink-0 rounded-md bg-ink-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+              className="shrink-0 rounded-md bg-navy-900 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-navy-800 disabled:opacity-60"
             >
               Doğrula
             </button>
@@ -172,26 +178,24 @@ export default function QrVerifyView({ initialHistory }: { initialHistory: Verif
       )}
 
       <div className="mt-8">
-        <h2 className="mb-3 text-sm font-bold text-ink-900">Bugünün Geçmişi</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">Bugünün Geçmişi</h2>
         {history.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Henüz doğrulama yapılmadı.</p>
         ) : (
-          <ul className="divide-y divide-border rounded-xl border border-border bg-card">
+          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
             {history.map((item) => (
               <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-ink-900">
+                  <p className="truncate font-medium text-foreground">
                     {item.detail || item.customer_name || item.code}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {CODE_TYPE_LABEL[item.code_type] ?? item.code_type} · {formatTime(item.created_at)}
                   </p>
                 </div>
-                <Stamp
-                  label={item.result === "success" ? "Başarılı" : "Hata"}
-                  tone={item.result === "success" ? "primary" : "brick"}
-                  className="shrink-0 px-2.5 py-0.5 text-[10px]"
-                />
+                <Badge variant={item.result === "success" ? "success" : "danger"} className="shrink-0">
+                  {item.result === "success" ? "Başarılı" : "Hata"}
+                </Badge>
               </li>
             ))}
           </ul>

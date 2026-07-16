@@ -16,12 +16,12 @@ export default async function PanelPackagesPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Paketlerim
         </h1>
         <Link
           href="/panel/paketler/yeni"
-          className={cn(buttonVariants({ variant: "default", shape: "rect", size: "sm" }))}
+          className={cn(buttonVariants({ variant: "teal", size: "sm" }))}
         >
           + Yeni Paket
         </Link>
@@ -35,7 +35,7 @@ export default async function PanelPackagesPage() {
           action={
             <Link
               href="/panel/paketler/yeni"
-              className="text-sm font-semibold text-primary-600 hover:underline"
+              className="text-sm font-semibold text-teal-700 hover:underline"
             >
               İlk paketini oluştur →
             </Link>

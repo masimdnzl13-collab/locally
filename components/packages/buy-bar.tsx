@@ -31,7 +31,7 @@ export default function BuyBar({
   return (
     <div className="safe-bottom fixed inset-x-0 bottom-16 z-30 border-t border-border bg-card px-4 py-3 md:bottom-0">
       {error && (
-        <p className="mb-2 rounded-lg bg-tile-50 px-3 py-2 text-center text-sm font-medium text-tile-600">
+        <p className="mb-2 rounded-lg bg-danger-50 px-3 py-2 text-center text-sm font-medium text-danger-700">
           {error}
         </p>
       )}
@@ -39,8 +39,7 @@ export default function BuyBar({
         <input type="hidden" name="packageId" value={packageId} />
         <Button
           type="submit"
-          variant="accent"
-          shape="pill"
+          variant="teal"
           size="lg"
           disabled={isPending || !purchasable}
           className="w-full"

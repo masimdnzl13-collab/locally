@@ -35,7 +35,7 @@ export default async function OdemePage({
 
   return (
     <div className="mx-auto max-w-md px-6 py-10">
-      <h1 className="font-display text-2xl font-medium tracking-tight text-foreground">Ödeme</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Ödeme</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {purchase.package.title} — <span className="font-semibold text-foreground">{formatTL(purchase.amount)}</span>
       </p>
@@ -46,7 +46,7 @@ export default async function OdemePage({
         ) : purchase.checkout_form_content ? (
           <IyzicoCheckoutEmbed formContent={purchase.checkout_form_content} />
         ) : (
-          <p className="rounded-lg bg-tile-50 px-3 py-2 text-sm font-medium text-tile-600">
+          <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm font-medium text-danger-700">
             Ödeme formu yüklenemedi, lütfen tekrar dene.
           </p>
         )}

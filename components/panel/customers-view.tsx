@@ -47,19 +47,19 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Toplam Müşteri</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">{summary.total}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">{summary.total}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Bu Ay Yeni</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">{summary.newThisMonth}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">{summary.newThisMonth}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Bu Ay Tekrar</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">{summary.repeatThisMonth}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">{summary.repeatThisMonth}</p>
           </CardContent>
         </Card>
       </div>
@@ -69,7 +69,7 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="İsim veya telefon ara..."
-        className="mb-3 w-full rounded-md border border-border bg-card px-4 py-3 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
+        className="mb-3 w-full rounded-input border border-border bg-card px-4 py-3 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -80,8 +80,8 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
             className={cn(
               "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
               segment === s.id
-                ? "bg-primary text-white"
-                : "bg-sand-100 text-sepia-700 hover:bg-sand-200"
+                ? "bg-navy-900 text-white"
+                : "bg-stone-100 text-stone-700 hover:bg-stone-200"
             )}
           >
             {s.label}
@@ -100,14 +100,14 @@ export default function CustomersView({ customers }: { customers: Customer[] }) 
             <Link
               key={c.id}
               href={`/panel/musteriler/${c.id}`}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-sepia-300"
+              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover"
             >
               <div className="min-w-0">
-                <p className="truncate font-bold text-ink-900">{c.full_name || "İsimsiz"}</p>
+                <p className="truncate font-bold text-foreground">{c.full_name || "İsimsiz"}</p>
                 <p className="text-xs text-muted-foreground">{c.phone}</p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-sm font-semibold text-ink-900">{c.visit_count} ziyaret</p>
+                <p className="text-sm font-semibold text-foreground">{c.visit_count} ziyaret</p>
                 <p className="text-xs text-muted-foreground">Son: {formatDate(c.last_visit_at)}</p>
               </div>
             </Link>

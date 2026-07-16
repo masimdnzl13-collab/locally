@@ -7,7 +7,7 @@ export default async function AyarlarPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-6 md:px-8 md:py-8">
-      <h1 className="mb-1 font-display text-2xl font-medium tracking-tight text-ink-900">Ayarlar</h1>
+      <h1 className="mb-1 text-2xl font-bold tracking-tight text-foreground">Ayarlar</h1>
       <p className="mb-6 text-sm text-muted-foreground">Ödeme Hesabı</p>
       <PaymentAccountForm business={business} />
     </div>

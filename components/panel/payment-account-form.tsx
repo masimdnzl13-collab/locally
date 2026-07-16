@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 import { IYZICO_ONBOARDING_LABELS, type Business } from "@/lib/types";
 
 const inputClass =
-  "w-full rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
-const labelClass = "mb-1.5 block text-sm font-medium text-ink-900";
+  "w-full rounded-input border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
+const labelClass = "mb-1.5 block text-sm font-medium text-foreground";
 
 const STATUS_CLASS: Record<Business["iyzico_onboarding_status"], string> = {
-  not_started: "bg-sand-100 text-sepia-700",
-  pending: "bg-accent/10 text-accent-700",
-  approved: "bg-primary/10 text-primary-700",
-  rejected: "bg-tile-50 text-tile-600",
+  not_started: "bg-stone-100 text-stone-700",
+  pending: "bg-discount-50 text-discount-700",
+  approved: "bg-teal-50 text-teal-700",
+  rejected: "bg-danger-50 text-danger-600",
 };
 
 export default function PaymentAccountForm({ business }: { business: Business }) {
@@ -38,9 +38,9 @@ export default function PaymentAccountForm({ business }: { business: Business })
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
         <div>
-          <p className="text-sm font-bold text-ink-900">Kayıt Durumu</p>
+          <p className="text-sm font-bold text-foreground">Kayıt Durumu</p>
           <p className="text-xs text-muted-foreground">
             Onaylanmadan paketlerin satışa kapalı kalır ve vitrinde &quot;yakında&quot; görünür.
           </p>
@@ -56,15 +56,15 @@ export default function PaymentAccountForm({ business }: { business: Business })
       </div>
 
       {business.iyzico_onboarding_status === "rejected" && business.iyzico_reject_reason && (
-        <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">
+        <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">
           Red gerekçesi: {business.iyzico_reject_reason}
         </p>
       )}
 
-      <form action={handleSubmit} className="space-y-4 rounded-xl border border-border bg-card p-5">
-        {error && <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">{error}</p>}
+      <form action={handleSubmit} className="space-y-4 rounded-lg border border-border bg-card p-5">
+        {error && <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">{error}</p>}
         {success && (
-          <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary-700">
+          <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-700">
             Kaydedildi.
           </p>
         )}
@@ -76,7 +76,7 @@ export default function PaymentAccountForm({ business }: { business: Business })
             className={cn(
               "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
               type === "PERSONAL"
-                ? "border-primary bg-primary/10 text-primary-700"
+                ? "border-teal-600 bg-teal-50 text-teal-700"
                 : "border-border text-muted-foreground"
             )}
           >
@@ -88,7 +88,7 @@ export default function PaymentAccountForm({ business }: { business: Business })
             className={cn(
               "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
               type === "PRIVATE_COMPANY"
-                ? "border-primary bg-primary/10 text-primary-700"
+                ? "border-teal-600 bg-teal-50 text-teal-700"
                 : "border-border text-muted-foreground"
             )}
           >

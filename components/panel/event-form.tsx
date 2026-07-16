@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import type { PanelEventDetail } from "@/lib/events/queries";
 
 const inputClass =
-  "w-full rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
-const labelClass = "mb-1.5 block text-sm font-medium text-ink-900";
+  "w-full rounded-input border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
+const labelClass = "mb-1.5 block text-sm font-medium text-foreground";
 
 function toLocalDateTimeInput(iso: string) {
   const d = new Date(iso);
@@ -42,10 +42,10 @@ export default function EventForm({ event }: { event?: PanelEventDetail }) {
       {isEdit && <input type="hidden" name="eventId" value={event!.id} />}
 
       {error && (
-        <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">{error}</p>
+        <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">{error}</p>
       )}
 
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="rounded-lg border border-border bg-card p-5">
         <div className="space-y-4">
           <div>
             <label className={labelClass}>Başlık</label>
@@ -74,7 +74,7 @@ export default function EventForm({ event }: { event?: PanelEventDetail }) {
               type="file"
               name="image"
               accept="image/*"
-              className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700"
+              className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-teal-700"
             />
             {event?.image_url && (
               <p className="mt-1 text-xs text-muted-foreground">Boş bırakılırsa mevcut görsel korunur.</p>
@@ -99,8 +99,8 @@ export default function EventForm({ event }: { event?: PanelEventDetail }) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="mb-4 text-sm font-bold text-ink-900">Etkinlik Türü</h2>
+      <div className="rounded-lg border border-border bg-card p-5">
+        <h2 className="mb-4 text-sm font-bold text-foreground">Etkinlik Türü</h2>
         <div className="mb-4 flex gap-2">
           <button
             type="button"
@@ -108,7 +108,7 @@ export default function EventForm({ event }: { event?: PanelEventDetail }) {
             className={cn(
               "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
               eventType === "free"
-                ? "border-primary bg-primary/10 text-primary-700"
+                ? "border-teal-600 bg-teal-50 text-teal-700"
                 : "border-border text-muted-foreground"
             )}
           >
@@ -120,7 +120,7 @@ export default function EventForm({ event }: { event?: PanelEventDetail }) {
             className={cn(
               "flex-1 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors",
               eventType === "paid"
-                ? "border-primary bg-primary/10 text-primary-700"
+                ? "border-teal-600 bg-teal-50 text-teal-700"
                 : "border-border text-muted-foreground"
             )}
           >

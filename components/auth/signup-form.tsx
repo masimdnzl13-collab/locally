@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Compass, MailCheck, Store } from "lucide-react";
 import { signUpAction } from "@/lib/auth/actions";
 import SubmitButton from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +31,10 @@ export default function SignupForm({
   if (notice) {
     return (
       <div className="text-center">
-        <div className="mb-3 text-4xl">📬</div>
-        <p className="text-sm text-ink-900">{notice}</p>
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-600">
+          <MailCheck size={22} strokeWidth={1.75} />
+        </div>
+        <p className="text-sm text-foreground">{notice}</p>
       </div>
     );
   }
@@ -45,30 +48,32 @@ export default function SignupForm({
           type="button"
           onClick={() => setRole("user")}
           className={cn(
-            "rounded-xl border p-3 text-left text-sm transition-colors",
+            "flex items-center gap-2.5 rounded-input border p-3 text-left text-sm transition-colors",
             role === "user"
-              ? "border-primary bg-primary-50 font-semibold text-primary-700"
+              ? "border-teal-600 bg-teal-50 font-semibold text-teal-700"
               : "border-border text-muted-foreground hover:bg-muted"
           )}
         >
-          🔍 Fırsatları keşfetmek istiyorum
+          <Compass size={18} strokeWidth={2} className="shrink-0" />
+          Fırsatları keşfetmek istiyorum
         </button>
         <button
           type="button"
           onClick={() => setRole("business")}
           className={cn(
-            "rounded-xl border p-3 text-left text-sm transition-colors",
+            "flex items-center gap-2.5 rounded-input border p-3 text-left text-sm transition-colors",
             role === "business"
-              ? "border-primary bg-primary-50 font-semibold text-primary-700"
+              ? "border-teal-600 bg-teal-50 font-semibold text-teal-700"
               : "border-border text-muted-foreground hover:bg-muted"
           )}
         >
-          🏪 İşletme sahibiyim
+          <Store size={18} strokeWidth={2} className="shrink-0" />
+          İşletme sahibiyim
         </button>
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
           Ad Soyad
         </label>
         <Input
@@ -79,7 +84,7 @@ export default function SignupForm({
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
           E-posta
         </label>
         <Input
@@ -90,7 +95,7 @@ export default function SignupForm({
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
           Şifre
         </label>
         <Input
@@ -103,7 +108,7 @@ export default function SignupForm({
       </div>
 
       {error && (
-        <p className="rounded-lg bg-tile-50 px-3 py-2 text-sm text-tile-600">
+        <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {error}
         </p>
       )}
@@ -112,7 +117,7 @@ export default function SignupForm({
 
       <p className="text-center text-sm text-muted-foreground">
         Zaten hesabın var mı?{" "}
-        <Link href="/giris" className="font-semibold text-primary-600">
+        <Link href="/giris" className="font-semibold text-teal-700">
           Giriş yap
         </Link>
       </p>

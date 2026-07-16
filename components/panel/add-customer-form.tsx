@@ -5,8 +5,8 @@ import { addCustomerAction } from "@/lib/customers/actions";
 import SubmitButton from "@/components/ui/submit-button";
 
 const inputClass =
-  "w-full rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
-const labelClass = "mb-1.5 block text-sm font-medium text-ink-900";
+  "w-full rounded-input border border-border bg-card px-4 py-3 text-sm text-foreground transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring";
+const labelClass = "mb-1.5 block text-sm font-medium text-foreground";
 
 export default function AddCustomerForm() {
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +21,8 @@ export default function AddCustomerForm() {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4 rounded-xl border border-border bg-card p-5">
-      {error && <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">{error}</p>}
+    <form action={handleSubmit} className="space-y-4 rounded-lg border border-border bg-card p-5">
+      {error && <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">{error}</p>}
 
       <div>
         <label className={labelClass}>Ad Soyad</label>

@@ -20,7 +20,7 @@ export default function ResetPasswordForm() {
   return (
     <form action={handleSubmit} className="space-y-4">
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
           Yeni Şifre
         </label>
         <Input
@@ -33,7 +33,7 @@ export default function ResetPasswordForm() {
       </div>
 
       {error && (
-        <p className="rounded-lg bg-tile-50 px-3 py-2 text-sm text-tile-600">
+        <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {error}
         </p>
       )}

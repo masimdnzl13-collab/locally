@@ -43,15 +43,15 @@ function LiveFlashCard({ deal }: { deal: PanelFlashDeal }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-accent/30 bg-accent/5">
-      <div className="flex items-center justify-between bg-accent px-5 py-3">
-        <span className="text-sm font-bold text-ink-950">🔥 Flaşın Şu An Canlı</span>
-        <span className="rounded-full bg-ink-950/10 px-2.5 py-1 text-xs font-bold tabular-nums text-ink-950">
+    <div className="overflow-hidden rounded-lg border border-discount-300 bg-discount-50">
+      <div className="flex items-center justify-between bg-discount-500 px-5 py-3">
+        <span className="text-sm font-bold text-white">🔥 Flaşın Şu An Canlı</span>
+        <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-bold tabular-nums text-white">
           {countdown.expired ? "Süresi doldu" : countdown.label}
         </span>
       </div>
       <div className="p-5">
-        <p className="text-lg font-bold text-ink-900">{deal.offer_text}</p>
+        <p className="text-lg font-bold text-foreground">{deal.offer_text}</p>
         <p className="mt-1 text-sm text-muted-foreground">
           Geçerlilik: {formatWindow(deal.starts_at, deal.ends_at)}
         </p>
@@ -59,13 +59,13 @@ function LiveFlashCard({ deal }: { deal: PanelFlashDeal }) {
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-md bg-card p-3">
             <p className="text-xs text-muted-foreground">Kalan / Toplam</p>
-            <p className="mt-0.5 font-sans text-xl font-bold tabular-nums text-ink-900">
+            <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">
               {deal.remaining_quota} / {deal.total_quota}
             </p>
           </div>
           <div className="rounded-md bg-card p-3">
             <p className="text-xs text-muted-foreground">Yer Ayırtan</p>
-            <p className="mt-0.5 font-sans text-xl font-bold tabular-nums text-ink-900">{reservedCount} kişi</p>
+            <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">{reservedCount} kişi</p>
           </div>
         </div>
 
@@ -73,7 +73,7 @@ function LiveFlashCard({ deal }: { deal: PanelFlashDeal }) {
           type="button"
           onClick={handleEnd}
           disabled={isPending}
-          className="mt-5 w-full rounded-md border border-tile-200 bg-card px-4 py-3 text-sm font-bold text-tile-600 transition-colors hover:bg-tile-50 disabled:opacity-60"
+          className="mt-5 w-full rounded-md border border-danger-200 bg-card px-4 py-3 text-sm font-bold text-danger-600 transition-colors hover:bg-danger-50 disabled:opacity-60"
         >
           {isPending ? "Bir saniye..." : "Flaşı Bitir"}
         </button>
@@ -114,13 +114,13 @@ function CreateFlashForm() {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-5 rounded-xl border border-border bg-card p-5">
+    <form action={handleSubmit} className="space-y-5 rounded-lg border border-border bg-card p-5">
       {error && (
-        <p className="rounded-md bg-tile-50 px-3 py-2 text-sm text-tile-600">{error}</p>
+        <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">{error}</p>
       )}
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">Teklif Metni</label>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">Teklif Metni</label>
         <input
           type="text"
           value={offerText}
@@ -128,12 +128,12 @@ function CreateFlashForm() {
           required
           maxLength={120}
           placeholder="19:00–22:00 arası ana yemekler yarı fiyat"
-          className="w-full rounded-md border border-border bg-card px-4 py-3 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-input border border-border bg-card px-4 py-3 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">Saat Aralığı</label>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">Saat Aralığı</label>
         <div className="mb-2 flex flex-wrap gap-2">
           {TIME_PRESETS.map((preset) => (
             <button
@@ -143,7 +143,7 @@ function CreateFlashForm() {
               className={cn(
                 "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
                 startTime === preset.start && endTime === preset.end
-                  ? "border-primary bg-primary/10 text-primary-700"
+                  ? "border-discount-500 bg-discount-50 text-discount-700"
                   : "border-border text-muted-foreground hover:bg-muted"
               )}
             >
@@ -156,20 +156,20 @@ function CreateFlashForm() {
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-input border border-border bg-card px-3 py-2.5 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <span className="text-muted-foreground">–</span>
           <input
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-input border border-border bg-card px-3 py-2.5 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink-900">Kontenjan</label>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">Kontenjan</label>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -178,7 +178,7 @@ function CreateFlashForm() {
           >
             −
           </button>
-          <span className="w-12 text-center font-sans text-lg font-bold tabular-nums text-ink-900">{quota}</span>
+          <span className="w-12 text-center text-lg font-bold tabular-nums text-foreground">{quota}</span>
           <button
             type="button"
             onClick={() => setQuota((q) => q + 1)}
@@ -192,7 +192,7 @@ function CreateFlashForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="flex w-full items-center justify-center rounded-md bg-accent px-4 py-3.5 text-base font-extrabold text-ink-950 transition-all duration-200 hover:bg-accent-500 hover:-translate-y-0.5 disabled:opacity-60"
+        className="flex w-full items-center justify-center rounded-md bg-discount-500 px-4 py-3.5 text-base font-extrabold text-white transition-all duration-200 hover:bg-discount-600 hover:-translate-y-0.5 disabled:opacity-60"
       >
         {isPending ? "Yayınlanıyor..." : "🔥 Flaşı Yayınla"}
       </button>
@@ -204,13 +204,13 @@ function HistorySection({ history }: { history: PanelFlashDeal[] }) {
   if (history.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h2 className="mb-3 text-sm font-bold text-ink-900">Geçmiş Flaşlar</h2>
+    <div className="rounded-lg border border-border bg-card p-5">
+      <h2 className="mb-3 text-sm font-bold text-foreground">Geçmiş Flaşlar</h2>
       <ul className="divide-y divide-border">
         {history.map((deal) => (
           <li key={deal.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
             <div className="min-w-0">
-              <p className="truncate font-medium text-ink-900">{deal.offer_text}</p>
+              <p className="truncate font-medium text-foreground">{deal.offer_text}</p>
               <p className="text-xs text-muted-foreground">
                 {new Date(deal.created_at).toLocaleDateString("tr-TR", {
                   day: "numeric",
@@ -219,10 +219,10 @@ function HistorySection({ history }: { history: PanelFlashDeal[] }) {
                 · {formatWindow(deal.starts_at, deal.ends_at)}
               </p>
               {deal.removed_by_admin && (
-                <p className="text-xs font-semibold text-tile-600">Admin tarafından kaldırıldı</p>
+                <p className="text-xs font-semibold text-danger-600">Admin tarafından kaldırıldı</p>
               )}
             </div>
-            <span className="shrink-0 rounded-full bg-sand-100 px-2.5 py-1 text-xs font-bold text-sepia-700">
+            <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-bold text-stone-700">
               {deal.total_quota - deal.remaining_quota} ayırtma
             </span>
           </li>
@@ -244,9 +244,9 @@ export default function FlashDealPanel({
       {liveFlash ? <LiveFlashCard deal={liveFlash} /> : <CreateFlashForm />}
 
       {!liveFlash && (
-        <div className="rounded-xl bg-primary/5 p-4 text-sm text-primary-800">
+        <div className="rounded-lg bg-teal-50 p-4 text-sm text-teal-800">
           <p className="mb-1 font-bold">💡 İpucu</p>
-          <ul className="list-inside list-disc space-y-1 text-primary-700">
+          <ul className="list-inside list-disc space-y-1 text-teal-700">
             <li>En çok ilgi gören flaşlar somut ve saat aralıklı olanlar.</li>
             <li>Net bir indirim yüzdesi veya ürün adı belirtmek katılımı artırır.</li>
             <li>Akşamüstü paylaşılan flaşlar aynı gün en yüksek dönüşümü alır.</li>

@@ -38,12 +38,12 @@ export default function JoinBar({
   if (joined) {
     return (
       <div className="safe-bottom fixed inset-x-0 bottom-16 z-30 border-t border-border bg-card px-4 py-3 md:bottom-0">
-        <div className="flex items-center justify-between rounded-xl bg-primary-50 px-4 py-3">
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-primary-700">
+        <div className="flex items-center justify-between rounded-xl bg-success-50 px-4 py-3">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-success-700">
             <Check size={16} strokeWidth={2.5} />
             Kaydın alındı, görüşürüz!
           </span>
-          <Link href="/hesabim/paketlerim" className="text-sm font-bold text-primary-700 underline">
+          <Link href="/hesabim/paketlerim" className="text-sm font-bold text-success-700 underline">
             Biletlerim
           </Link>
         </div>
@@ -54,7 +54,7 @@ export default function JoinBar({
   return (
     <div className="safe-bottom fixed inset-x-0 bottom-16 z-30 border-t border-border bg-card px-4 py-3 md:bottom-0">
       {error && (
-        <p className="mb-2 rounded-lg bg-tile-50 px-3 py-2 text-center text-sm font-medium text-tile-600">
+        <p className="mb-2 rounded-lg bg-danger-50 px-3 py-2 text-center text-sm font-medium text-danger-700">
           {error}
         </p>
       )}
@@ -62,8 +62,7 @@ export default function JoinBar({
         <input type="hidden" name="eventId" value={eventId} />
         <Button
           type="submit"
-          variant={isPaid ? "accent" : "default"}
-          shape="pill"
+          variant="teal"
           size="lg"
           disabled={isPending || full}
           className="w-full"

@@ -34,7 +34,7 @@ export default async function CustomerDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 md:px-8 md:py-8">
-      <h1 className="font-display text-2xl font-medium tracking-tight text-ink-900">
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">
         {customer.full_name || "İsimsiz Müşteri"}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">{customer.phone}</p>
@@ -43,13 +43,13 @@ export default async function CustomerDetailPage({
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Ziyaret</p>
-            <p className="mt-1 font-sans text-xl font-bold tabular-nums text-ink-900">{customer.visit_count}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">{customer.visit_count}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">İlk Ziyaret</p>
-            <p className="mt-1 text-sm font-bold text-ink-900">
+            <p className="mt-1 text-sm font-bold text-foreground">
               {customer.first_visit_at ? formatDateTime(customer.first_visit_at) : "—"}
             </p>
           </CardContent>
@@ -57,7 +57,7 @@ export default async function CustomerDetailPage({
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Son Ziyaret</p>
-            <p className="mt-1 text-sm font-bold text-ink-900">
+            <p className="mt-1 text-sm font-bold text-foreground">
               {customer.last_visit_at ? formatDateTime(customer.last_visit_at) : "—"}
             </p>
           </CardContent>
@@ -66,21 +66,21 @@ export default async function CustomerDetailPage({
 
       <Card className="mt-6">
         <CardContent className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-ink-900">Not</h2>
+          <h2 className="mb-3 text-sm font-bold text-foreground">Not</h2>
           <CustomerNotes customerId={customer.id} initialNotes={customer.notes} />
         </CardContent>
       </Card>
 
       <Card className="mt-6">
         <CardContent className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-ink-900">Aldığı Paketler</h2>
+          <h2 className="mb-3 text-sm font-bold text-foreground">Aldığı Paketler</h2>
           {!detail || detail.packages.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">Henüz paket satın almamış.</p>
           ) : (
             <ul className="divide-y divide-border">
               {detail.packages.map((p) => (
                 <li key={p.qr_code} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                  <span className="font-medium text-ink-900">{p.package_title}</span>
+                  <span className="font-medium text-foreground">{p.package_title}</span>
                   <span className="text-xs font-semibold text-muted-foreground">
                     kalan {p.remaining_uses} / {p.usage_count}
                   </span>
@@ -93,7 +93,7 @@ export default async function CustomerDetailPage({
 
       <Card className="mt-6">
         <CardContent className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-ink-900">Ziyaret Geçmişi</h2>
+          <h2 className="mb-3 text-sm font-bold text-foreground">Ziyaret Geçmişi</h2>
           {!detail || detail.timeline.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">Henüz ziyaret kaydı yok.</p>
           ) : (
@@ -102,7 +102,7 @@ export default async function CustomerDetailPage({
                 <li key={i} className="flex items-start gap-3 text-sm">
                   <span className="text-lg">{KIND_ICON[t.kind] ?? "•"}</span>
                   <div>
-                    <p className="font-medium text-ink-900">{t.label}</p>
+                    <p className="font-medium text-foreground">{t.label}</p>
                     <p className="text-xs text-muted-foreground">{formatDateTime(t.occurred_at)}</p>
                   </div>
                 </li>
