@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BusinessCategory } from "@/lib/types";
+import { demoPackagesForCity, demoPackageDetail } from "@/lib/demo-data";
 
 export interface DiscoverPackage {
   id: string;
@@ -9,6 +10,8 @@ export interface DiscoverPackage {
   usage_count: number;
   expires_at: string;
   purchasable: boolean;
+  /** True only for lib/demo-data.ts preview content — never set on real rows. */
+  isDemo?: boolean;
   business: {
     name: string;
     slug: string;
@@ -21,8 +24,14 @@ export interface DiscoverPackage {
 
 // Supabase henüz yapılandırılmadıysa (env değişkenleri boş) bu fonksiyon
 // hata fırlatmak yerine boş liste döner; girişsiz keşfet sayfası hiçbir
-// zaman çökmemeli.
+// zaman çökmemeli. Gerçek satır yoksa (yeni proje, henüz işletme eklenmedi)
+// önizleme amaçlı demo verisine düşer — bkz. lib/demo-data.ts.
 export async function getDiscoverPackages(city?: string): Promise<DiscoverPackage[]> {
+  const real = await fetchRealDiscoverPackages(city);
+  return real.length > 0 ? real : demoPackagesForCity(city);
+}
+
+async function fetchRealDiscoverPackages(city?: string): Promise<DiscoverPackage[]> {
   try {
     const supabase = createClient();
 
@@ -65,6 +74,8 @@ export interface PackageDetail {
   usage_count: number;
   expires_at: string;
   purchasable: boolean;
+  /** True only for lib/demo-data.ts preview content — never set on real rows. */
+  isDemo?: boolean;
   business: {
     id: string;
     name: string;
@@ -120,6 +131,11 @@ export async function getPackageForEdit(id: string, businessId: string) {
 }
 
 export async function getPackageDetail(id: string): Promise<PackageDetail | null> {
+  const real = await fetchRealPackageDetail(id);
+  return real ?? demoPackageDetail(id);
+}
+
+async function fetchRealPackageDetail(id: string): Promise<PackageDetail | null> {
   try {
     const supabase = createClient();
 

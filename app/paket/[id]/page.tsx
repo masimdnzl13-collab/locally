@@ -48,13 +48,26 @@ export default async function PackageDetailPage({
 
       <div className="mx-auto max-w-2xl px-6 py-6">
         <Reveal>
-          <Link
-            href={`/isletme/${pkg.business.slug}`}
-            className="text-sm font-medium text-teal-700 hover:underline"
-          >
-            {pkg.business.name}
-            {pkg.business.district ? ` · ${pkg.business.district}` : ""}
-          </Link>
+          {pkg.isDemo ? (
+            <Badge variant="outline" className="mb-3">
+              Örnek kampanya — önizleme
+            </Badge>
+          ) : null}
+
+          {pkg.isDemo ? (
+            <span className="text-sm font-medium text-muted-foreground">
+              {pkg.business.name}
+              {pkg.business.district ? ` · ${pkg.business.district}` : ""}
+            </span>
+          ) : (
+            <Link
+              href={`/isletme/${pkg.business.slug}`}
+              className="text-sm font-medium text-teal-700 hover:underline"
+            >
+              {pkg.business.name}
+              {pkg.business.district ? ` · ${pkg.business.district}` : ""}
+            </Link>
+          )}
 
           <span className="mt-3 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {BUSINESS_CATEGORY_LABELS[pkg.business.category]}

@@ -25,7 +25,7 @@ export default function NavBar({ city, user }: { city: string; user: CurrentUser
   const isHome = pathname === "/";
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => setScrolled(window.scrollY > 64);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -35,42 +35,67 @@ export default function NavBar({ city, user }: { city: string; user: CurrentUser
 
   // Transparent-over-hero is only meaningful on the homepage; every other
   // page is solid from the start so content never sits under a see-through bar.
-  const solid = scrolled || !isHome;
+  const onHero = isHome && !scrolled;
+  const solid = !onHero;
 
   return (
     <>
       {/* Masaüstü */}
       <header
         className={cn(
-          "sticky top-0 z-40 hidden transition-all duration-200 md:block",
+          "sticky top-0 z-40 hidden transition-all duration-300 md:block",
           solid
             ? "border-b border-border bg-background/95 backdrop-blur shadow-sm"
-            : "border-b border-transparent bg-transparent"
+            : "border-b border-white/0 bg-gradient-to-b from-black/40 via-black/15 to-transparent backdrop-blur-[2px]"
         )}
       >
-        <div className="mx-auto flex max-w-[100rem] items-center gap-6 px-5 py-3 xl:px-8">
-          <Link href="/" className="shrink-0 font-serif text-2xl italic text-foreground">
+        <div
+          className={cn(
+            "mx-auto flex max-w-[100rem] items-center gap-6 px-5 py-3 xl:px-8",
+            onHero && "[text-shadow:0_1px_3px_rgb(0_0_0_/_0.45)]"
+          )}
+        >
+          <Link
+            href="/"
+            className={cn(
+              "shrink-0 font-serif text-2xl italic transition-colors",
+              onHero ? "text-white" : "text-foreground"
+            )}
+          >
             Locally
           </Link>
 
-          <SearchBar size="md" className="max-w-md flex-1" />
+          {!onHero && <SearchBar size="md" className="max-w-md flex-1" />}
 
-          <LocationSelector city={city} className="shrink-0" />
+          <LocationSelector
+            city={city}
+            className={onHero ? "text-white hover:text-white/80 [&_svg]:opacity-90" : undefined}
+          />
 
-          <nav className="flex shrink-0 items-center gap-5">
+          <nav className={cn("flex shrink-0 items-center gap-5", onHero && "ml-2")}>
             {CONTENT_LINKS.map((item) => {
               const active = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className={cn(
+                    "relative py-1 text-sm font-medium transition-colors",
+                    onHero
+                      ? "text-white/85 hover:text-white"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  <span className={active ? "text-foreground" : undefined}>{item.label}</span>
+                  <span className={active ? (onHero ? "text-white" : "text-foreground") : undefined}>
+                    {item.label}
+                  </span>
                   {active && (
                     <motion.span
                       layoutId="nav-desktop-underline"
-                      className="absolute inset-x-0 -bottom-[13px] h-0.5 rounded-full bg-teal-600"
+                      className={cn(
+                        "absolute inset-x-0 -bottom-[13px] h-0.5 rounded-full",
+                        onHero ? "bg-white" : "bg-teal-600"
+                      )}
                       transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     />
                   )}
@@ -83,14 +108,24 @@ export default function NavBar({ city, user }: { city: string; user: CurrentUser
             <Link
               href="/favorilerim"
               aria-label="Favoriler"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+                onHero
+                  ? "text-white/90 hover:bg-white/15 hover:text-white"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
             >
               <Heart size={19} strokeWidth={1.75} />
             </Link>
             <Link
               href="/bildirimler"
               aria-label="Bildirimler"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+                onHero
+                  ? "text-white/90 hover:bg-white/15 hover:text-white"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
             >
               <Bell size={19} strokeWidth={1.75} />
             </Link>
@@ -130,7 +165,7 @@ export default function NavBar({ city, user }: { city: string; user: CurrentUser
             )}
           </div>
         </div>
-        <SearchBar size="md" placeholder="İşletme veya kampanya ara" />
+        {!isHome && <SearchBar size="md" placeholder="İşletme veya kampanya ara" />}
       </header>
 
       {/* Mobil alt gezinme çubuğu */}

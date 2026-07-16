@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BusinessCategory } from "@/lib/types";
+import { demoFlashDealsForCity } from "@/lib/demo-data";
 
 export interface FlashDeal {
   id: string;
@@ -12,11 +13,14 @@ export interface FlashDeal {
     name: string;
     slug: string;
     district: string | null;
+    city: string;
     category: BusinessCategory;
     cover_url: string | null;
   };
   reserved_by_me: boolean;
   my_confirmation_code: string | null;
+  /** True only for lib/demo-data.ts preview content — never set on real rows. */
+  isDemo?: boolean;
 }
 
 export interface PanelFlashDeal {
@@ -64,6 +68,11 @@ export async function getFlashHistory(businessId: string, limit = 8): Promise<Pa
 }
 
 export async function getActiveFlashDeals(city?: string): Promise<FlashDeal[]> {
+  const real = await fetchRealActiveFlashDeals(city);
+  return real.length > 0 ? real : demoFlashDealsForCity(city);
+}
+
+async function fetchRealActiveFlashDeals(city?: string): Promise<FlashDeal[]> {
   try {
     const supabase = createClient();
     const {

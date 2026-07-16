@@ -88,6 +88,11 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
         >
           {countdown.label}
         </span>
+        {deal.isDemo && (
+          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-navy-900">
+            Örnek
+          </span>
+        )}
       </div>
 
       <div className="p-4">
@@ -105,7 +110,11 @@ export default function FlashCard({ deal }: { deal: FlashDeal }) {
             {full ? "Doldu" : remaining <= 3 ? `Son ${remaining} yer` : `${remaining} yer kaldı`}
           </span>
 
-          {reserved ? (
+          {deal.isDemo ? (
+            <Button variant="teal" size="sm" disabled>
+              Örnek fırsat
+            </Button>
+          ) : reserved ? (
             <span className="rounded-full border border-teal-500/40 bg-teal-500/15 px-3 py-1.5 text-xs font-bold text-teal-200">
               ✓ Yerin ayrıldı · {code}
             </span>

@@ -39,9 +39,13 @@ export function DealCard({
 
           <div className="absolute left-3 top-3 flex gap-1.5">
             <Badge variant="discount">%{savings}</Badge>
-            {!pkg.purchasable && <Badge variant="overlay">Yakında</Badge>}
+            {pkg.isDemo ? (
+              <Badge variant="overlay">Örnek</Badge>
+            ) : (
+              !pkg.purchasable && <Badge variant="overlay">Yakında</Badge>
+            )}
           </div>
-          <SaveButton pkg={pkg} className="absolute right-3 top-3" />
+          {!pkg.isDemo && <SaveButton pkg={pkg} className="absolute right-3 top-3" />}
         </div>
 
         <div className={cn("flex flex-1 flex-col gap-1 p-4", featured && "sm:p-5")}>

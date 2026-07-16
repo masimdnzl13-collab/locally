@@ -37,7 +37,8 @@ export default function EventCard({ event }: { event: EventListItem }) {
           <p className="truncate font-semibold text-foreground">{event.title}</p>
           <p className="text-xs text-muted-foreground/80">{formatTime(event.event_at)}</p>
         </div>
-        <div className="shrink-0">
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {event.isDemo && <Badge variant="outline">Örnek</Badge>}
           {full ? (
             <Badge variant="neutral">Kontenjan doldu</Badge>
           ) : event.is_paid ? (

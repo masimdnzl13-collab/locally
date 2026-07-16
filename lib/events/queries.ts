@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { demoEventsForCity, demoEventDetail } from "@/lib/demo-data";
 
 export interface EventListItem {
   id: string;
@@ -10,6 +11,8 @@ export interface EventListItem {
   capacity: number | null;
   business: { name: string; slug: string };
   ticket_count: number;
+  /** True only for lib/demo-data.ts preview content — never set on real rows. */
+  isDemo?: boolean;
 }
 
 async function fetchUpcoming(untilIso?: string, city?: string) {
@@ -56,11 +59,13 @@ async function fetchUpcoming(untilIso?: string, city?: string) {
 export async function getUpcomingEventsThisWeek(city?: string): Promise<EventListItem[]> {
   const until = new Date();
   until.setDate(until.getDate() + 8);
-  return fetchUpcoming(until.toISOString(), city);
+  const real = await fetchUpcoming(until.toISOString(), city);
+  return real.length > 0 ? real : demoEventsForCity(city);
 }
 
 export async function getUpcomingEventsForHome(limit = 5, city?: string): Promise<EventListItem[]> {
-  const all = await fetchUpcoming(undefined, city);
+  const real = await fetchUpcoming(undefined, city);
+  const all = real.length > 0 ? real : demoEventsForCity(city);
   return all.slice(0, limit);
 }
 
@@ -259,6 +264,11 @@ export async function getTicketWithQr(ticketId: string): Promise<TicketWithQr | 
 }
 
 export async function getEventDetail(id: string): Promise<EventDetail | null> {
+  const real = await fetchRealEventDetail(id);
+  return real ?? demoEventDetail(id);
+}
+
+async function fetchRealEventDetail(id: string): Promise<EventDetail | null> {
   try {
     const supabase = createClient();
 

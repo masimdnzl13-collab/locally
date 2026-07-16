@@ -5,9 +5,9 @@ import { getUpcomingEventsForHome } from "@/lib/events/queries";
 import { getWaitlistCount } from "@/lib/waitlist/queries";
 import { getSelectedTown } from "@/lib/locations-server";
 import type { Town } from "@/lib/locations";
+import { Hero } from "@/components/hero";
 import FounderWaitlistForm from "@/components/landing/founder-waitlist-form";
 import EventCard from "@/components/events/event-card";
-import { SearchBar } from "@/components/ui/search-bar";
 import { CategoryGrid } from "@/components/ui/category-grid";
 import { DealCard } from "@/components/ui/deal-card";
 import { Shelf, ShelfGrid, ShelfScroller } from "@/components/ui/shelf";
@@ -66,24 +66,7 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Search-first hero — no giant illustration, real content starts immediately below */}
-      <section className="border-b border-border bg-card px-6 py-12 md:py-16">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-teal-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-discount-500" />
-            {city} · Sezon Dışı
-          </span>
-          <h1 className="mt-5 text-balance text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
-            Yerel işletmelerde <span className="font-serif italic text-teal-700">özel fırsatlar</span> keşfet
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-balance text-base text-muted-foreground md:text-lg">
-            Sezon dışında {town.possessive} işletmelerini keşfet, yazın turiste ayrılan fiyatları kendine ayır.
-          </p>
-          <div className="mx-auto mt-8 max-w-xl">
-            <SearchBar size="lg" />
-          </div>
-        </div>
-      </section>
+      <Hero town={town} />
 
       <section className="px-5 py-6 xl:px-8">
         <div className="mx-auto max-w-[100rem]">

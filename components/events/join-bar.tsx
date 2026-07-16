@@ -15,11 +15,13 @@ export default function JoinBar({
   isPaid,
   ticketPrice,
   full,
+  isDemo,
 }: {
   eventId: string;
   isPaid: boolean;
   ticketPrice: number | null;
   full: boolean;
+  isDemo?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
@@ -33,6 +35,16 @@ export default function JoinBar({
       if (result?.error) setError(result.error);
       else if (result?.success) setJoined(true);
     });
+  }
+
+  if (isDemo) {
+    return (
+      <div className="safe-bottom fixed inset-x-0 bottom-16 z-30 border-t border-border bg-card px-4 py-3 md:bottom-0">
+        <Button type="button" variant="teal" size="lg" disabled className="w-full">
+          Örnek etkinlik — kayıt yakında aktif olacak
+        </Button>
+      </div>
+    );
   }
 
   if (joined) {

@@ -46,6 +46,12 @@ export default async function EventDetailPage({
 
       <div className="mx-auto max-w-2xl px-6 py-6">
         <Reveal>
+          {event.isDemo ? (
+            <Badge variant="outline" className="mb-3">
+              Örnek etkinlik — önizleme
+            </Badge>
+          ) : null}
+
           <h1 className="font-serif text-3xl italic tracking-tight text-foreground">
             {event.title}
           </h1>
@@ -53,13 +59,20 @@ export default async function EventDetailPage({
             {formatDateTime(event.event_at)}
           </p>
 
-          <Link
-            href={`/isletme/${event.business.slug}`}
-            className="mt-3 block text-sm text-muted-foreground hover:underline"
-          >
-            {event.business.name}
-            {event.business_district ? ` · ${event.business_district}` : ""}
-          </Link>
+          {event.isDemo ? (
+            <span className="mt-3 block text-sm text-muted-foreground">
+              {event.business.name}
+              {event.business_district ? ` · ${event.business_district}` : ""}
+            </span>
+          ) : (
+            <Link
+              href={`/isletme/${event.business.slug}`}
+              className="mt-3 block text-sm text-muted-foreground hover:underline"
+            >
+              {event.business.name}
+              {event.business_district ? ` · ${event.business_district}` : ""}
+            </Link>
+          )}
 
           {event.description && (
             <p className="mt-4 text-sm text-muted-foreground">{event.description}</p>
@@ -80,6 +93,7 @@ export default async function EventDetailPage({
         isPaid={event.is_paid}
         ticketPrice={event.ticket_price}
         full={full}
+        isDemo={event.isDemo}
       />
     </div>
   );
