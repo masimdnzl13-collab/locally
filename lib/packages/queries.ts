@@ -9,8 +9,6 @@ export interface DiscoverPackage {
   usage_count: number;
   expires_at: string;
   purchasable: boolean;
-  quota: number | null;
-  sold_count: number;
   business: {
     name: string;
     slug: string;
@@ -31,7 +29,7 @@ export async function getDiscoverPackages(): Promise<DiscoverPackage[]> {
     const { data, error } = await supabase
       .from("packages")
       .select(
-        `id, title, sale_price, summer_reference_price, usage_count, expires_at, quota, sold_count,
+        `id, title, sale_price, summer_reference_price, usage_count, expires_at,
          business:businesses!inner(name, slug, district, city, category, cover_url, approval_status, iyzico_onboarding_status)`
       )
       .eq("is_active", true)

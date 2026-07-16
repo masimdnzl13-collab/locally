@@ -36,8 +36,6 @@ function toDiscoverPackage(
     usage_count: pkg.usage_count,
     expires_at: "",
     purchasable: true,
-    quota: null,
-    sold_count: 0,
     business: {
       name: business.name,
       slug: business.slug,

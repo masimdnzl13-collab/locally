@@ -14,26 +14,22 @@ const CATEGORY_ICONS: Record<BusinessCategory, LucideIcon> = {
 
 const CATEGORIES = Object.keys(CATEGORY_ICONS) as BusinessCategory[];
 
-/** Apple-Maps-style category pills — links to /kesfet?category=X. */
-export function CategoryGrid({ active, className }: { active?: BusinessCategory; className?: string }) {
+/** Elegant monochrome category picker — links to /kesfet?category=X. */
+export function CategoryGrid({ className }: { className?: string }) {
   return (
-    <div className={cn("no-scrollbar flex gap-2 overflow-x-auto", className)}>
+    <div className={cn("no-scrollbar flex gap-3 overflow-x-auto", className)}>
       {CATEGORIES.map((category) => {
         const Icon = CATEGORY_ICONS[category];
-        const isActive = active === category;
         return (
           <Link
             key={category}
             href={`/kesfet?category=${category}`}
-            className={cn(
-              "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors",
-              isActive
-                ? "border-navy-900 bg-navy-900 text-white"
-                : "border-border bg-card text-foreground hover:border-teal-300 hover:bg-teal-50/60"
-            )}
+            className="flex shrink-0 flex-col items-center gap-2 rounded-lg border border-border bg-card px-5 py-4 transition-colors hover:border-teal-300 hover:bg-teal-50/50"
           >
-            <Icon size={17} strokeWidth={2} className={isActive ? "text-white" : "text-teal-700"} />
-            {BUSINESS_CATEGORY_LABELS[category]}
+            <Icon size={22} strokeWidth={1.5} className="text-navy-800" />
+            <span className="text-xs font-medium text-foreground">
+              {BUSINESS_CATEGORY_LABELS[category]}
+            </span>
           </Link>
         );
       })}
