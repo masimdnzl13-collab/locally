@@ -6,7 +6,9 @@ export default function KayitPage({
 }: {
   searchParams: { rol?: string };
 }) {
-  const initialRole = searchParams.rol === "isletme" ? "business" : "user";
+  // Only skip the "continue as" chooser when a role was explicitly requested
+  // (e.g. the homepage's "İşletmemi Kaydet" CTA links to ?rol=isletme).
+  const initialRole = searchParams.rol === "isletme" ? "business" : undefined;
 
   return (
     <AuthShell title="Locally'e katıl" description="30 saniyede hesabını oluştur">

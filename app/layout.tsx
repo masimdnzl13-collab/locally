@@ -4,6 +4,8 @@ import "./globals.css";
 import NavBar from "@/components/nav-bar";
 import Footer from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getSelectedCity } from "@/lib/locations-server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -44,11 +46,14 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const city = getSelectedCity();
+  const user = await getCurrentUser();
+
   return (
     <html lang="tr" suppressHydrationWarning>
       <body
@@ -56,7 +61,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <div className="flex min-h-dvh flex-col">
-            <NavBar />
+            <NavBar city={city} user={user} />
             <main className="flex-1 pb-16 md:pb-0">{children}</main>
             <Footer />
           </div>

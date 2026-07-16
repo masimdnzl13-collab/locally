@@ -82,6 +82,31 @@ export async function signInAction(formData: FormData) {
   redirect(profile?.role === "business" ? "/panel" : "/kesfet");
 }
 
+export async function updateProfileAction(formData: FormData) {
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Oturum bulunamadı." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName || null, phone: phone || null })
+    .eq("id", user.id);
+
+  if (error) {
+    return { error: "Profil güncellenemedi: " + error.message };
+  }
+
+  return { success: true, message: "Bilgilerin güncellendi." };
+}
+
 export async function signOutAction() {
   const supabase = createClient();
   await supabase.auth.signOut();

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Moon } from "lucide-react";
 import { getActiveFlashDeals } from "@/lib/flash-deals/queries";
+import { getSelectedCity } from "@/lib/locations-server";
 import FlashCard from "@/components/flash/flash-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 
 export default async function BuAksamPage() {
-  const deals = await getActiveFlashDeals();
+  const city = getSelectedCity();
+  const deals = await getActiveFlashDeals(city);
 
   if (deals.length === 0) {
     return (
@@ -32,7 +34,7 @@ export default async function BuAksamPage() {
           Bu Akşam
         </h1>
         <p className="mt-1 text-sm text-stone-300">
-          Bodrum&apos;da bu akşam geçerli {deals.length} flaş fırsat
+          {city}&apos;da bu akşam geçerli {deals.length} flaş fırsat
         </p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

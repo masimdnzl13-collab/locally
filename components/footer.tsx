@@ -33,7 +33,7 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-border bg-muted pb-16 md:pb-0">
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <div className="mx-auto max-w-[100rem] px-5 py-12 xl:px-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
             <span className="font-serif text-xl italic text-foreground">Locally</span>

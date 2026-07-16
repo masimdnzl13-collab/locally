@@ -12,7 +12,7 @@ export interface EventListItem {
   ticket_count: number;
 }
 
-async function fetchUpcoming(untilIso?: string) {
+async function fetchUpcoming(untilIso?: string, city?: string) {
   try {
     const supabase = createClient();
 
@@ -20,7 +20,7 @@ async function fetchUpcoming(untilIso?: string) {
       .from("events")
       .select(
         `id, title, event_at, image_url, is_paid, ticket_price, capacity,
-         business:businesses!inner(name, slug, approval_status),
+         business:businesses!inner(name, slug, city, approval_status),
          tickets(id, status)`
       )
       .eq("business.approval_status", "approved")
@@ -28,6 +28,7 @@ async function fetchUpcoming(untilIso?: string) {
       .order("event_at", { ascending: true });
 
     if (untilIso) query = query.lte("event_at", untilIso);
+    if (city) query = query.eq("business.city", city);
 
     const { data, error } = await query;
     if (error || !data) return [];
@@ -52,14 +53,14 @@ async function fetchUpcoming(untilIso?: string) {
   }
 }
 
-export async function getUpcomingEventsThisWeek(): Promise<EventListItem[]> {
+export async function getUpcomingEventsThisWeek(city?: string): Promise<EventListItem[]> {
   const until = new Date();
   until.setDate(until.getDate() + 8);
-  return fetchUpcoming(until.toISOString());
+  return fetchUpcoming(until.toISOString(), city);
 }
 
-export async function getUpcomingEventsForHome(limit = 5): Promise<EventListItem[]> {
-  const all = await fetchUpcoming();
+export async function getUpcomingEventsForHome(limit = 5, city?: string): Promise<EventListItem[]> {
+  const all = await fetchUpcoming(undefined, city);
   return all.slice(0, limit);
 }
 

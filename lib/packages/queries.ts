@@ -22,11 +22,11 @@ export interface DiscoverPackage {
 // Supabase henüz yapılandırılmadıysa (env değişkenleri boş) bu fonksiyon
 // hata fırlatmak yerine boş liste döner; girişsiz keşfet sayfası hiçbir
 // zaman çökmemeli.
-export async function getDiscoverPackages(): Promise<DiscoverPackage[]> {
+export async function getDiscoverPackages(city?: string): Promise<DiscoverPackage[]> {
   try {
     const supabase = createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("packages")
       .select(
         `id, title, sale_price, summer_reference_price, usage_count, expires_at,
@@ -35,6 +35,10 @@ export async function getDiscoverPackages(): Promise<DiscoverPackage[]> {
       .eq("is_active", true)
       .eq("business.approval_status", "approved")
       .order("created_at", { ascending: false });
+
+    if (city) query = query.eq("business.city", city);
+
+    const { data, error } = await query;
 
     if (error || !data) return [];
 

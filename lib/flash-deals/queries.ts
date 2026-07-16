@@ -63,7 +63,7 @@ export async function getFlashHistory(businessId: string, limit = 8): Promise<Pa
   return data as PanelFlashDeal[];
 }
 
-export async function getActiveFlashDeals(): Promise<FlashDeal[]> {
+export async function getActiveFlashDeals(city?: string): Promise<FlashDeal[]> {
   try {
     const supabase = createClient();
     const {
@@ -72,11 +72,11 @@ export async function getActiveFlashDeals(): Promise<FlashDeal[]> {
 
     const nowIso = new Date().toISOString();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("flash_deals")
       .select(
         `id, offer_text, starts_at, ends_at, total_quota, remaining_quota,
-         business:businesses!inner(name, slug, district, category, cover_url, approval_status),
+         business:businesses!inner(name, slug, district, city, category, cover_url, approval_status),
          reservations:flash_deal_reservations(user_id, confirmation_code)`
       )
       .eq("is_active", true)
@@ -84,6 +84,10 @@ export async function getActiveFlashDeals(): Promise<FlashDeal[]> {
       .lte("starts_at", nowIso)
       .gt("ends_at", nowIso)
       .order("ends_at", { ascending: true });
+
+    if (city) query = query.eq("business.city", city);
+
+    const { data, error } = await query;
 
     if (error || !data) return [];
 

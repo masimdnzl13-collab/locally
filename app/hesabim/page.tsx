@@ -1,9 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Ticket, ChevronRight, LogOut } from "lucide-react";
+import { Ticket, Heart, Percent, Bell, CreditCard, Settings, HelpCircle, ChevronRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
 import { Card } from "@/components/ui/card";
+
+const LINKS = [
+  { href: "/hesabim/paketlerim", label: "Paketlerim", icon: Ticket },
+  { href: "/favorilerim", label: "Favorilerim", icon: Heart },
+  { href: "/hesabim/kuponlarim", label: "Kuponlarım", icon: Percent },
+  { href: "/bildirimler", label: "Bildirimler", icon: Bell },
+  { href: "/hesabim/odeme-yontemleri", label: "Ödeme Yöntemleri", icon: CreditCard },
+  { href: "/hesabim/ayarlar", label: "Hesap Ayarları", icon: Settings },
+  { href: "/yardim", label: "Yardım", icon: HelpCircle },
+];
 
 export default async function HesabimPage() {
   const supabase = createClient();
@@ -35,27 +45,27 @@ export default async function HesabimPage() {
         </div>
       </div>
 
-      <Link href="/hesabim/paketlerim" className="block">
-        <Card
-          hoverLift
-          className="flex items-center justify-between p-4 text-sm font-semibold text-foreground"
-        >
-          <span className="flex items-center gap-2.5">
-            <Ticket size={18} className="text-teal-600" strokeWidth={1.75} />
-            Paketlerim
-          </span>
-          <ChevronRight size={16} className="text-muted-foreground" />
-        </Card>
-      </Link>
-
-      <Card className="mt-3 p-4 text-sm text-muted-foreground">
-        Biletlerin ve hesap ayarların çok yakında burada olacak.
-      </Card>
+      <div className="space-y-2">
+        {LINKS.map((link) => (
+          <Link key={link.href} href={link.href} className="block">
+            <Card
+              hoverLift
+              className="flex items-center justify-between p-4 text-sm font-semibold text-foreground"
+            >
+              <span className="flex items-center gap-2.5">
+                <link.icon size={18} className="text-teal-600" strokeWidth={1.75} />
+                {link.label}
+              </span>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </Card>
+          </Link>
+        ))}
+      </div>
 
       <form action={signOutAction} className="mt-6">
         <button
           type="submit"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
         >
           <LogOut size={15} strokeWidth={2} />
           Çıkış Yap

@@ -1,9 +1,11 @@
 export default function ComingSoon({
   title,
   description,
+  children,
 }: {
   title: string;
   description: string;
+  children?: React.ReactNode;
 }) {
   return (
     <section className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center px-6 text-center md:min-h-[calc(100dvh-4.5rem)]">
@@ -16,6 +18,7 @@ export default function ComingSoon({
       <p className="mt-3 max-w-sm text-balance text-sm text-muted-foreground">
         {description}
       </p>
+      {children}
     </section>
   );
 }

@@ -3,6 +3,8 @@ import { getDiscoverPackages, type DiscoverPackage } from "@/lib/packages/querie
 import { getActiveFlashDeals } from "@/lib/flash-deals/queries";
 import { getUpcomingEventsForHome } from "@/lib/events/queries";
 import { getWaitlistCount } from "@/lib/waitlist/queries";
+import { getSelectedTown } from "@/lib/locations-server";
+import type { Town } from "@/lib/locations";
 import FounderWaitlistForm from "@/components/landing/founder-waitlist-form";
 import EventCard from "@/components/events/event-card";
 import { SearchBar } from "@/components/ui/search-bar";
@@ -17,23 +19,25 @@ import type { BusinessCategory } from "@/lib/types";
 import { Ticket, Smartphone, Sun, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const HOW_IT_WORKS = [
-  {
-    icon: Ticket,
-    title: "Paketini al",
-    description: "Bodrum'daki işletmelerden sana uygun paketi seç, güvenle satın al.",
-  },
-  {
-    icon: Smartphone,
-    title: "QR ile kullan",
-    description: "İşletmeye gittiğinde telefonundaki QR kodunu okut, hakkın anında düşsün.",
-  },
-  {
-    icon: Sun,
-    title: "Kışın tadını çıkar",
-    description: "Yazın turiste ayrılan keyfi, kasabanda sen keşfet.",
-  },
-];
+function howItWorks(town: Town) {
+  return [
+    {
+      icon: Ticket,
+      title: "Paketini al",
+      description: `${town.possessive} işletmelerinden sana uygun paketi seç, güvenle satın al.`,
+    },
+    {
+      icon: Smartphone,
+      title: "QR ile kullan",
+      description: "İşletmeye gittiğinde telefonundaki QR kodunu okut, hakkın anında düşsün.",
+    },
+    {
+      icon: Sun,
+      title: "Kışın tadını çıkar",
+      description: "Yazın turiste ayrılan keyfi, kasabanda sen keşfet.",
+    },
+  ];
+}
 
 function byCategory(pkgs: DiscoverPackage[], category: BusinessCategory) {
   return pkgs.filter((p) => p.business.category === category);
@@ -44,10 +48,12 @@ function savingsPercent(p: DiscoverPackage) {
 }
 
 export default async function HomePage() {
+  const town = getSelectedTown();
+  const city = town.label;
   const [packages, flashDeals, weekEvents, waitlistCount] = await Promise.all([
-    getDiscoverPackages(),
-    getActiveFlashDeals(),
-    getUpcomingEventsForHome(5),
+    getDiscoverPackages(city),
+    getActiveFlashDeals(city),
+    getUpcomingEventsForHome(5, city),
     getWaitlistCount(),
   ]);
 
@@ -65,13 +71,13 @@ export default async function HomePage() {
         <div className="mx-auto max-w-3xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-teal-700">
             <span className="h-1.5 w-1.5 rounded-full bg-discount-500" />
-            Bodrum · Sezon Dışı
+            {city} · Sezon Dışı
           </span>
           <h1 className="mt-5 text-balance text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
             Yerel işletmelerde <span className="font-serif italic text-teal-700">özel fırsatlar</span> keşfet
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-balance text-base text-muted-foreground md:text-lg">
-            Sezon dışında Bodrum&apos;un işletmelerini keşfet, yazın turiste ayrılan fiyatları kendine ayır.
+            Sezon dışında {town.possessive} işletmelerini keşfet, yazın turiste ayrılan fiyatları kendine ayır.
           </p>
           <div className="mx-auto mt-8 max-w-xl">
             <SearchBar size="lg" />
@@ -79,13 +85,13 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="px-6 py-6 md:px-10">
-        <div className="mx-auto max-w-7xl">
+      <section className="px-5 py-6 xl:px-8">
+        <div className="mx-auto max-w-[100rem]">
           <CategoryGrid />
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl divide-y divide-border px-6 md:px-10">
+      <div className="mx-auto max-w-[100rem] divide-y divide-border px-5 xl:px-8">
         {trending.length > 0 && (
           <Shelf title="Trend kampanyalar" href="/kesfet">
             <ShelfGrid className="sm:grid-cols-2 lg:grid-cols-4">
@@ -178,7 +184,7 @@ export default async function HomePage() {
             </h2>
           </Reveal>
           <div className="grid gap-10 sm:grid-cols-3">
-            {HOW_IT_WORKS.map((step, i) => (
+            {howItWorks(town).map((step, i) => (
               <Reveal key={step.title} delay={i * 0.1} className="text-center">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-card text-teal-700">
                   <step.icon className="h-5 w-5" strokeWidth={1.75} />

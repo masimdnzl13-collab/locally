@@ -1,5 +1,6 @@
 import { CloudSun } from "lucide-react";
 import { getDiscoverPackages } from "@/lib/packages/queries";
+import { getSelectedCity } from "@/lib/locations-server";
 import DiscoverView from "@/components/discover/discover-view";
 import FlashStripServer from "@/components/flash/flash-strip-server";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -19,7 +20,8 @@ export default async function KesfetPage({
 }: {
   searchParams: { q?: string; category?: string };
 }) {
-  const packages = await getDiscoverPackages();
+  const city = getSelectedCity();
+  const packages = await getDiscoverPackages(city);
 
   if (packages.length === 0) {
     return (
@@ -29,7 +31,7 @@ export default async function KesfetPage({
           <EmptyState
             icon={CloudSun}
             title="Bu kategoride şu an paket yok, yakında eklenecek"
-            description="Bodrum'daki işletmeler çok yakında burada."
+            description={`${city}'daki işletmeler çok yakında burada.`}
             className="border-none bg-transparent"
           />
         </div>
@@ -48,6 +50,7 @@ export default async function KesfetPage({
       <FlashStripServer />
       <DiscoverView
         packages={packages}
+        city={city}
         initialQuery={searchParams.q ?? ""}
         initialCategory={initialCategory}
       />
