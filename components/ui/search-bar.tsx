@@ -21,8 +21,8 @@ export function SearchBar({
     <form
       action={action}
       className={cn(
-        "relative flex items-center border border-border bg-card transition-shadow focus-within:ring-2 focus-within:ring-ring",
-        xl ? "h-[72px] rounded-full px-6" : large ? "h-14 rounded-input px-5" : "h-11 rounded-input px-3.5",
+        "relative flex items-center rounded-full border border-border bg-card transition-shadow focus-within:ring-2 focus-within:ring-ring",
+        xl ? "h-16 px-6" : large ? "h-14 px-5" : "h-11 px-3.5",
         className
       )}
     >
@@ -34,14 +34,14 @@ export function SearchBar({
         placeholder={placeholder}
         className={cn(
           "w-full bg-transparent text-foreground placeholder:text-muted-foreground/70 focus:outline-none",
-          xl ? "px-5 text-lg" : large ? "px-4 text-base" : "px-2.5 text-sm"
+          xl ? "px-5 text-base" : large ? "px-4 text-base" : "px-2.5 text-sm"
         )}
       />
       <button
         type="submit"
         className={cn(
-          "shrink-0 rounded-full bg-navy-900 font-semibold text-white transition-colors hover:bg-navy-800",
-          xl ? "px-7 py-4 text-base" : large ? "px-5 py-2.5 rounded-md text-sm" : "px-3 py-1.5 rounded-md text-xs"
+          "shrink-0 rounded-full bg-teal-900 font-semibold text-white transition-colors hover:bg-teal-800",
+          xl ? "px-6 py-3.5 text-sm" : large ? "px-5 py-2.5 text-sm" : "px-3.5 py-1.5 text-xs"
         )}
       >
         Ara

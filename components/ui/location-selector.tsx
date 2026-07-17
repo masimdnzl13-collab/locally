@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, Search, Check, X } from "lucide-react";
+import { MapPin, ChevronDown, Search, Check, X } from "lucide-react";
 import { TOWNS, type Town } from "@/lib/locations";
 import { setCityAction } from "@/lib/locations-actions";
 import { cn } from "@/lib/utils";
@@ -76,10 +76,11 @@ export function LocationSelector({ city, className }: { city: string; className?
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex shrink-0 items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
       >
-        <MapPin size={16} />
+        <MapPin size={15} className="text-muted-foreground" />
         {city}
+        <ChevronDown size={14} className="text-muted-foreground" />
       </button>
 
       <AnimatePresence>

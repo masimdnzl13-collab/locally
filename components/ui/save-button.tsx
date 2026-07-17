@@ -20,14 +20,14 @@ export function SaveButton({ pkg, className }: { pkg: DiscoverPackage; className
         toggle(pkg);
       }}
       className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-navy-700 shadow-sm transition-transform duration-150 hover:scale-105 active:scale-95",
+        "flex h-9 w-9 items-center justify-center rounded-full bg-navy-950/35 text-white backdrop-blur-sm transition-transform duration-150 hover:scale-105 active:scale-95",
         className
       )}
     >
       <Heart
         size={18}
         strokeWidth={2}
-        className={saved ? "fill-discount-500 text-discount-500" : "fill-none"}
+        className={saved ? "fill-discount-500 text-discount-500" : "fill-none text-white"}
       />
     </button>
   );

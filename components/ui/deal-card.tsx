@@ -38,14 +38,16 @@ export function DealCard({
           )}
 
           <div className="absolute left-3 top-3 flex gap-1.5">
-            <Badge variant="discount">%{savings}</Badge>
+            <span className="rounded-full bg-navy-950/70 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
+              %{savings} İNDİRİM
+            </span>
             {pkg.isDemo ? (
               <Badge variant="overlay">Örnek</Badge>
             ) : (
               !pkg.purchasable && <Badge variant="overlay">Yakında</Badge>
             )}
           </div>
-          {!pkg.isDemo && <SaveButton pkg={pkg} className="absolute right-3 top-3" />}
+          <SaveButton pkg={pkg} className="absolute right-3 top-3" />
         </div>
 
         <div className={cn("flex flex-1 flex-col gap-1 p-4", featured && "sm:p-5")}>

@@ -25,16 +25,11 @@ export default function NavBar({ city, user }: { city: string; user: CurrentUser
   const isHome = pathname === "/";
 
   useEffect(() => {
-    // On the homepage the hero's own content (incl. its search box) only
-    // finishes fading out around ~55% of the way through its own height —
-    // the navbar must not turn solid (and show its own search box) before
-    // that, or the two search boxes visibly overlap mid-scroll.
-    const threshold = isHome ? Math.max(window.innerHeight * 0.5, 320) : 64;
-    const onScroll = () => setScrolled(window.scrollY > threshold);
+    const onScroll = () => setScrolled(window.scrollY > 64);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [isHome]);
+  }, []);
 
   if (pathname?.startsWith("/panel") || pathname?.startsWith("/admin")) return null;
 
@@ -58,11 +53,11 @@ export default function NavBar({ city, user }: { city: string; user: CurrentUser
             Locally
           </Link>
 
-          {!onHero && <SearchBar size="md" className="max-w-md flex-1" />}
+          <SearchBar size="md" className="max-w-md flex-1" />
 
-          <LocationSelector city={city} className={!onHero ? undefined : "ml-1"} />
+          <LocationSelector city={city} />
 
-          <nav className={cn("flex shrink-0 items-center gap-5", onHero && "ml-1")}>
+          <nav className="flex shrink-0 items-center gap-5">
             {CONTENT_LINKS.map((item) => {
               const active = pathname === item.href;
               return (

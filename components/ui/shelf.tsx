@@ -24,10 +24,10 @@ export function Shelf({
         {href && (
           <Link
             href={href}
-            className="flex shrink-0 items-center gap-0.5 text-sm font-medium text-teal-700 transition-colors hover:text-teal-800"
+            className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-stone-200"
           >
             {hrefLabel}
-            <ChevronRight size={16} />
+            <ChevronRight size={15} />
           </Link>
         )}
       </div>

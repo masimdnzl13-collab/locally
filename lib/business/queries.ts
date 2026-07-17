@@ -1,5 +1,36 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Business } from "@/lib/types";
+import type { Business, BusinessCategory } from "@/lib/types";
+
+const ZERO_COUNTS: Record<BusinessCategory, number> = {
+  restoran: 0,
+  kafe: 0,
+  otel: 0,
+  beach_club: 0,
+  aktivite: 0,
+  diger: 0,
+};
+
+/** Real per-category counts of approved businesses — never fabricated. */
+export async function getBusinessCategoryCounts(
+  city?: string
+): Promise<Record<BusinessCategory, number>> {
+  try {
+    const supabase = createClient();
+    let query = supabase.from("businesses").select("category").eq("approval_status", "approved");
+    if (city) query = query.eq("city", city);
+
+    const { data, error } = await query;
+    if (error || !data) return { ...ZERO_COUNTS };
+
+    const counts = { ...ZERO_COUNTS };
+    for (const row of data as { category: BusinessCategory }[]) {
+      counts[row.category] = (counts[row.category] ?? 0) + 1;
+    }
+    return counts;
+  } catch {
+    return { ...ZERO_COUNTS };
+  }
+}
 
 export interface BusinessProfilePackage {
   id: string;

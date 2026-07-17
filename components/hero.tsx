@@ -32,15 +32,8 @@ export function Hero({ town }: { town: Town }) {
         />
       </motion.div>
 
-      {/* Soft radial vignette behind the text column only — the image stays
-          bright and airy everywhere else, no full-bleed dark cast. */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 55% 60% at 50% 42%, rgb(6 18 28 / 0.38), transparent 72%)",
-        }}
-      />
+      {/* Top: soft white mist the photo fades into behind the floating navbar */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-background/70 to-transparent" />
 
       {/* Bottom: layered atmospheric fog — several soft passes instead of one
           flat gradient, so the image dissolves into the page rather than cutting off. */}
@@ -50,23 +43,26 @@ export function Hero({ town }: { town: Town }) {
 
       <motion.div
         style={{ opacity: contentOpacity, y: contentY }}
-        className="relative flex h-full flex-col items-center justify-center px-6 text-center"
+        className="relative flex h-full flex-col items-center justify-center gap-5 px-6 py-24 text-center"
       >
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/15 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-md">
-          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: town.accent }} />
+        <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-md">
+          <span className="h-1.5 w-1.5 rounded-full bg-discount-500" />
           {town.label} · Sezon Dışı
         </span>
 
-        <h1 className="mt-8 max-w-4xl text-balance text-5xl font-semibold leading-[0.98] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)] sm:text-6xl md:text-7xl lg:text-[76px] lg:leading-[1.02]">
-          <span className="block">Bu kışın gerçek hâli</span>
-          <span className="block font-serif italic">{town.label}&apos;da seni bekliyor</span>
+        <h1 className="max-w-4xl text-balance text-4xl font-bold leading-[1.08] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.4)] sm:text-5xl md:text-6xl lg:text-7xl">
+          <span className="block">Yerel işletmelerde</span>
+          <span className="block">
+            <span className="font-serif italic font-normal text-[#3DDBA6]">özel fırsatlar</span>{" "}
+            keşfet
+          </span>
         </h1>
 
-        <p className="mt-7 max-w-lg text-balance text-lg text-white/95 drop-shadow-sm md:text-xl">
-          {town.heroTagline}
+        <p className="max-w-lg text-balance text-base text-white/95 drop-shadow-sm md:text-lg">
+          Sezon dışında {town.possessive} işletmelerini keşfet, yazın turiste ayrılan fiyatları kendine ayır.
         </p>
 
-        <div className="mx-auto mt-12 w-full max-w-2xl">
+        <div className="mx-auto mt-3 w-full max-w-2xl">
           <SearchBar size="xl" className="border-transparent bg-white shadow-[0_24px_60px_-12px_rgba(6,18,28,0.45)]" />
         </div>
 

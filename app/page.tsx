@@ -3,6 +3,7 @@ import { getDiscoverPackages, type DiscoverPackage } from "@/lib/packages/querie
 import { getActiveFlashDeals } from "@/lib/flash-deals/queries";
 import { getUpcomingEventsForHome } from "@/lib/events/queries";
 import { getWaitlistCount } from "@/lib/waitlist/queries";
+import { getBusinessCategoryCounts } from "@/lib/business/queries";
 import { getSelectedTown } from "@/lib/locations-server";
 import type { Town } from "@/lib/locations";
 import { Hero } from "@/components/hero";
@@ -50,11 +51,12 @@ function savingsPercent(p: DiscoverPackage) {
 export default async function HomePage() {
   const town = getSelectedTown();
   const city = town.label;
-  const [packages, flashDeals, weekEvents, waitlistCount] = await Promise.all([
+  const [packages, flashDeals, weekEvents, waitlistCount, categoryCounts] = await Promise.all([
     getDiscoverPackages(city),
     getActiveFlashDeals(city),
     getUpcomingEventsForHome(5, city),
     getWaitlistCount(),
+    getBusinessCategoryCounts(city),
   ]);
 
   const trending = [...packages].sort((a, b) => savingsPercent(b) - savingsPercent(a)).slice(0, 8);
@@ -70,13 +72,15 @@ export default async function HomePage() {
 
       <section className="px-5 py-6 xl:px-8">
         <div className="mx-auto max-w-[100rem]">
-          <CategoryGrid />
+          <Shelf title="Kategorilere göz at" href="/kesfet" hrefLabel="Tüm kategoriler">
+            <CategoryGrid counts={categoryCounts} />
+          </Shelf>
         </div>
       </section>
 
       <div className="mx-auto max-w-[100rem] divide-y divide-border px-5 xl:px-8">
         {trending.length > 0 && (
-          <Shelf title="Trend kampanyalar" href="/kesfet">
+          <Shelf title="Popüler fırsatlar" href="/kesfet" hrefLabel="Tüm fırsatları gör">
             <ShelfGrid className="sm:grid-cols-2 lg:grid-cols-4">
               {trending.map((pkg, i) => (
                 <div key={pkg.id} className={i === 0 ? "col-span-2 row-span-2" : undefined}>
