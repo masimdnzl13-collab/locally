@@ -2350,7 +2350,7 @@ begin
     join businesses b on b.id = p.business_id where b.is_demo;
   select count(*) into v_purchases from purchases pu
     where pu.user_id in (select id from profiles where is_demo)
-       or pu.package_id in (select id from packages p join businesses b on b.id = p.business_id where b.is_demo);
+       or pu.package_id in (select p.id from packages p join businesses b on b.id = p.business_id where b.is_demo);
 
   return jsonb_build_object(
     'loaded', v_businesses > 0,
@@ -2392,12 +2392,12 @@ begin
   where purchase_id in (
     select id from purchases
     where user_id in (select id from profiles where is_demo)
-       or package_id in (select id from packages p join businesses b on b.id = p.business_id where b.is_demo)
+       or package_id in (select p.id from packages p join businesses b on b.id = p.business_id where b.is_demo)
   );
 
   delete from purchases
   where user_id in (select id from profiles where is_demo)
-     or package_id in (select id from packages p join businesses b on b.id = p.business_id where b.is_demo);
+     or package_id in (select p.id from packages p join businesses b on b.id = p.business_id where b.is_demo);
 
   -- businesses silinince packages/flash_deals/events/customers/
   -- verification_logs/announcements/flash_deal_reservations/tickets
@@ -2567,7 +2567,7 @@ begin
     end if;
   end loop;
 
-  select array_agg(id) into v_package_ids from packages p join businesses b on b.id = p.business_id where b.is_demo;
+  select array_agg(p.id) into v_package_ids from packages p join businesses b on b.id = p.business_id where b.is_demo;
 
   -- ---------------------------------------------------------------
   -- 3) BU AKŞAM FLAŞ FIRSATLARI — 4 aktif, biri kontenjanı bitmiş

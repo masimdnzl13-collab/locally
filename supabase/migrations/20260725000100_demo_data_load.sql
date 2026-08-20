@@ -131,7 +131,7 @@ begin
     end if;
   end loop;
 
-  select array_agg(id) into v_package_ids from packages p join businesses b on b.id = p.business_id where b.is_demo;
+  select array_agg(p.id) into v_package_ids from packages p join businesses b on b.id = p.business_id where b.is_demo;
 
   -- ---------------------------------------------------------------
   -- 3) BU AKŞAM FLAŞ FIRSATLARI — 4 aktif, biri kontenjanı bitmiş
