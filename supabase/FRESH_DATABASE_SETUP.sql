@@ -2784,12 +2784,18 @@ reset search_path;
 -- ÖNEMLİ: is_demo=false (varsayılan) bırakılıyor — is_demo=true olsaydı admin
 -- panelindeki "Demo Verisini Temizle" düğmesi bu hesapları da (auth.users
 -- dahil) silerdi. Test lab hesapları demo veri döngüsünden tamamen bağımsız.
-insert into profiles (id, full_name, role) values
-  ('99990000-0000-4000-8000-000000000001', 'Test Admin', 'admin'),
-  ('99990000-0000-4000-8000-000000000002', 'Test İşletme Sahibi', 'business'),
-  ('99990000-0000-4000-8000-000000000003', 'Test Kullanıcı', 'user'),
-  ('99990000-0000-4000-8000-000000000004', 'Komşu İşletme Sahibi', 'business')
-on conflict (id) do update set role = excluded.role;
+-- phone: _touch_customer() (bkz. verification.sql) yalnızca profiles.phone
+-- doluysa müşteriyi customers tablosuna işler -- CRM eşleştirmesi telefon
+-- bazlı olduğu için. Gerçek kayıt akışında normal kullanıcı için telefon
+-- zorunlu (bkz. signUpAction); test.kullanici de aynı davranışı sergilesin
+-- diye burada da doldurulmalı, yoksa "QR Doğrula -> hak düş -> Müşteriler'e
+-- düş" zinciri Test Lab üzerinden hiç test edilemez.
+insert into profiles (id, full_name, phone, role) values
+  ('99990000-0000-4000-8000-000000000001', 'Test Admin', '05320000101', 'admin'),
+  ('99990000-0000-4000-8000-000000000002', 'Test İşletme Sahibi', '05320000102', 'business'),
+  ('99990000-0000-4000-8000-000000000003', 'Test Kullanıcı', '05320000103', 'user'),
+  ('99990000-0000-4000-8000-000000000004', 'Komşu İşletme Sahibi', '05320000104', 'business')
+on conflict (id) do update set role = excluded.role, phone = excluded.phone;
 
 -- ---------------------------------------------------------------------------
 -- 2) İşletmeler — onaylı, logo+kapak fotoğrafı dolu (sihirbaza düşmesin)
