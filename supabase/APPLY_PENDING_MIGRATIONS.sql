@@ -2676,7 +2676,7 @@ begin
       v_user_id,
       v_package_id,
       450,
-      case when v_i % 4 = 0 then 'reserved' else 'completed' end,
+      (case when v_i % 4 = 0 then 'reserved' else 'completed' end)::purchase_status,
       case when v_i % 4 = 0 then 'pay_at_venue' else 'pay_at_venue' end,
       now() - ((v_i % 7) || ' days')::interval
     )
