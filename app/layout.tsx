@@ -22,10 +22,17 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
+const SITE_DESCRIPTION =
+  "Bodrum'da sezon dışında işletmeleri ve yerel halkı buluşturan yerel keşif pazaryeri.";
+
 export const metadata: Metadata = {
-  title: "Locally — Yerel fırsatları keşfet",
-  description:
-    "Bodrum'da sezon dışında işletmeleri ve yerel halkı buluşturan yerel keşif pazaryeri.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  title: {
+    default: "Locally — Yerel fırsatları keşfet",
+    template: "%s — Locally",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: "Locally",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192.png",
@@ -35,6 +42,18 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Locally",
+  },
+  openGraph: {
+    title: "Locally — Yerel fırsatları keşfet",
+    description: SITE_DESCRIPTION,
+    siteName: "Locally",
+    locale: "tr_TR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Locally — Yerel fırsatları keşfet",
+    description: SITE_DESCRIPTION,
   },
 };
 

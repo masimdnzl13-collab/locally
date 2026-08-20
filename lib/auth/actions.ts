@@ -86,26 +86,20 @@ export async function signInAction(formData: FormData) {
     return { error: "E-posta veya şifre hatalı." };
   }
 
-  let { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .maybeSingle();
-
-  if (!profile) {
-    // Eski hesaplarda (e-posta onayı akışındaki geçmiş hatadan kalan)
-    // profiles satırı hiç oluşmamış olabilir — girişte onarılır.
-    const requestedRole = (data.user.user_metadata?.role === "business"
-      ? "business"
-      : "user") as UserRole;
-    profile = (await ensureProfile({
-      id: data.user.id,
-      email: data.user.email ?? null,
-      fullName: (data.user.user_metadata?.full_name as string | undefined) || null,
-      phone: (data.user.user_metadata?.phone as string | undefined) || null,
-      requestedRole,
-    })) as { role: UserRole };
-  }
+  // ensureProfile hem eksik profiles satırını (e-posta onayı akışındaki
+  // geçmiş hatadan kalan) onarır hem de admin beyaz listesine sonradan
+  // eklenmiş bir e-postanın rolünü her girişte admin'e yükseltir — bkz.
+  // lib/auth/ensure-profile.ts.
+  const requestedRole = (data.user.user_metadata?.role === "business"
+    ? "business"
+    : "user") as UserRole;
+  const profile = (await ensureProfile({
+    id: data.user.id,
+    email: data.user.email ?? null,
+    fullName: (data.user.user_metadata?.full_name as string | undefined) || null,
+    phone: (data.user.user_metadata?.phone as string | undefined) || null,
+    requestedRole,
+  })) as { role: UserRole };
 
   if (next) {
     redirect(next);

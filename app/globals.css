@@ -116,6 +116,20 @@
   }
 }
 
+@media print {
+  header,
+  footer,
+  nav {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  main {
+    padding-bottom: 0 !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

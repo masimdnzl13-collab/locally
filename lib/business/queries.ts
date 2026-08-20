@@ -16,7 +16,11 @@ export async function getBusinessCategoryCounts(
 ): Promise<Record<BusinessCategory, number>> {
   try {
     const supabase = createClient();
-    let query = supabase.from("businesses").select("category").eq("approval_status", "approved");
+    let query = supabase
+      .from("businesses")
+      .select("category")
+      .eq("approval_status", "approved")
+      .eq("is_test_fixture", false);
     if (city) query = query.eq("city", city);
 
     const { data, error } = await query;

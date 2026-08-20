@@ -19,7 +19,8 @@ export default async function OdemePage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/giris");
+  if (!user)
+    redirect(`/giris?next=${encodeURIComponent(`/satin-alma/odeme?purchase=${searchParams.purchase}`)}`);
 
   const purchase = await getCheckoutPurchase(searchParams.purchase, user.id);
   if (!purchase) redirect("/kesfet");

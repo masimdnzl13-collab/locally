@@ -23,10 +23,11 @@ async function fetchUpcoming(untilIso?: string, city?: string) {
       .from("events")
       .select(
         `id, title, event_at, image_url, is_paid, ticket_price, capacity,
-         business:businesses!inner(name, slug, city, approval_status),
+         business:businesses!inner(name, slug, city, approval_status, is_test_fixture),
          tickets(id, status)`
       )
       .eq("business.approval_status", "approved")
+      .eq("business.is_test_fixture", false)
       .gte("event_at", new Date().toISOString())
       .order("event_at", { ascending: true });
 

@@ -36,7 +36,22 @@ export async function ensureProfile(params: {
     .eq("id", params.id)
     .maybeSingle();
 
-  if (existing) return existing;
+  if (existing) {
+    // Zaten kayıtlı bir hesap sonradan admin beyaz listesine eklenmiş
+    // olabilir (ör. m.asimdnzl13@gmail.com) — her giriş/callback akışında
+    // burada tekrar kontrol edip rolü yükseltiyoruz. Admin rolü asla
+    // otomatik düşürülmez, yalnızca yükseltilir.
+    if (existing.role !== "admin" && (await resolveRole(params.email, existing.role)) === "admin") {
+      const { data: upgraded } = await service
+        .from("profiles")
+        .update({ role: "admin" })
+        .eq("id", params.id)
+        .select("id, role")
+        .single();
+      return upgraded ?? existing;
+    }
+    return existing;
+  }
 
   const role = await resolveRole(params.email, params.requestedRole);
 

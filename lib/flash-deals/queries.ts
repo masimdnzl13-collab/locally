@@ -85,11 +85,12 @@ async function fetchRealActiveFlashDeals(city?: string): Promise<FlashDeal[]> {
       .from("flash_deals")
       .select(
         `id, offer_text, starts_at, ends_at, total_quota, remaining_quota,
-         business:businesses!inner(name, slug, district, city, category, cover_url, approval_status),
+         business:businesses!inner(name, slug, district, city, category, cover_url, approval_status, is_test_fixture),
          reservations:flash_deal_reservations(user_id, confirmation_code)`
       )
       .eq("is_active", true)
       .eq("business.approval_status", "approved")
+      .eq("business.is_test_fixture", false)
       .lte("starts_at", nowIso)
       .gt("ends_at", nowIso)
       .order("ends_at", { ascending: true });

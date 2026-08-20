@@ -39,10 +39,11 @@ async function fetchRealDiscoverPackages(city?: string): Promise<DiscoverPackage
       .from("packages")
       .select(
         `id, title, sale_price, summer_reference_price, usage_count, expires_at,
-         business:businesses!inner(name, slug, district, city, category, cover_url, approval_status, iyzico_onboarding_status)`
+         business:businesses!inner(name, slug, district, city, category, cover_url, approval_status, iyzico_onboarding_status, is_test_fixture)`
       )
       .eq("is_active", true)
       .eq("business.approval_status", "approved")
+      .eq("business.is_test_fixture", false)
       .order("created_at", { ascending: false });
 
     if (city) query = query.eq("business.city", city);
