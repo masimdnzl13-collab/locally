@@ -12,7 +12,16 @@
 -- Test lab hesap şifresi: TestLab2026!
 -- =============================================================================
 
-create extension if not exists pgcrypto;
+-- Supabase projelerinde pgcrypto genellikle "extensions" şemasına kurulur,
+-- "public" değil — bu yüzden crypt()/gen_salt() çağrıları şema belirtilmeden
+-- yapılırsa "function does not exist" hatası verebilir. Eklentiyi açıkça
+-- extensions şemasına kurmayı DENERİZ (zaten başka bir şemada kuruluysa
+-- "if not exists" bunu sessizce atlar, hataya sebep olmaz), ve aşağıdaki
+-- INSERT'ten hemen önce search_path'i hem public hem extensions'ı
+-- kapsayacak şekilde genişletiriz — böylece pgcrypto hangi şemada kurulu
+-- olursa olsun (public, extensions, ya da başka bir yerde) crypt()/
+-- gen_salt() bulunur. İşlem bitince search_path eski haline döndürülür.
+create extension if not exists pgcrypto with schema extensions;
 
 -- is_test_fixture: is_demo'dan bilinçli olarak AYRI bir bayrak. is_demo=true
 -- satırlar admin panelindeki "Demo Verisini Temizle" düğmesiyle silinebilir;
@@ -28,6 +37,8 @@ create index if not exists idx_businesses_is_test_fixture on businesses (is_test
 --    (WRONG_BUSINESS senaryosu için, ayrı bir işletmeye ihtiyaç var)
 -- ---------------------------------------------------------------------------
 
+set search_path = public, extensions;
+
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
@@ -39,6 +50,8 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000000', '99990000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'test.kullanici@locally.test', crypt('TestLab2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Test Kullanıcı"}', false, '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '99990000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'test.komsu@locally.test', crypt('TestLab2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Komşu İşletme Sahibi"}', false, '', '', '', '')
 on conflict (id) do nothing;
+
+reset search_path;
 
 -- ÖNEMLİ: is_demo=false (varsayılan) bırakılıyor — is_demo=true olsaydı admin
 -- panelindeki "Demo Verisini Temizle" düğmesi bu hesapları da (auth.users

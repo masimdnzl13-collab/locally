@@ -2479,6 +2479,19 @@ grant execute on function public.admin_clear_demo_data() to authenticated;
 -- is_demo=true (veya demo işletme/kullanıcıya bağlı) olduğu için
 -- admin_clear_demo_data() ile güvenle geri alınabilir. Sabit UUID + ON
 -- CONFLICT DO NOTHING sayesinde fonksiyon tekrar çağrılsa da hata vermez.
+--
+-- GİRİŞ YAPILAMAZ HESAPLAR: bu 12 işletme + 30 kullanıcının tek işi
+-- keşfet/panel/admin ekranlarındaki listeleri, müşteri geçmişini ve
+-- grafikleri gerçekçi görünecek şekilde doldurmak — hiçbiriyle giriş
+-- yapılması gerekmiyor (giriş gerektiren tek test hesapları
+-- /test-lab-k7m2p9x4 sayfasındaki 3 sabit hesap, bkz. test_lab.sql).
+-- Bu yüzden encrypted_password bilinçli olarak NULL bırakılıyor: hem
+-- crypt()/gen_salt() (pgcrypto) çağırma ve şema/arama yolu bağımlılığını
+-- tamamen ortadan kaldırıyor, hem de auth şemasının iç yapısına daha az
+-- bağımlı, daha sağlam bir yöntem. NULL şifreli bir auth.users satırı
+-- Supabase'te geçerlidir (ör. yalnızca magic link ile giren kullanıcılarda
+-- da böyledir) — signInWithPassword bu hesaplar için her zaman "Invalid
+-- login credentials" döner, hesaplar başka hiçbir şekilde etkilenmez.
 
 create or replace function public.admin_load_demo_data()
 returns jsonb
@@ -2509,18 +2522,18 @@ begin
     raw_app_meta_data, raw_user_meta_data, is_super_admin,
     confirmation_token, recovery_token, email_change_token_new, email_change
   ) values
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'demo.b01@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 1"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'demo.b02@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 2"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'demo.b03@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 3"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'demo.b04@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 4"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'demo.b05@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 5"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'demo.b06@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 6"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'demo.b07@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 7"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'demo.b08@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 8"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'demo.b09@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 9"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'demo.b10@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 10"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000011', 'authenticated', 'authenticated', 'demo.b11@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 11"}', false, '', '', '', ''),
-    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000012', 'authenticated', 'authenticated', 'demo.b12@locally.test', crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 12"}', false, '', '', '', '')
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'demo.b01@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 1"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'demo.b02@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 2"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'demo.b03@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 3"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'demo.b04@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 4"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'demo.b05@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 5"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'demo.b06@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 6"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'demo.b07@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 7"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'demo.b08@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 8"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'demo.b09@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 9"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'demo.b10@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 10"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000011', 'authenticated', 'authenticated', 'demo.b11@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 11"}', false, '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', 'd0000000-0000-4000-8000-000000000012', 'authenticated', 'authenticated', 'demo.b12@locally.test', null, now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Demo İşletme 12"}', false, '', '', '', '')
   on conflict (id) do nothing;
 
   insert into profiles (id, full_name, phone, role, is_demo)
@@ -2635,7 +2648,7 @@ begin
     ) values (
       '00000000-0000-0000-0000-000000000000', v_user_id, 'authenticated', 'authenticated',
       'demo.u' || lpad(v_i::text, 2, '0') || '@locally.test',
-      crypt('DemoPilot2026!', gen_salt('bf')), now(), now(), now(),
+      null, now(), now(), now(),
       '{"provider":"email","providers":["email"]}',
       ('{"full_name":"Demo Kullanıcı ' || v_i || '"}')::jsonb,
       false, '', '', '', ''
@@ -2766,7 +2779,16 @@ where p.id = u.id
 -- Test lab hesap şifresi: TestLab2026!
 -- =============================================================================
 
-create extension if not exists pgcrypto;
+-- Supabase projelerinde pgcrypto genellikle "extensions" şemasına kurulur,
+-- "public" değil — bu yüzden crypt()/gen_salt() çağrıları şema belirtilmeden
+-- yapılırsa "function does not exist" hatası verebilir. Eklentiyi açıkça
+-- extensions şemasına kurmayı DENERİZ (zaten başka bir şemada kuruluysa
+-- "if not exists" bunu sessizce atlar, hataya sebep olmaz), ve aşağıdaki
+-- INSERT'ten hemen önce search_path'i hem public hem extensions'ı
+-- kapsayacak şekilde genişletiriz — böylece pgcrypto hangi şemada kurulu
+-- olursa olsun (public, extensions, ya da başka bir yerde) crypt()/
+-- gen_salt() bulunur. İşlem bitince search_path eski haline döndürülür.
+create extension if not exists pgcrypto with schema extensions;
 
 -- is_test_fixture: is_demo'dan bilinçli olarak AYRI bir bayrak. is_demo=true
 -- satırlar admin panelindeki "Demo Verisini Temizle" düğmesiyle silinebilir;
@@ -2782,6 +2804,8 @@ create index if not exists idx_businesses_is_test_fixture on businesses (is_test
 --    (WRONG_BUSINESS senaryosu için, ayrı bir işletmeye ihtiyaç var)
 -- ---------------------------------------------------------------------------
 
+set search_path = public, extensions;
+
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
@@ -2793,6 +2817,8 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000000', '99990000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'test.kullanici@locally.test', crypt('TestLab2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Test Kullanıcı"}', false, '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '99990000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'test.komsu@locally.test', crypt('TestLab2026!', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Komşu İşletme Sahibi"}', false, '', '', '', '')
 on conflict (id) do nothing;
+
+reset search_path;
 
 -- ÖNEMLİ: is_demo=false (varsayılan) bırakılıyor — is_demo=true olsaydı admin
 -- panelindeki "Demo Verisini Temizle" düğmesi bu hesapları da (auth.users
