@@ -48,7 +48,7 @@ export default function BuyBar({
             ? "Yakında"
             : isPending
               ? "Bir saniye..."
-              : `Paketi Al — ${formatTL(price)}`}
+              : `Paketi Ayırt — Mekânda Öde (${formatTL(price)})`}
         </Button>
       </form>
     </div>

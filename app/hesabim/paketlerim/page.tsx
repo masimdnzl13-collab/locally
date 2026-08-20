@@ -6,6 +6,7 @@ import { generateQrDataUrl } from "@/lib/qr";
 import MyPackagesView, { type MyPackageCard } from "@/components/packages/my-packages-view";
 import MyTicketsView, { type MyTicketCard } from "@/components/events/my-tickets-view";
 import MyStuffSwitcher from "@/components/packages/my-stuff-switcher";
+import { PILOT_MODE } from "@/lib/config/pilot";
 
 export default async function PaketlerimPage() {
   const supabase = createClient();
@@ -34,7 +35,9 @@ export default async function PaketlerimPage() {
       qrCode: e.qr_code,
       finished: e.status !== "active" || new Date(e.package.expires_at) < new Date(),
       purchaseId: e.purchase_id,
+      isReservation: e.purchase_status === "reserved",
       refundEligible:
+        !PILOT_MODE &&
         e.purchase_status === "completed" &&
         !e.refund_requested &&
         e.remaining_uses === e.package.usage_count &&

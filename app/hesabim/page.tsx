@@ -4,13 +4,18 @@ import { Ticket, Heart, Percent, Bell, CreditCard, Settings, HelpCircle, Chevron
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
 import { Card } from "@/components/ui/card";
+import { PILOT_MODE } from "@/lib/config/pilot";
 
+// Pilot modda kart/online ödeme kaydı olmadığı için bu menü öğesi
+// gösterilmiyor — PILOT_MODE false yapıldığında geri döner.
 const LINKS = [
   { href: "/hesabim/paketlerim", label: "Paketlerim", icon: Ticket },
   { href: "/favorilerim", label: "Favorilerim", icon: Heart },
   { href: "/hesabim/kuponlarim", label: "Kuponlarım", icon: Percent },
   { href: "/bildirimler", label: "Bildirimler", icon: Bell },
-  { href: "/hesabim/odeme-yontemleri", label: "Ödeme Yöntemleri", icon: CreditCard },
+  ...(PILOT_MODE
+    ? []
+    : [{ href: "/hesabim/odeme-yontemleri", label: "Ödeme Yöntemleri", icon: CreditCard }]),
   { href: "/hesabim/ayarlar", label: "Hesap Ayarları", icon: Settings },
   { href: "/yardim", label: "Yardım", icon: HelpCircle },
 ];

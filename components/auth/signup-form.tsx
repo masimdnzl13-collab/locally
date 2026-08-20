@@ -151,6 +151,22 @@ export default function SignupForm({
           placeholder="sen@ornek.com"
         />
       </div>
+      {role === "user" && (
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-foreground">
+            Telefon
+          </label>
+          <Input
+            type="tel"
+            name="phone"
+            required
+            placeholder="05xx xxx xx xx"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            İşletmeler QR doğrulama sonrası seninle bu numaradan iletişime geçebilir.
+          </p>
+        </div>
+      )}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">
           Şifre

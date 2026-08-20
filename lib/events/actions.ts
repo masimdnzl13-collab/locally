@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { paymentService } from "@/lib/payments";
 import { getMyBusiness } from "@/lib/business/current";
+import { PILOT_MODE } from "@/lib/config/pilot";
 
 async function requireBusiness() {
   const business = await getMyBusiness();
@@ -293,14 +294,19 @@ export async function purchaseEventTicketAction(
   if (!event.is_paid || !event.ticket_price) return { error: "Bu etkinlik ücretsiz." };
   if (new Date(event.event_at) < new Date()) return { error: "Bu etkinlik geçti." };
 
-  const charge = await paymentService.charge({
-    amount: event.ticket_price,
-    userId: user.id,
-    packageId: eventId,
-  });
+  // PİLOT MOD: platformdan para geçmez, bilet ücreti kapıda alınır — burada
+  // yalnızca yer ayrılır. PILOT_MODE false yapıldığında gerçek ödeme akışı
+  // (lib/payments üzerinden) devreye girer.
+  if (!PILOT_MODE) {
+    const charge = await paymentService.charge({
+      amount: event.ticket_price,
+      userId: user.id,
+      packageId: eventId,
+    });
 
-  if (!charge.success) {
-    return { error: charge.error ?? "Ödeme alınamadı, tekrar dener misin?" };
+    if (!charge.success) {
+      return { error: charge.error ?? "Ödeme alınamadı, tekrar dener misin?" };
+    }
   }
 
   const { data: ticket, error } = await supabase

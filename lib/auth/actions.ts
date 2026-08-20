@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ensureProfile } from "@/lib/auth/ensure-profile";
 import type { UserRole } from "@/lib/types";
 
 function safeNext(next: FormDataEntryValue | null): string | null {
@@ -15,18 +16,30 @@ export async function signUpAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("fullName") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
   const role = (formData.get("role") === "business" ? "business" : "user") as UserRole;
 
   if (!email || !password) {
     return { error: "E-posta ve şifre gerekli." };
   }
+  // Telefon, işletmelerin QR doğrulama sonrası müşteriyi CRM'e
+  // düşürebilmesi ve duyuru gönderebilmesi için müşteri hesaplarında zorunlu.
+  if (role === "user" && !phone) {
+    return { error: "Telefon numarası gerekli." };
+  }
 
   const supabase = createClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, role } },
+    options: {
+      data: { full_name: fullName, phone, role },
+      // E-posta onay bağlantısı /auth/callback'e (PKCE code exchange) düşmezse
+      // profiles satırı hiç oluşturulmaz — bkz. ensureProfile.
+      emailRedirectTo: `${siteUrl}/auth/callback`,
+    },
   });
 
   if (error) {
@@ -40,16 +53,20 @@ export async function signUpAction(formData: FormData) {
     };
   }
 
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: data.user.id,
-    full_name: fullName || null,
-    role,
-  });
-
-  if (profileError && profileError.code !== "23505") {
-    return { error: "Profil oluşturulamadı: " + profileError.message };
+  let profile: { id: string; role: UserRole } | null = null;
+  try {
+    profile = (await ensureProfile({
+      id: data.user.id,
+      email,
+      fullName: fullName || null,
+      phone: phone || null,
+      requestedRole: role,
+    })) as { id: string; role: UserRole };
+  } catch (err) {
+    return { error: "Profil oluşturulamadı: " + (err as Error).message };
   }
 
+  if (profile?.role === "admin") redirect("/admin");
   redirect(role === "business" ? "/panel/kurulum" : "/kesfet");
 }
 
@@ -69,16 +86,32 @@ export async function signInAction(formData: FormData) {
     return { error: "E-posta veya şifre hatalı." };
   }
 
+  let { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  if (!profile) {
+    // Eski hesaplarda (e-posta onayı akışındaki geçmiş hatadan kalan)
+    // profiles satırı hiç oluşmamış olabilir — girişte onarılır.
+    const requestedRole = (data.user.user_metadata?.role === "business"
+      ? "business"
+      : "user") as UserRole;
+    profile = (await ensureProfile({
+      id: data.user.id,
+      email: data.user.email ?? null,
+      fullName: (data.user.user_metadata?.full_name as string | undefined) || null,
+      phone: (data.user.user_metadata?.phone as string | undefined) || null,
+      requestedRole,
+    })) as { role: UserRole };
+  }
+
   if (next) {
     redirect(next);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .single();
-
+  if (profile?.role === "admin") redirect("/admin");
   redirect(profile?.role === "business" ? "/panel" : "/kesfet");
 }
 

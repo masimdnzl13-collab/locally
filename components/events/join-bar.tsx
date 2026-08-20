@@ -84,7 +84,7 @@ export default function JoinBar({
             : isPending
               ? "Bir saniye..."
               : isPaid
-                ? `Bilet Al — ${formatTL(ticketPrice ?? 0)}`
+                ? `Yerini Ayırt — Kapıda Öde (${formatTL(ticketPrice ?? 0)})`
                 : "Katılacağım"}
         </Button>
       </form>

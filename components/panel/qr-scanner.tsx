@@ -56,7 +56,12 @@ export default function QrScanner({
     const instance = scannerRef.current;
     if (!instance) return;
     if (paused) {
-      instance.pause(true);
+      try {
+        instance.pause(true);
+      } catch {
+        // kamera hiç başlamamışsa (izin yok, HTTPS dışı bağlam vb.) pause
+        // atılamaz; elle kod girişi bu durumdan etkilenmez.
+      }
     } else {
       try {
         instance.resume();

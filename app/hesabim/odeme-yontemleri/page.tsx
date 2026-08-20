@@ -11,8 +11,8 @@ export default async function OdemeYontemleriPage() {
 
   return (
     <ComingSoon
-      title="Ödeme yöntemleri çok yakında"
-      description="Kartlarını kaydedip tek dokunuşla ödeme yapabileceğin bu alan üzerinde çalışıyoruz. Şimdilik her satın almada ödeme bilgisi iyzico üzerinden güvenle alınıyor."
+      title="Ödeme mekânda alınıyor"
+      description="Şu an paketlerini ve biletlerini uygulamadan ayırtıyorsun, ödemeyi ilk ziyaretinde işletmede yapıyorsun. Kart kaydetme gibi online ödeme seçenekleri yakında eklenecek."
     />
   );
 }

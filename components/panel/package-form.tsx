@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { createPackageAction, updatePackageAction } from "@/lib/packages/actions";
 import SubmitButton from "@/components/ui/submit-button";
+import PackageCopyAssistant from "@/components/ai/package-copy-assistant";
 import type { Package } from "@/lib/types";
 
 const inputClass =
@@ -46,6 +47,12 @@ export default function PackageForm({
   const [isPending, startTransition] = useTransition();
   const isEdit = !!pkg;
 
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const usageDescriptionRef = useRef<HTMLInputElement>(null);
+  const salePriceRef = useRef<HTMLInputElement>(null);
+  const referencePriceRef = useRef<HTMLInputElement>(null);
+
   function handleSubmit(formData: FormData) {
     setError(null);
     startTransition(async () => {
@@ -70,10 +77,30 @@ export default function PackageForm({
         </p>
       )}
 
+      <PackageCopyAssistant
+        getContent={() =>
+          [descriptionRef.current?.value, usageDescriptionRef.current?.value]
+            .filter(Boolean)
+            .join(" — ")
+        }
+        getSalePrice={() => Number(salePriceRef.current?.value ?? 0)}
+        getReferencePrice={() => {
+          const v = Number(referencePriceRef.current?.value ?? 0);
+          return v > 0 ? v : null;
+        }}
+        onApplyTitle={(title) => {
+          if (titleRef.current) titleRef.current.value = title;
+        }}
+        onApplyDescription={(text) => {
+          if (descriptionRef.current) descriptionRef.current.value = text;
+        }}
+      />
+
       <Section title="Temel Bilgiler">
         <div>
           <label className={labelClass}>Başlık</label>
           <input
+            ref={titleRef}
             type="text"
             name="title"
             required
@@ -85,6 +112,7 @@ export default function PackageForm({
         <div>
           <label className={labelClass}>Açıklama</label>
           <textarea
+            ref={descriptionRef}
             name="description"
             rows={3}
             defaultValue={pkg?.description ?? ""}
@@ -111,6 +139,7 @@ export default function PackageForm({
         <div>
           <label className={labelClass}>Satış Fiyatı (₺)</label>
           <input
+            ref={salePriceRef}
             type="number"
             name="sale_price"
             required
@@ -123,6 +152,7 @@ export default function PackageForm({
         <div>
           <label className={labelClass}>Referans Yaz Fiyatı (₺)</label>
           <input
+            ref={referencePriceRef}
             type="number"
             name="summer_reference_price"
             required
@@ -167,6 +197,7 @@ export default function PackageForm({
         <div>
           <label className={labelClass}>Her Hakkın Kapsamı</label>
           <input
+            ref={usageDescriptionRef}
             type="text"
             name="usage_description"
             defaultValue={pkg?.usage_description ?? ""}

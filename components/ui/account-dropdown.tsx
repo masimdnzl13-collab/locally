@@ -19,6 +19,7 @@ import {
 import { signOutAction } from "@/lib/auth/actions";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { cn } from "@/lib/utils";
+import { PILOT_MODE } from "@/lib/config/pilot";
 
 const MENU_ITEMS = [
   { href: "/hesabim", label: "Profilim", icon: User },
@@ -26,7 +27,9 @@ const MENU_ITEMS = [
   { href: "/hesabim/paketlerim", label: "Paketim", icon: Ticket },
   { href: "/hesabim/kuponlarim", label: "Kuponlarım", icon: Percent },
   { href: "/bildirimler", label: "Bildirimler", icon: Bell },
-  { href: "/hesabim/odeme-yontemleri", label: "Ödeme Yöntemleri", icon: CreditCard },
+  ...(PILOT_MODE
+    ? []
+    : [{ href: "/hesabim/odeme-yontemleri", label: "Ödeme Yöntemleri", icon: CreditCard }]),
   { href: "/hesabim/ayarlar", label: "Hesap Ayarları", icon: Settings },
   { href: "/yardim", label: "Yardım", icon: HelpCircle },
 ];

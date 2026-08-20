@@ -20,6 +20,7 @@ export interface MyPackageCard {
   qrCode: string;
   finished: boolean;
   purchaseId: string;
+  isReservation: boolean;
   refundEligible: boolean;
   refundRequested: boolean;
   refundRejectReason: string | null;
@@ -84,20 +85,26 @@ export default function MyPackagesView({ items }: { items: MyPackageCard[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-muted-foreground">{item.businessName}</p>
                   <p className="truncate font-semibold text-foreground">{item.title}</p>
-                  <div className="mt-1.5 flex items-center gap-1.5">
-                    {Array.from({ length: item.totalUses }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={cn(
-                          "h-1.5 w-4 rounded-full",
-                          i < item.remainingUses ? "bg-teal-500" : "bg-stone-200"
-                        )}
-                      />
-                    ))}
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      {item.remainingUses}/{item.totalUses}
+                  {item.isReservation ? (
+                    <span className="mt-1.5 inline-block rounded-full bg-discount-50 px-2.5 py-0.5 text-xs font-semibold text-discount-700">
+                      Ödeme bekliyor — mekânda öde
                     </span>
-                  </div>
+                  ) : (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      {Array.from({ length: item.totalUses }).map((_, i) => (
+                        <span
+                          key={i}
+                          className={cn(
+                            "h-1.5 w-4 rounded-full",
+                            i < item.remainingUses ? "bg-teal-500" : "bg-stone-200"
+                          )}
+                        />
+                      ))}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        {item.remainingUses}/{item.totalUses}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-xs text-muted-foreground">{formatDate(item.expiresAt)}</p>
@@ -124,6 +131,11 @@ export default function MyPackagesView({ items }: { items: MyPackageCard[] }) {
           >
             <p className="text-sm text-muted-foreground">{selected.businessName}</p>
             <p className="mb-4 font-semibold text-foreground">{selected.title}</p>
+            {selected.isReservation && (
+              <span className="mb-2 inline-block rounded-full bg-discount-50 px-3 py-1 text-xs font-semibold text-discount-700">
+                Ödeme bekliyor — mekânda öde
+              </span>
+            )}
             {selected.finished && <Badge variant="success">Tamamlandı</Badge>}
 
             <div className="mx-auto mt-4 flex h-56 w-56 items-center justify-center rounded-lg bg-muted p-3">

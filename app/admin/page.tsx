@@ -1,12 +1,18 @@
 import { getOverviewMetrics } from "@/lib/admin/queries";
+import { getDemoDataSummary } from "@/lib/admin/demo-actions";
 import { Card } from "@/components/ui/card";
+import DemoDataPanel from "@/components/admin/demo-data-panel";
+import { PILOT_MODE } from "@/lib/config/pilot";
 
 function formatTL(n: number) {
   return n.toLocaleString("tr-TR") + "₺";
 }
 
 export default async function AdminOverviewPage() {
-  const metrics = await getOverviewMetrics();
+  const [metrics, demoSummary] = await Promise.all([
+    getOverviewMetrics(),
+    getDemoDataSummary(),
+  ]);
 
   const cards = [
     { label: "Toplam Kullanıcı", value: metrics.totalUsers },
@@ -15,7 +21,9 @@ export default async function AdminOverviewPage() {
     { label: "Bekleyen İşletme", value: metrics.pendingBusinesses },
     { label: "Bu Ay Satış Adedi", value: metrics.monthlySalesCount },
     { label: "Bu Ay Ciro", value: formatTL(metrics.monthlySalesAmount) },
-    { label: "Kesilen Toplam Komisyon", value: formatTL(metrics.totalCommission) },
+    ...(PILOT_MODE
+      ? []
+      : [{ label: "Kesilen Toplam Komisyon", value: formatTL(metrics.totalCommission) }]),
     { label: "Bu Hafta Doğrulama", value: metrics.weeklyVerifications },
     { label: "Kurucu 500 Bekleme Listesi", value: metrics.waitlistCount },
   ];
@@ -32,6 +40,8 @@ export default async function AdminOverviewPage() {
           </Card>
         ))}
       </div>
+
+      <DemoDataPanel summary={demoSummary} />
     </div>
   );
 }

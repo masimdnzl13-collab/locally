@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface PurchaseWithEntitlement {
   id: string;
+  status: string;
   package: {
     title: string;
     business: { name: string };
@@ -112,6 +113,51 @@ export async function getCheckoutPurchase(
   };
 }
 
+export interface PendingReservation {
+  id: string;
+  createdAt: string;
+  customerName: string;
+  customerPhone: string | null;
+  packageTitle: string;
+  amount: number;
+}
+
+// Pilot mod: ödeme bekleyen (henüz mekânda ödenmemiş) rezervasyonlar.
+// İşletme panelinde "kim, hangi paket, ne zaman ayırttı" listesi için.
+export async function getPendingReservations(businessId: string): Promise<PendingReservation[]> {
+  try {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("purchases")
+      .select(
+        `id, created_at, amount,
+         package:packages!inner(title, business_id),
+         profile:profiles(full_name, phone)`
+      )
+      .eq("status", "reserved")
+      .eq("package.business_id", businessId)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map((row) => {
+      const pkg = Array.isArray(row.package) ? row.package[0] : row.package;
+      const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+      return {
+        id: row.id,
+        createdAt: row.created_at,
+        customerName: profile?.full_name || "İsimsiz müşteri",
+        customerPhone: profile?.phone ?? null,
+        packageTitle: pkg?.title ?? "",
+        amount: row.amount,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function getPurchaseWithEntitlement(
   purchaseId: string
 ): Promise<PurchaseWithEntitlement | null> {
@@ -121,7 +167,7 @@ export async function getPurchaseWithEntitlement(
     const { data, error } = await supabase
       .from("purchases")
       .select(
-        `id,
+        `id, status,
          package:packages(title, business:businesses(name)),
          entitlement:entitlements(qr_code, remaining_uses, status)`
       )
@@ -138,6 +184,7 @@ export async function getPurchaseWithEntitlement(
 
     return {
       id: data.id,
+      status: data.status,
       package: { title: pkg?.title ?? "", business: { name: business?.name ?? "" } },
       entitlement: entitlement ?? null,
     };

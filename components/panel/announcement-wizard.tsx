@@ -7,6 +7,7 @@ import { SEGMENTS, type Segment } from "@/lib/customers/segments";
 import { ANNOUNCEMENT_TEMPLATES, personalize } from "@/lib/announcements/templates";
 import { getSegmentRecipientsAction, sendAnnouncementAction } from "@/lib/announcements/actions";
 import { isNightHours, SMS_PRICING } from "@/lib/announcements/time";
+import AnnouncementCopyAssistant from "@/components/ai/announcement-copy-assistant";
 
 type Channel = "sms" | "email";
 
@@ -171,6 +172,14 @@ export default function AnnouncementWizard() {
               E-posta
             </button>
           </div>
+
+          <AnnouncementCopyAssistant
+            segment={segment}
+            onApply={(message) => {
+              setTemplateKey(null);
+              setContent(message);
+            }}
+          />
 
           <div className="flex flex-wrap gap-2">
             {ANNOUNCEMENT_TEMPLATES.map((tpl) => (

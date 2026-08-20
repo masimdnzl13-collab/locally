@@ -6,6 +6,8 @@ import Footer from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getSelectedCity } from "@/lib/locations-server";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { getMissingEnvVars } from "@/lib/env";
+import ConfigError from "@/components/config-error";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -51,6 +53,22 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const missingEnvVars = getMissingEnvVars().filter((key) =>
+    key.startsWith("NEXT_PUBLIC_SUPABASE")
+  );
+
+  if (missingEnvVars.length > 0) {
+    return (
+      <html lang="tr" suppressHydrationWarning>
+        <body
+          className={`${inter.variable} ${newsreader.variable} font-sans antialiased bg-background text-foreground`}
+        >
+          <ConfigError missingEnvVars={missingEnvVars} />
+        </body>
+      </html>
+    );
+  }
+
   const city = getSelectedCity();
   const user = await getCurrentUser();
 

@@ -1,6 +1,9 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { withTimeout } from "@/lib/supabase/with-timeout";
 import type { UserRole } from "@/lib/types";
+
+const AUTH_LOOKUP_TIMEOUT_MS = 2500;
 
 export interface CurrentUser {
   id: string;
@@ -12,16 +15,20 @@ export interface CurrentUser {
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   try {
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await withTimeout(
+      supabase.auth.getUser().then((res) => res.data.user),
+      AUTH_LOOKUP_TIMEOUT_MS,
+      null
+    );
     if (!user) return null;
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, role")
-      .eq("id", user.id)
-      .single();
+    const profile = await withTimeout(
+      Promise.resolve(
+        supabase.from("profiles").select("full_name, role").eq("id", user.id).single()
+      ).then((res) => res.data),
+      AUTH_LOOKUP_TIMEOUT_MS,
+      null
+    );
 
     return {
       id: user.id,

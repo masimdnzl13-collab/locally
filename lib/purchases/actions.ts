@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { initializeCheckout, refundPayment } from "@/lib/iyzico/service";
 import { finalizeCheckout } from "@/lib/purchases/checkout";
+import { PILOT_MODE } from "@/lib/config/pilot";
 
 function clientIp(): string {
   const forwarded = headers().get("x-forwarded-for");
@@ -60,19 +61,48 @@ export async function initiatePackageCheckoutAction(
   if (pkg.quota !== null && pkg.sold_count >= pkg.quota) {
     return { error: "Bu paket için kontenjan doldu." };
   }
-  if (business.iyzico_onboarding_status !== "approved" || !business.iyzico_submerchant_key) {
-    return { error: "Bu işletme ödeme altyapısını henüz tamamlamadı." };
-  }
 
   const { count: existingCount } = await supabase
     .from("purchases")
     .select("id", { count: "exact", head: true })
     .eq("package_id", packageId)
     .eq("user_id", user!.id)
-    .eq("status", "completed");
+    .in("status", PILOT_MODE ? ["completed", "reserved"] : ["completed"]);
 
   if ((existingCount ?? 0) >= pkg.per_person_limit) {
-    return { error: "Bu paketi kişi başı satın alma limitine ulaştın." };
+    return { error: "Bu paketi kişi başı ayırtma limitine ulaştın." };
+  }
+
+  // ---------------------------------------------------------------
+  // PİLOT MOD: platformdan para geçmez. Rezervasyon anında hak/QR üretilir
+  // (bkz. migration create_entitlement_on_purchase_completed), ödeme
+  // mekânda ilk QR doğrulamasında alınır ve rezervasyon otomatik aktif olur.
+  // ---------------------------------------------------------------
+  if (PILOT_MODE) {
+    const { data: purchase, error: insertError } = await supabase
+      .from("purchases")
+      .insert({
+        user_id: user!.id,
+        package_id: pkg.id,
+        amount: pkg.sale_price,
+        status: "reserved",
+        provider_status: "pay_at_venue",
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !purchase) {
+      return { error: "Rezervasyon oluşturulamadı: " + insertError?.message };
+    }
+
+    redirect(`/satin-alma/basarili?purchase=${purchase.id}`);
+  }
+
+  // ---------------------------------------------------------------
+  // Gerçek ödeme modu (iyzico) — PILOT_MODE false yapıldığında devreye girer.
+  // ---------------------------------------------------------------
+  if (business.iyzico_onboarding_status !== "approved" || !business.iyzico_submerchant_key) {
+    return { error: "Bu işletme ödeme altyapısını henüz tamamlamadı." };
   }
 
   const { data: settings } = await supabase
@@ -171,6 +201,28 @@ export async function completeTestCheckoutAction(
   }
 
   redirect(`/satin-alma/basarili?purchase=${result.purchaseId}`);
+}
+
+export async function cancelReservationAction(
+  formData: FormData
+): Promise<{ error?: string; success?: true }> {
+  const purchaseId = String(formData.get("purchaseId") ?? "");
+  if (!purchaseId) return { error: "Rezervasyon bulunamadı." };
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("cancel_package_reservation", {
+    p_purchase_id: purchaseId,
+    p_reason: "business_cancelled",
+  });
+
+  if (error) {
+    const [code] = error.message.split(":");
+    if (code === "NOT_ELIGIBLE") return { error: "Bu rezervasyon artık iptal edilemez." };
+    if (code === "FORBIDDEN") return { error: "Bu rezervasyon size ait değil." };
+    return { error: "Rezervasyon iptal edilemedi." };
+  }
+
+  return { success: true };
 }
 
 export async function requestRefundAction(

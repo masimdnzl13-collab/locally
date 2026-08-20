@@ -19,6 +19,7 @@ export default async function SatinAlmaBasariliPage({
   if (!purchase || !purchase.entitlement) redirect("/kesfet");
 
   const qrDataUrl = await generateQrDataUrl(purchase.entitlement.qr_code);
+  const isReservation = purchase.status === "reserved";
 
   return (
     <section className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center px-6 py-10 text-center md:min-h-[calc(100dvh-4.5rem)]">
@@ -26,13 +27,20 @@ export default async function SatinAlmaBasariliPage({
         <CheckCircle2 size={32} strokeWidth={1.75} />
       </div>
       <h1 className="font-serif text-3xl italic tracking-tight text-foreground">
-        Paketin hazır!
+        {isReservation ? "Paketin ayrıldı!" : "Paketin hazır!"}
       </h1>
       <p className="mt-2 max-w-sm text-balance text-sm text-muted-foreground">
-        QR kodunla {purchase.package.business.name} işletmesinde kullanabilirsin.
+        {isReservation
+          ? `İlk ziyaretinde ${purchase.package.business.name} işletmesinde ödeyip bu QR ile kullanmaya başlayacaksın.`
+          : `QR kodunla ${purchase.package.business.name} işletmesinde kullanabilirsin.`}
       </p>
 
       <Card className="mt-8 w-full max-w-xs p-6 text-center">
+        {isReservation && (
+          <span className="mb-3 inline-block rounded-full bg-discount-50 px-3 py-1 text-xs font-semibold text-discount-700">
+            Ödeme bekliyor — mekânda öde
+          </span>
+        )}
         <p className="text-xs uppercase tracking-wide text-muted-foreground">
           {purchase.package.title}
         </p>
