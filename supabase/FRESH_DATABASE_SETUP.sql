@@ -2498,7 +2498,7 @@ begin
   on conflict (id) do nothing;
 
   insert into profiles (id, full_name, phone, role, is_demo)
-  select 'd0000000-0000-4000-8000-00000000000' || g, 'Demo İşletme ' || g, '05' || (300000000 + g)::text, 'business', true
+  select ('d0000000-0000-4000-8000-' || lpad(g::text, 12, '0'))::uuid, 'Demo İşletme ' || g, '05' || (300000000 + g)::text, 'business', true
   from generate_series(1, 12) g
   on conflict (id) do nothing;
 
@@ -2528,7 +2528,7 @@ begin
     insert into packages (id, business_id, title, description, sale_price, summer_reference_price, normal_value, usage_count, usage_description, expires_at, quota, sold_count, per_person_limit, is_active)
     values (
       ('f0000000-0000-4000-8000-0000000000' || lpad(v_i::text, 2, '0'))::uuid,
-      ('e0000000-0000-4000-8000-00000000000' || lpad(v_i::text, 2, '0'))::uuid,
+      ('e0000000-0000-4000-8000-' || lpad(v_i::text, 12, '0'))::uuid,
       'Kış Paketi — 4 Kullanım',
       'Kış sezonuna özel indirimli kullanım paketi, dilediğin zaman gel.',
       450 + v_i * 15,
@@ -2549,7 +2549,7 @@ begin
       insert into packages (id, business_id, title, description, sale_price, summer_reference_price, normal_value, usage_count, usage_description, expires_at, quota, sold_count, per_person_limit, is_active)
       values (
         ('f0000000-0000-4000-8000-0000000001' || lpad(v_i::text, 2, '0'))::uuid,
-        ('e0000000-0000-4000-8000-00000000000' || lpad(v_i::text, 2, '0'))::uuid,
+        ('e0000000-0000-4000-8000-' || lpad(v_i::text, 12, '0'))::uuid,
         'Son Haftalar Fırsatı — 2 Kullanım',
         'Kış sezonunun son haftalarına özel, sınırlı süreli fırsat paketi.',
         280 + v_i * 10,
