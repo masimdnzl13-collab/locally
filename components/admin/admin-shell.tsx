@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { adminNavItems } from "@/lib/admin-nav-items";
 import { signOutAction } from "@/lib/auth/actions";
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell({
+  isMultiRole = false,
+  children,
+}: {
+  isMultiRole?: boolean;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
 
   return (
@@ -15,9 +21,25 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Masaüstü: sol menü (navy workspace surface) */}
       <aside className="hidden w-60 shrink-0 bg-navy-900 md:flex md:flex-col">
         <div className="border-b border-white/10 px-5 py-4">
-          <span className="text-base font-extrabold tracking-tight text-white">
-            Locally <span className="text-teal-300">Admin</span>
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-base font-extrabold tracking-tight text-white">
+              Locally <span className="text-teal-300">Admin</span>
+            </span>
+            {isMultiRole && (
+              <span className="shrink-0 rounded-full bg-teal-500/20 px-2 py-0.5 text-[10px] font-bold text-teal-300">
+                Admin modu
+              </span>
+            )}
+          </div>
+          {isMultiRole && (
+            <Link
+              href="/rol-sec"
+              className="mt-2 flex items-center gap-1.5 text-xs font-medium text-navy-300 transition-colors hover:text-white"
+            >
+              <Repeat size={12} />
+              Rol değiştir
+            </Link>
+          )}
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {adminNavItems.map((item) => {

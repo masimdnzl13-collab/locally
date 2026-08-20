@@ -14,12 +14,15 @@ import {
   HelpCircle,
   LogOut,
   Store,
+  ShieldCheck,
+  Repeat,
   ChevronDown,
 } from "lucide-react";
 import { signOutAction } from "@/lib/auth/actions";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { cn } from "@/lib/utils";
 import { PILOT_MODE } from "@/lib/config/pilot";
+import { ROLE_LABELS } from "@/lib/auth/roles";
 
 const MENU_ITEMS = [
   { href: "/hesabim", label: "Profilim", icon: User },
@@ -48,6 +51,7 @@ export function AccountDropdown({ user, className }: { user: CurrentUser; classN
   }, [open]);
 
   const initial = (user.fullName ?? user.email ?? "?").trim().charAt(0).toUpperCase();
+  const isMultiRole = user.effectiveRoles.length > 1;
 
   return (
     <div ref={ref} className={cn("relative", className)}>
@@ -72,24 +76,53 @@ export function AccountDropdown({ user, className }: { user: CurrentUser; classN
             className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
           >
             <div className="border-b border-border px-4 py-3">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {user.fullName || "Hesabım"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {user.fullName || "Hesabım"}
+                </p>
+                {isMultiRole && (
+                  <span className="shrink-0 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-700">
+                    {ROLE_LABELS[user.activeRole]} modu
+                  </span>
+                )}
+              </div>
               {user.email && (
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               )}
             </div>
 
-            {user.role === "business" && (
+            {(user.effectiveRoles.includes("business") || user.effectiveRoles.includes("admin")) && (
               <>
-                <Link
-                  href="/panel"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50"
-                >
-                  <Store size={16} strokeWidth={2} />
-                  İşletme Panelim
-                </Link>
+                {user.effectiveRoles.includes("business") && (
+                  <Link
+                    href="/panel"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50"
+                  >
+                    <Store size={16} strokeWidth={2} />
+                    İşletme Panelim
+                  </Link>
+                )}
+                {user.effectiveRoles.includes("admin") && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50"
+                  >
+                    <ShieldCheck size={16} strokeWidth={2} />
+                    Admin Panelim
+                  </Link>
+                )}
+                {isMultiRole && (
+                  <Link
+                    href="/rol-sec"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-navy-700 transition-colors hover:bg-muted"
+                  >
+                    <Repeat size={16} strokeWidth={2} />
+                    Rol değiştir
+                  </Link>
+                )}
                 <div className="border-b border-border" />
               </>
             )}

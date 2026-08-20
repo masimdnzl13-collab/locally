@@ -8,7 +8,7 @@ export const metadata = { robots: { index: false, follow: false } };
 
 export default async function TestLabPrintPage() {
   const user = await getCurrentUser();
-  const allowed = TEST_LAB_ENABLED || user?.role === "admin";
+  const allowed = TEST_LAB_ENABLED || user?.effectiveRoles.includes("admin");
   if (!allowed) notFound();
 
   const items = (await getTestLabQrItems()).filter((i) => i.scenario === "valid");

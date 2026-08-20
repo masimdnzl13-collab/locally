@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getEffectiveRoles } from "@/lib/auth/roles";
+import type { UserRole } from "@/lib/types";
 
 async function requireAdmin() {
   const supabase = createClient();
@@ -11,8 +13,17 @@ async function requireAdmin() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/giris");
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user!.id).single();
-  if (profile?.role !== "admin") redirect("/");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, additional_roles")
+    .eq("id", user!.id)
+    .single();
+
+  const effectiveRoles = getEffectiveRoles({
+    role: (profile?.role as UserRole) ?? "user",
+    additional_roles: profile?.additional_roles as UserRole[] | null,
+  });
+  if (!effectiveRoles.includes("admin")) redirect("/");
 
   return supabase;
 }

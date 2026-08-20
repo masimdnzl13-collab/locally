@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getEffectiveRoles } from "@/lib/auth/roles";
+import type { UserRole } from "@/lib/types";
 
 export default async function PanelLayout({
   children,
@@ -17,11 +19,20 @@ export default async function PanelLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, additional_roles")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "business") {
+  // "business" tek rollü işletme sahipleri için (büyük çoğunluk) role
+  // alanından, çok rollü hesaplar için (bkz. P27) additional_roles'ten
+  // gelebilir — ikisi de aynı kapıdan geçer, gerçek yetki her durumda
+  // owns_business() (RLS) tarafından ayrıca doğrulanır.
+  const effectiveRoles = getEffectiveRoles({
+    role: (profile?.role as UserRole) ?? "user",
+    additional_roles: profile?.additional_roles as UserRole[] | null,
+  });
+
+  if (!effectiveRoles.includes("business")) {
     redirect("/");
   }
 

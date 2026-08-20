@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/auth/ensure-profile";
 import type { UserRole } from "@/lib/types";
+import { ACTIVE_ROLE_COOKIE, getEffectiveRoles } from "@/lib/auth/roles";
 
 function safeNext(next: FormDataEntryValue | null): string | null {
   if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//")) {
@@ -99,10 +101,23 @@ export async function signInAction(formData: FormData) {
     fullName: (data.user.user_metadata?.full_name as string | undefined) || null,
     phone: (data.user.user_metadata?.phone as string | undefined) || null,
     requestedRole,
-  })) as { role: UserRole };
+  })) as { role: UserRole; additional_roles?: UserRole[] | null };
 
   if (next) {
     redirect(next);
+  }
+
+  // Tek rollü hesaplar (büyük çoğunluk) için davranış birebir eskisiyle
+  // aynı — hiçbir ek ekran görmezler. Yalnızca elle birden fazla rol
+  // atanmış hesaplar (bkz. lib/auth/roles.ts, additional_roles) her
+  // girişte /rol-sec'e düşer.
+  const effectiveRoles = getEffectiveRoles({
+    role: profile?.role ?? "user",
+    additional_roles: profile?.additional_roles,
+  });
+
+  if (effectiveRoles.length > 1) {
+    redirect("/rol-sec");
   }
 
   if (profile?.role === "admin") redirect("/admin");
@@ -137,6 +152,7 @@ export async function updateProfileAction(formData: FormData) {
 export async function signOutAction() {
   const supabase = createClient();
   await supabase.auth.signOut();
+  cookies().delete(ACTIVE_ROLE_COOKIE);
   redirect("/");
 }
 

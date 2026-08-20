@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { panelNavItems } from "@/lib/panel-nav-items";
 import { signOutAction } from "@/lib/auth/actions";
@@ -10,9 +10,11 @@ import type { Business } from "@/lib/types";
 
 export default function PanelShell({
   business,
+  isMultiRole = false,
   children,
 }: {
   business: Business;
+  isMultiRole?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -22,10 +24,26 @@ export default function PanelShell({
       {/* Masaüstü: sol menü (navy workspace surface) */}
       <aside className="hidden w-60 shrink-0 bg-navy-900 md:flex md:flex-col">
         <div className="border-b border-white/10 px-5 py-4">
-          <span className="text-lg font-extrabold tracking-tight text-white">
-            Locally <span className="text-teal-300">İşletme</span>
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-lg font-extrabold tracking-tight text-white">
+              Locally <span className="text-teal-300">İşletme</span>
+            </span>
+            {isMultiRole && (
+              <span className="shrink-0 rounded-full bg-teal-500/20 px-2 py-0.5 text-[10px] font-bold text-teal-300">
+                İşletme modu
+              </span>
+            )}
+          </div>
           <p className="mt-1 truncate text-xs text-navy-300">{business.name}</p>
+          {isMultiRole && (
+            <Link
+              href="/rol-sec"
+              className="mt-2 flex items-center gap-1.5 text-xs font-medium text-navy-300 transition-colors hover:text-white"
+            >
+              <Repeat size={12} />
+              Rol değiştir
+            </Link>
+          )}
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {panelNavItems.map((item) => {

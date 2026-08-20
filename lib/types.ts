@@ -15,6 +15,11 @@ export interface Profile {
   full_name: string | null;
   phone: string | null;
   role: UserRole;
+  // Neredeyse her zaman boş dizi — yalnızca belirli, izin verilmiş hesaplara
+  // (bkz. supabase/migrations/*_multi_role.sql) elle atanır. Sıradan bir
+  // kullanıcı bu alana asla kendi kendine yazamaz (profiles tablosunda
+  // "authenticated" rolünden bu sütuna UPDATE izni ayrıca kaldırılmıştır).
+  additional_roles: UserRole[];
   created_at: string;
   updated_at: string;
 }

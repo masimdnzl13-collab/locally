@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/auth/ensure-profile";
 import type { UserRole } from "@/lib/types";
+import { getEffectiveRoles } from "@/lib/auth/roles";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
         ? "business"
         : "user") as UserRole;
 
-      let profile: { id: string; role: UserRole } | null = null;
+      let profile: { id: string; role: UserRole; additional_roles?: UserRole[] | null } | null = null;
       try {
         profile = (await ensureProfile({
           id: data.user.id,
@@ -24,11 +25,21 @@ export async function GET(request: Request) {
           fullName: (data.user.user_metadata?.full_name as string | undefined) || null,
           phone: (data.user.user_metadata?.phone as string | undefined) || null,
           requestedRole,
-        })) as { id: string; role: UserRole };
+        })) as { id: string; role: UserRole; additional_roles?: UserRole[] | null };
       } catch {
         // Profil zaten varsa veya oluşturma başarısız olsa da kullanıcıyı
         // akışta tutmaya devam ediyoruz; ilk girişte profil eksikse
         // sonraki bir işlemde tekrar denenir.
+      }
+
+      if (next === "/kesfet" && profile) {
+        const effectiveRoles = getEffectiveRoles({
+          role: profile.role,
+          additional_roles: profile.additional_roles,
+        });
+        if (effectiveRoles.length > 1) {
+          return NextResponse.redirect(`${origin}/rol-sec`);
+        }
       }
 
       if (profile?.role === "admin" && next === "/kesfet") {

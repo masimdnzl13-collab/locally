@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getMyBusiness } from "@/lib/business/current";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { signOutAction } from "@/lib/auth/actions";
 import PanelShell from "@/components/panel/panel-shell";
 
@@ -8,7 +9,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const business = await getMyBusiness();
+  const [business, user] = await Promise.all([getMyBusiness(), getCurrentUser()]);
 
   if (!business || !business.logo_url || !business.cover_url) {
     redirect("/panel/kurulum");
@@ -56,5 +57,9 @@ export default async function DashboardLayout({
     );
   }
 
-  return <PanelShell business={business}>{children}</PanelShell>;
+  return (
+    <PanelShell business={business} isMultiRole={(user?.effectiveRoles.length ?? 1) > 1}>
+      {children}
+    </PanelShell>
+  );
 }

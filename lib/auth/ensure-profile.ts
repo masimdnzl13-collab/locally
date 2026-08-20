@@ -32,7 +32,7 @@ export async function ensureProfile(params: {
 
   const { data: existing } = await service
     .from("profiles")
-    .select("id, role")
+    .select("id, role, additional_roles")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -46,7 +46,7 @@ export async function ensureProfile(params: {
         .from("profiles")
         .update({ role: "admin" })
         .eq("id", params.id)
-        .select("id, role")
+        .select("id, role, additional_roles")
         .single();
       return upgraded ?? existing;
     }
@@ -58,9 +58,9 @@ export async function ensureProfile(params: {
   const { data, error } = await service
     .from("profiles")
     .insert({ id: params.id, full_name: params.fullName, phone: params.phone || null, role })
-    .select("id, role")
+    .select("id, role, additional_roles")
     .single();
 
   if (error && error.code !== "23505") throw error;
-  return data ?? { id: params.id, role };
+  return data ?? { id: params.id, role, additional_roles: [] };
 }

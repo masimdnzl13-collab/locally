@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AdminShell from "@/components/admin/admin-shell";
+import { getEffectiveRoles } from "@/lib/auth/roles";
+import type { UserRole } from "@/lib/types";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
@@ -12,11 +14,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, additional_roles")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") redirect("/");
+  const effectiveRoles = getEffectiveRoles({
+    role: (profile?.role as UserRole) ?? "user",
+    additional_roles: profile?.additional_roles as UserRole[] | null,
+  });
 
-  return <AdminShell>{children}</AdminShell>;
+  if (!effectiveRoles.includes("admin")) redirect("/");
+
+  return <AdminShell isMultiRole={effectiveRoles.length > 1}>{children}</AdminShell>;
 }

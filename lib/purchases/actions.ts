@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { initializeCheckout, refundPayment } from "@/lib/iyzico/service";
 import { finalizeCheckout } from "@/lib/purchases/checkout";
 import { PILOT_MODE } from "@/lib/config/pilot";
+import { getEffectiveRoles } from "@/lib/auth/roles";
+import type { UserRole } from "@/lib/types";
 
 function clientIp(): string {
   const forwarded = headers().get("x-forwarded-for");
@@ -21,11 +23,16 @@ async function requireAdminUser() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, additional_roles")
     .eq("id", user.id)
     .single();
 
-  return profile?.role === "admin" ? supabase : null;
+  const effectiveRoles = getEffectiveRoles({
+    role: (profile?.role as UserRole) ?? "user",
+    additional_roles: profile?.additional_roles as UserRole[] | null,
+  });
+
+  return effectiveRoles.includes("admin") ? supabase : null;
 }
 
 export async function initiatePackageCheckoutAction(
