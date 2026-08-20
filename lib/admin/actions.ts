@@ -135,3 +135,27 @@ export async function removeContentAction(
   revalidatePath("/etkinlikler");
   return { success: true };
 }
+
+// Yalnızca eski seed-demo.sql işletmelerini (sahibi @locally.app ile biten)
+// tek tek kaldırmak için — RPC'nin kendisi de aynı imzayı ayrıca kontrol
+// eder, bu yüzden form alanı kurcalanıp başka bir işletme gönderilse bile
+// gerçek bir pilot işletmesi asla silinemez. Toplu silme yok, bilinçli.
+export async function deleteLegacyBusinessAction(
+  formData: FormData
+): Promise<{ error?: string; success?: true }> {
+  const supabase = await requireAdmin();
+  const businessId = String(formData.get("businessId") ?? "");
+  if (!businessId) return { error: "İşletme bulunamadı." };
+
+  const { error } = await supabase.rpc("admin_delete_legacy_business", {
+    p_business_id: businessId,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/eski-veri");
+  revalidatePath("/kesfet");
+  revalidatePath("/bu-aksam");
+  revalidatePath("/etkinlikler");
+  return { success: true };
+}

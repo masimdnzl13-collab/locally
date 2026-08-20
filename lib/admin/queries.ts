@@ -291,3 +291,26 @@ export async function getWaitlist(): Promise<WaitlistEntry[]> {
   if (error || !data) return [];
   return data as WaitlistEntry[];
 }
+
+export interface LegacyBusinessRow {
+  id: string;
+  name: string;
+  category: BusinessCategory;
+  city: string;
+  district: string | null;
+  approval_status: ApprovalStatus;
+  created_at: string;
+  owner_email: string;
+}
+
+// Pilot öncesi seed-demo.sql ile elle oluşturulmuş, is_demo işareti
+// taşımayan eski örnek işletmeler. auth.users'a bakması gerektiği için
+// (sahibinin e-postasıyla tespit ediliyor) bir RPC üzerinden okunuyor —
+// bkz. supabase/migrations/20260821000100_legacy_seed_cleanup.sql.
+export async function getLegacyBusinesses(): Promise<LegacyBusinessRow[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("admin_legacy_businesses");
+
+  if (error || !data) return [];
+  return data as LegacyBusinessRow[];
+}
