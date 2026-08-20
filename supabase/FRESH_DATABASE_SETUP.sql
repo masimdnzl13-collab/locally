@@ -8,12 +8,17 @@
 -- Projen yalnızca DURAKLATILMIŞTI, "Restore" ile geri açtıysan, ya da
 -- veritabanının o an tam olarak hangi durumda olduğundan emin değilsen
 -- (elle uygulanmış migration'lar yüzünden bu artık tahmin konusu olabiliyor)
--- bu dosya yerine APPLY_PENDING_MIGRATIONS.sql'i kullan — o dosya da artık
--- bu 22 migration'ın TAMAMINI içeriyor ve her satırı ayrı ayrı güvenli
--- ("if not exists" / "on conflict do nothing" / "drop + create") olduğu
+-- bu dosya yerine APPLY_PENDING_MIGRATIONS.sql'i kullan.
+--
+-- ÖNEMLİ — BU DOSYA İLE APPLY_PENDING_MIGRATIONS.sql ARASINDAKİ FARK:
+-- gövdedeki (22 migration'ın idempotent hali) SQL birebir aynıdır — ikisi
+-- de aynı kaynaktan üretildi ve aynı otomatik denetimden geçirildi (bkz.
+-- en alttaki "hiçbir yerde varsayım yok" notu). Tek gerçek fark, bu
+-- dosyanın EN BAŞINDA ekstra bir "veritabanı gerçekten boş mu?" güvenlik
+-- kilidinin olması. Onun dışında iki dosya da her satırı kendi başına
+-- güvenli (if not exists / on conflict do nothing / drop+create) olduğu
 -- için boş, kısmen uygulanmış ya da tam uygulanmış her veritabanında
--- sorunsuz çalışır. Aralarındaki tek fark, bu dosyanın en başında ekstra
--- bir "veritabanı gerçekten boş mu?" güvenlik kilidi olması.
+-- sorunsuz çalışır.
 --
 -- GÜVENLİK KİLİDİ: Bu betik en başta public.profiles tablosunun zaten var
 -- olup olmadığını kontrol eder. Varsa (yani veritabanı boş değilse) betik
@@ -39,7 +44,6 @@ begin
   end if;
 end $$;
 
-
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260711003340_init_schema.sql
 -- ============================================================================
@@ -52,19 +56,49 @@ end $$;
 -- ENUM TİPLERİ
 -- =========================================================
 
-create type user_role as enum ('user', 'business', 'admin');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'user_role') then
+    create type user_role as enum ('user', 'business', 'admin');
+  end if;
+end $$;
 
-create type business_category as enum (
-  'restoran', 'kafe', 'otel', 'beach_club', 'aktivite', 'diger'
-);
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'business_category') then
+    create type business_category as enum (
+      'restoran', 'kafe', 'otel', 'beach_club', 'aktivite', 'diger'
+    );
+  end if;
+end $$;
 
-create type approval_status as enum ('pending', 'approved', 'rejected');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'approval_status') then
+    create type approval_status as enum ('pending', 'approved', 'rejected');
+  end if;
+end $$;
 
-create type purchase_status as enum ('pending', 'completed', 'failed', 'refunded');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'purchase_status') then
+    create type purchase_status as enum ('pending', 'completed', 'failed', 'refunded');
+  end if;
+end $$;
 
-create type entitlement_status as enum ('active', 'used', 'expired');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'entitlement_status') then
+    create type entitlement_status as enum ('active', 'used', 'expired');
+  end if;
+end $$;
 
-create type ticket_status as enum ('active', 'cancelled', 'used');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'ticket_status') then
+    create type ticket_status as enum ('active', 'cancelled', 'used');
+  end if;
+end $$;
 
 -- =========================================================
 -- YARDIMCI FONKSİYONLAR
@@ -85,7 +119,7 @@ $$;
 -- =========================================================
 
 -- profiles: auth kullanıcısına 1-1 bağlı profil bilgisi
-create table profiles (
+create table if not exists profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text,
   phone text,
@@ -94,12 +128,14 @@ create table profiles (
   updated_at timestamptz not null default now()
 );
 
+drop trigger if exists trg_profiles_updated_at on profiles;
+
 create trigger trg_profiles_updated_at
   before update on profiles
   for each row execute function set_updated_at();
 
 -- businesses: işletme kayıtları, admin onayı gerektirir
-create table businesses (
+create table if not exists businesses (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references profiles (id) on delete cascade,
   name text not null,
@@ -120,9 +156,11 @@ create table businesses (
   updated_at timestamptz not null default now()
 );
 
-create index idx_businesses_owner_id on businesses (owner_id);
-create index idx_businesses_approval_status on businesses (approval_status);
-create index idx_businesses_city_category on businesses (city, category);
+create index if not exists idx_businesses_owner_id on businesses (owner_id);
+create index if not exists idx_businesses_approval_status on businesses (approval_status);
+create index if not exists idx_businesses_city_category on businesses (city, category);
+
+drop trigger if exists trg_businesses_updated_at on businesses;
 
 create trigger trg_businesses_updated_at
   before update on businesses
@@ -174,12 +212,14 @@ begin
 end;
 $$;
 
+drop trigger if exists trg_businesses_guard_approval on businesses;
+
 create trigger trg_businesses_guard_approval
   before update on businesses
   for each row execute function guard_business_approval_status();
 
 -- packages: işletmeye bağlı ön ödemeli paketler
-create table packages (
+create table if not exists packages (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   title text not null,
@@ -196,15 +236,17 @@ create table packages (
   updated_at timestamptz not null default now()
 );
 
-create index idx_packages_business_id on packages (business_id);
-create index idx_packages_is_active on packages (is_active);
+create index if not exists idx_packages_business_id on packages (business_id);
+create index if not exists idx_packages_is_active on packages (is_active);
+
+drop trigger if exists trg_packages_updated_at on packages;
 
 create trigger trg_packages_updated_at
   before update on packages
   for each row execute function set_updated_at();
 
 -- purchases: kullanıcının paket satın alımları
-create table purchases (
+create table if not exists purchases (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles (id) on delete cascade,
   package_id uuid not null references packages (id),
@@ -216,15 +258,17 @@ create table purchases (
   updated_at timestamptz not null default now()
 );
 
-create index idx_purchases_user_id on purchases (user_id);
-create index idx_purchases_package_id on purchases (package_id);
+create index if not exists idx_purchases_user_id on purchases (user_id);
+create index if not exists idx_purchases_package_id on purchases (package_id);
+
+drop trigger if exists trg_purchases_updated_at on purchases;
 
 create trigger trg_purchases_updated_at
   before update on purchases
   for each row execute function set_updated_at();
 
 -- entitlements: satın alımdan doğan kullanım hakları + benzersiz QR
-create table entitlements (
+create table if not exists entitlements (
   id uuid primary key default gen_random_uuid(),
   purchase_id uuid not null references purchases (id) on delete cascade,
   remaining_uses int not null check (remaining_uses >= 0),
@@ -234,15 +278,17 @@ create table entitlements (
   updated_at timestamptz not null default now()
 );
 
-create index idx_entitlements_purchase_id on entitlements (purchase_id);
-create index idx_entitlements_qr_code on entitlements (qr_code);
+create index if not exists idx_entitlements_purchase_id on entitlements (purchase_id);
+create index if not exists idx_entitlements_qr_code on entitlements (qr_code);
+
+drop trigger if exists trg_entitlements_updated_at on entitlements;
 
 create trigger trg_entitlements_updated_at
   before update on entitlements
   for each row execute function set_updated_at();
 
 -- redemptions: her QR okutma kaydı
-create table redemptions (
+create table if not exists redemptions (
   id uuid primary key default gen_random_uuid(),
   entitlement_id uuid not null references entitlements (id),
   business_id uuid not null references businesses (id),
@@ -250,11 +296,11 @@ create table redemptions (
   verified_by uuid not null references profiles (id)
 );
 
-create index idx_redemptions_entitlement_id on redemptions (entitlement_id);
-create index idx_redemptions_business_id on redemptions (business_id);
+create index if not exists idx_redemptions_entitlement_id on redemptions (entitlement_id);
+create index if not exists idx_redemptions_business_id on redemptions (business_id);
 
 -- flash_deals: Bu Akşam fırsatları
-create table flash_deals (
+create table if not exists flash_deals (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   offer_text text not null,
@@ -267,11 +313,11 @@ create table flash_deals (
   check (ends_at > starts_at)
 );
 
-create index idx_flash_deals_business_id on flash_deals (business_id);
-create index idx_flash_deals_active_window on flash_deals (is_active, starts_at, ends_at);
+create index if not exists idx_flash_deals_business_id on flash_deals (business_id);
+create index if not exists idx_flash_deals_active_window on flash_deals (is_active, starts_at, ends_at);
 
 -- events: etkinlikler
-create table events (
+create table if not exists events (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   title text not null,
@@ -285,15 +331,17 @@ create table events (
   updated_at timestamptz not null default now()
 );
 
-create index idx_events_business_id on events (business_id);
-create index idx_events_event_at on events (event_at);
+create index if not exists idx_events_business_id on events (business_id);
+create index if not exists idx_events_event_at on events (event_at);
+
+drop trigger if exists trg_events_updated_at on events;
 
 create trigger trg_events_updated_at
   before update on events
   for each row execute function set_updated_at();
 
 -- tickets: etkinlik kayıtları/biletleri
-create table tickets (
+create table if not exists tickets (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references events (id) on delete cascade,
   user_id uuid not null references profiles (id) on delete cascade,
@@ -302,8 +350,8 @@ create table tickets (
   created_at timestamptz not null default now()
 );
 
-create index idx_tickets_event_id on tickets (event_id);
-create index idx_tickets_user_id on tickets (user_id);
+create index if not exists idx_tickets_event_id on tickets (event_id);
+create index if not exists idx_tickets_user_id on tickets (user_id);
 
 -- Etkinlik kontenjanını aşan bilet kaydını engelle
 create or replace function public.guard_ticket_capacity()
@@ -332,12 +380,14 @@ begin
 end;
 $$;
 
+drop trigger if exists trg_tickets_guard_capacity on tickets;
+
 create trigger trg_tickets_guard_capacity
   before insert on tickets
   for each row execute function guard_ticket_capacity();
 
 -- announcements: işletmenin duyuru gönderimleri
-create table announcements (
+create table if not exists announcements (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   channel text not null,
@@ -347,10 +397,10 @@ create table announcements (
   created_at timestamptz not null default now()
 );
 
-create index idx_announcements_business_id on announcements (business_id);
+create index if not exists idx_announcements_business_id on announcements (business_id);
 
 -- customers: mini-CRM, telefonla tekilleştirilmiş müşteri kaydı
-create table customers (
+create table if not exists customers (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   phone text not null,
@@ -362,7 +412,7 @@ create table customers (
   unique (business_id, phone)
 );
 
-create index idx_customers_business_id on customers (business_id);
+create index if not exists idx_customers_business_id on customers (business_id);
 
 -- =========================================================
 -- SATIN ALMA TAMAMLANINCA OTOMATİK ENTITLEMENT + QR ÜRETİMİ
@@ -397,6 +447,8 @@ begin
   return new;
 end;
 $$;
+
+drop trigger if exists trg_purchases_create_entitlement on purchases;
 
 create trigger trg_purchases_create_entitlement
   after insert or update on purchases
@@ -489,13 +541,19 @@ alter table customers enable row level security;
 
 -- profiles ---------------------------------------------------------------
 
+drop policy if exists "profiles_select_own_or_admin" on profiles;
+
 create policy "profiles_select_own_or_admin"
   on profiles for select
   using (id = auth.uid() or is_admin());
 
+drop policy if exists "profiles_insert_own" on profiles;
+
 create policy "profiles_insert_own"
   on profiles for insert
   with check (id = auth.uid());
+
+drop policy if exists "profiles_update_own_or_admin" on profiles;
 
 create policy "profiles_update_own_or_admin"
   on profiles for update
@@ -503,23 +561,33 @@ create policy "profiles_update_own_or_admin"
 
 -- businesses ---------------------------------------------------------------
 
+drop policy if exists "businesses_select_approved_public" on businesses;
+
 create policy "businesses_select_approved_public"
   on businesses for select
   using (approval_status = 'approved' or owner_id = auth.uid() or is_admin());
+
+drop policy if exists "businesses_insert_own" on businesses;
 
 create policy "businesses_insert_own"
   on businesses for insert
   with check (owner_id = auth.uid());
 
+drop policy if exists "businesses_update_own_or_admin" on businesses;
+
 create policy "businesses_update_own_or_admin"
   on businesses for update
   using (owner_id = auth.uid() or is_admin());
+
+drop policy if exists "businesses_delete_own_or_admin" on businesses;
 
 create policy "businesses_delete_own_or_admin"
   on businesses for delete
   using (owner_id = auth.uid() or is_admin());
 
 -- packages ---------------------------------------------------------------
+
+drop policy if exists "packages_select_public_active_or_owner" on packages;
 
 create policy "packages_select_public_active_or_owner"
   on packages for select
@@ -532,19 +600,27 @@ create policy "packages_select_public_active_or_owner"
     or is_admin()
   );
 
+drop policy if exists "packages_insert_owner" on packages;
+
 create policy "packages_insert_owner"
   on packages for insert
   with check (owns_business(business_id));
 
+drop policy if exists "packages_update_owner_or_admin" on packages;
+
 create policy "packages_update_owner_or_admin"
   on packages for update
   using (owns_business(business_id) or is_admin());
+
+drop policy if exists "packages_delete_owner_or_admin" on packages;
 
 create policy "packages_delete_owner_or_admin"
   on packages for delete
   using (owns_business(business_id) or is_admin());
 
 -- purchases ---------------------------------------------------------------
+
+drop policy if exists "purchases_select_own_or_business_or_admin" on purchases;
 
 create policy "purchases_select_own_or_business_or_admin"
   on purchases for select
@@ -557,11 +633,15 @@ create policy "purchases_select_own_or_business_or_admin"
     )
   );
 
+drop policy if exists "purchases_insert_own" on purchases;
+
 create policy "purchases_insert_own"
   on purchases for insert
   with check (user_id = auth.uid());
 
 -- entitlements ---------------------------------------------------------------
+
+drop policy if exists "entitlements_select_own_or_business_or_admin" on entitlements;
 
 create policy "entitlements_select_own_or_business_or_admin"
   on entitlements for select
@@ -584,6 +664,8 @@ create policy "entitlements_select_own_or_business_or_admin"
 
 -- redemptions ---------------------------------------------------------------
 
+drop policy if exists "redemptions_select_business_or_user_or_admin" on redemptions;
+
 create policy "redemptions_select_business_or_user_or_admin"
   on redemptions for select
   using (
@@ -601,6 +683,8 @@ create policy "redemptions_select_business_or_user_or_admin"
 
 -- flash_deals ---------------------------------------------------------------
 
+drop policy if exists "flash_deals_select_public_active_or_owner" on flash_deals;
+
 create policy "flash_deals_select_public_active_or_owner"
   on flash_deals for select
   using (
@@ -612,19 +696,27 @@ create policy "flash_deals_select_public_active_or_owner"
     or is_admin()
   );
 
+drop policy if exists "flash_deals_insert_owner" on flash_deals;
+
 create policy "flash_deals_insert_owner"
   on flash_deals for insert
   with check (owns_business(business_id));
 
+drop policy if exists "flash_deals_update_owner_or_admin" on flash_deals;
+
 create policy "flash_deals_update_owner_or_admin"
   on flash_deals for update
   using (owns_business(business_id) or is_admin());
+
+drop policy if exists "flash_deals_delete_owner_or_admin" on flash_deals;
 
 create policy "flash_deals_delete_owner_or_admin"
   on flash_deals for delete
   using (owns_business(business_id) or is_admin());
 
 -- events ---------------------------------------------------------------
+
+drop policy if exists "events_select_public_upcoming_or_owner" on events;
 
 create policy "events_select_public_upcoming_or_owner"
   on events for select
@@ -637,19 +729,27 @@ create policy "events_select_public_upcoming_or_owner"
     or is_admin()
   );
 
+drop policy if exists "events_insert_owner" on events;
+
 create policy "events_insert_owner"
   on events for insert
   with check (owns_business(business_id));
 
+drop policy if exists "events_update_owner_or_admin" on events;
+
 create policy "events_update_owner_or_admin"
   on events for update
   using (owns_business(business_id) or is_admin());
+
+drop policy if exists "events_delete_owner_or_admin" on events;
 
 create policy "events_delete_owner_or_admin"
   on events for delete
   using (owns_business(business_id) or is_admin());
 
 -- tickets ---------------------------------------------------------------
+
+drop policy if exists "tickets_select_own_or_business_or_admin" on tickets;
 
 create policy "tickets_select_own_or_business_or_admin"
   on tickets for select
@@ -662,9 +762,13 @@ create policy "tickets_select_own_or_business_or_admin"
     )
   );
 
+drop policy if exists "tickets_insert_own" on tickets;
+
 create policy "tickets_insert_own"
   on tickets for insert
   with check (user_id = auth.uid());
+
+drop policy if exists "tickets_update_own_or_business_or_admin" on tickets;
 
 create policy "tickets_update_own_or_business_or_admin"
   on tickets for update
@@ -679,17 +783,25 @@ create policy "tickets_update_own_or_business_or_admin"
 
 -- announcements ---------------------------------------------------------------
 
+drop policy if exists "announcements_select_owner_or_admin" on announcements;
+
 create policy "announcements_select_owner_or_admin"
   on announcements for select
   using (owns_business(business_id) or is_admin());
+
+drop policy if exists "announcements_insert_owner" on announcements;
 
 create policy "announcements_insert_owner"
   on announcements for insert
   with check (owns_business(business_id));
 
+drop policy if exists "announcements_update_owner_or_admin" on announcements;
+
 create policy "announcements_update_owner_or_admin"
   on announcements for update
   using (owns_business(business_id) or is_admin());
+
+drop policy if exists "announcements_delete_owner_or_admin" on announcements;
 
 create policy "announcements_delete_owner_or_admin"
   on announcements for delete
@@ -697,17 +809,25 @@ create policy "announcements_delete_owner_or_admin"
 
 -- customers ---------------------------------------------------------------
 
+drop policy if exists "customers_select_owner_or_admin" on customers;
+
 create policy "customers_select_owner_or_admin"
   on customers for select
   using (owns_business(business_id) or is_admin());
+
+drop policy if exists "customers_insert_owner" on customers;
 
 create policy "customers_insert_owner"
   on customers for insert
   with check (owns_business(business_id));
 
+drop policy if exists "customers_update_owner_or_admin" on customers;
+
 create policy "customers_update_owner_or_admin"
   on customers for update
   using (owns_business(business_id) or is_admin());
+
+drop policy if exists "customers_delete_owner_or_admin" on customers;
 
 create policy "customers_delete_owner_or_admin"
   on customers for delete
@@ -727,9 +847,13 @@ insert into storage.buckets (id, name, public)
 values ('business-images', 'business-images', true)
 on conflict (id) do nothing;
 
+drop policy if exists "business_images_public_read" on storage.objects;
+
 create policy "business_images_public_read"
   on storage.objects for select
   using (bucket_id = 'business-images');
+
+drop policy if exists "business_images_owner_insert" on storage.objects;
 
 create policy "business_images_owner_insert"
   on storage.objects for insert
@@ -738,12 +862,16 @@ create policy "business_images_owner_insert"
     and (storage.foldername(name))[1] = auth.uid()::text
   );
 
+drop policy if exists "business_images_owner_update" on storage.objects;
+
 create policy "business_images_owner_update"
   on storage.objects for update
   using (
     bucket_id = 'business-images'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+drop policy if exists "business_images_owner_delete" on storage.objects;
 
 create policy "business_images_owner_delete"
   on storage.objects for delete
@@ -761,20 +889,24 @@ create policy "business_images_owner_delete"
 
 -- Kurucu 500 bekleme listesi (landing page e-posta toplama)
 
-create table founder_waitlist (
+create table if not exists founder_waitlist (
   id uuid primary key default gen_random_uuid(),
   email text not null,
   created_at timestamptz not null default now()
 );
 
-create unique index idx_founder_waitlist_email_lower on founder_waitlist (lower(email));
+create unique index if not exists idx_founder_waitlist_email_lower on founder_waitlist (lower(email));
 
 alter table founder_waitlist enable row level security;
+
+drop policy if exists "founder_waitlist_insert_public" on founder_waitlist;
 
 create policy "founder_waitlist_insert_public"
   on founder_waitlist for insert
   to anon, authenticated
   with check (true);
+
+drop policy if exists "founder_waitlist_select_admin" on founder_waitlist;
 
 create policy "founder_waitlist_select_admin"
   on founder_waitlist for select
@@ -789,7 +921,7 @@ create policy "founder_waitlist_select_admin"
 
 -- Bu Akşam flaş fırsatları için "Yerimi Ayır" rezervasyon sistemi.
 
-create table flash_deal_reservations (
+create table if not exists flash_deal_reservations (
   id uuid primary key default gen_random_uuid(),
   flash_deal_id uuid not null references flash_deals (id) on delete cascade,
   user_id uuid not null references profiles (id) on delete cascade,
@@ -799,10 +931,12 @@ create table flash_deal_reservations (
   unique (flash_deal_id, user_id)
 );
 
-create index idx_flash_deal_reservations_flash_deal_id on flash_deal_reservations (flash_deal_id);
-create index idx_flash_deal_reservations_user_id on flash_deal_reservations (user_id);
+create index if not exists idx_flash_deal_reservations_flash_deal_id on flash_deal_reservations (flash_deal_id);
+create index if not exists idx_flash_deal_reservations_user_id on flash_deal_reservations (user_id);
 
 alter table flash_deal_reservations enable row level security;
+
+drop policy if exists "flash_deal_reservations_select_own_or_business_or_admin" on flash_deal_reservations;
 
 create policy "flash_deal_reservations_select_own_or_business_or_admin"
   on flash_deal_reservations for select
@@ -895,11 +1029,11 @@ grant execute on function public.reserve_flash_deal(uuid) to authenticated;
 -- Biletlere benzersiz QR kodu ekler ve kontenjan kontrolünü
 -- (events satırını kilitleyerek) eşzamanlılığa karşı güvenli hale getirir.
 
-alter table tickets add column qr_code text unique;
+alter table tickets add column if not exists qr_code text unique;
 
 -- Bir kullanıcının aynı etkinliğe birden fazla aktif bilet/kayıt açmasını
 -- (ör. çift tıklama) engeller.
-create unique index idx_tickets_event_user_active
+create unique index if not exists idx_tickets_event_user_active
   on tickets (event_id, user_id)
   where status = 'active';
 
@@ -950,13 +1084,17 @@ $$;
 -- Paket yönetimi için ek alanlar ve satılmış paketleri koruyan kurallar.
 
 alter table packages
-  add column per_person_limit int not null default 1 check (per_person_limit > 0),
-  add column usage_description text;
+  add column if not exists per_person_limit int not null default 1 check (per_person_limit > 0),
+  add column if not exists usage_description text;
 
 -- Kontrast mantığının anlamı: yaz fiyatı her zaman satış fiyatından yüksek olmalı.
-alter table packages
-  add constraint packages_summer_price_gt_sale_price
-  check (summer_reference_price > sale_price);
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'packages_summer_price_gt_sale_price') then
+    alter table packages add constraint packages_summer_price_gt_sale_price
+      check (summer_reference_price > sale_price);
+  end if;
+end $$;
 
 -- Satışı olan pakette hak sayısı düşürülemez (mevcut alıcıları mağdur etmemek için).
 create or replace function public.guard_package_usage_count_decrease()
@@ -972,6 +1110,8 @@ begin
   return new;
 end;
 $$;
+
+drop trigger if exists trg_packages_guard_usage_count on packages;
 
 create trigger trg_packages_guard_usage_count
   before update on packages
@@ -1052,7 +1192,7 @@ grant execute on function public.create_purchase(uuid, numeric, numeric, text) t
 -- Paket görseli: belirtilmezse formda işletmenin kapak görseli varsayılan
 -- olarak kullanılır (uygulama katmanında), burada yalnız alanı ekliyoruz.
 
-alter table packages add column image_url text;
+alter table packages add column if not exists image_url text;
 
 -- ==== supabase/migrations/20260715000000_package_image.sql SONU ====
 
@@ -1066,8 +1206,8 @@ alter table packages add column image_url text;
 -- erişimi olmayan işletmenin, yalnızca kendi etkinliğinin katılımcılarını
 -- görmesini sağlar).
 
-alter table events add column is_cancelled boolean not null default false;
-alter table tickets add column refund_status text;
+alter table events add column if not exists is_cancelled boolean not null default false;
+alter table tickets add column if not exists refund_status text;
 
 create or replace function public.get_event_participants(p_event_id uuid)
 returns table (
@@ -1114,10 +1254,10 @@ grant execute on function public.get_event_participants(uuid) to authenticated;
 -- QR Doğrulama: paket hakkı / flaş ayırtması / etkinlik bileti tek
 -- güvenli fonksiyondan geçer. Her deneme (başarılı/başarısız) loglanır.
 
-alter table flash_deal_reservations add column redeemed_at timestamptz;
-alter table tickets add column checked_in_at timestamptz;
+alter table flash_deal_reservations add column if not exists redeemed_at timestamptz;
+alter table tickets add column if not exists checked_in_at timestamptz;
 
-create table verification_logs (
+create table if not exists verification_logs (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   code text not null,
@@ -1130,9 +1270,11 @@ create table verification_logs (
   created_at timestamptz not null default now()
 );
 
-create index idx_verification_logs_business_id on verification_logs (business_id, created_at desc);
+create index if not exists idx_verification_logs_business_id on verification_logs (business_id, created_at desc);
 
 alter table verification_logs enable row level security;
+
+drop policy if exists "verification_logs_select_owner_or_admin" on verification_logs;
 
 create policy "verification_logs_select_owner_or_admin"
   on verification_logs for select
@@ -1378,7 +1520,7 @@ revoke all on function public._touch_customer(uuid, uuid) from public;
 -- Telefonla eşleştirme, profiles tablosuna doğrudan erişimi olmayan
 -- işletmenin yalnızca kendi müşterisinin verisini görmesini sağlar.
 
-alter table customers add column notes text;
+alter table customers add column if not exists notes text;
 
 create or replace function public.get_customer_detail(p_customer_id uuid)
 returns jsonb
@@ -1458,8 +1600,8 @@ grant execute on function public.get_customer_detail(uuid) to authenticated;
 -- tablolarına doğrudan erişimi olmayan işletmenin yalnızca kendi
 -- müşterilerine ait iletişim bilgilerini görmesini sağlar.
 
-alter table announcements add column target_segment text not null default 'tumu';
-alter table announcements add column template_key text;
+alter table announcements add column if not exists target_segment text not null default 'tumu';
+alter table announcements add column if not exists template_key text;
 
 create or replace function public.get_segment_recipients(p_business_id uuid, p_segment text)
 returns table (full_name text, phone text, email text)
@@ -1503,7 +1645,7 @@ grant execute on function public.get_segment_recipients(uuid, text) to authentic
 -- yalnızca service role ile (cron uç noktalarından) yapılır; RLS burada
 -- yalnızca panel/admin tarafındaki okuma erişimini sınırlar.
 
-create table cron_logs (
+create table if not exists cron_logs (
   id uuid primary key default gen_random_uuid(),
   job_name text not null,
   status text not null,
@@ -1512,15 +1654,17 @@ create table cron_logs (
   run_at timestamptz not null default now()
 );
 
-create index idx_cron_logs_job_name on cron_logs (job_name, run_at desc);
+create index if not exists idx_cron_logs_job_name on cron_logs (job_name, run_at desc);
 
 alter table cron_logs enable row level security;
+
+drop policy if exists "cron_logs_select_admin" on cron_logs;
 
 create policy "cron_logs_select_admin"
   on cron_logs for select
   using (is_admin());
 
-create table notification_queue (
+create table if not exists notification_queue (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles (id) on delete cascade,
   kind text not null,
@@ -1530,21 +1674,23 @@ create table notification_queue (
   processed_at timestamptz
 );
 
-create index idx_notification_queue_status on notification_queue (status, created_at);
+create index if not exists idx_notification_queue_status on notification_queue (status, created_at);
 
 -- Paket hatırlatmasının aynı hak için birden fazla kez kuyruğa girmesini
 -- (job iki kez çalışsa bile) engeller.
-create unique index idx_notification_queue_entitlement_reminder
+create unique index if not exists idx_notification_queue_entitlement_reminder
   on notification_queue (((payload ->> 'entitlement_id')))
   where kind = 'package_expiry_reminder';
 
 alter table notification_queue enable row level security;
 
+drop policy if exists "notification_queue_select_admin" on notification_queue;
+
 create policy "notification_queue_select_admin"
   on notification_queue for select
   using (is_admin());
 
-create table business_daily_summaries (
+create table if not exists business_daily_summaries (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   summary_date date not null,
@@ -1557,10 +1703,12 @@ create table business_daily_summaries (
   unique (business_id, summary_date)
 );
 
-create index idx_business_daily_summaries_business_date
+create index if not exists idx_business_daily_summaries_business_date
   on business_daily_summaries (business_id, summary_date desc);
 
 alter table business_daily_summaries enable row level security;
+
+drop policy if exists "business_daily_summaries_select_owner_or_admin" on business_daily_summaries;
 
 create policy "business_daily_summaries_select_owner_or_admin"
   on business_daily_summaries for select
@@ -1580,33 +1728,38 @@ create policy "business_daily_summaries_select_owner_or_admin"
 -- İŞLETME: ALT ÜYE İŞYERİ BİLGİLERİ
 -- =========================================================
 
-alter table businesses add column legal_name text;
-alter table businesses add column tax_identity_number text;
-alter table businesses add column iban text;
-alter table businesses add column iyzico_submerchant_type text;
-alter table businesses add column iyzico_submerchant_key text;
-alter table businesses add column iyzico_onboarding_status text not null default 'not_started';
+alter table businesses add column if not exists legal_name text;
+alter table businesses add column if not exists tax_identity_number text;
+alter table businesses add column if not exists iban text;
+alter table businesses add column if not exists iyzico_submerchant_type text;
+alter table businesses add column if not exists iyzico_submerchant_key text;
+alter table businesses add column if not exists iyzico_onboarding_status text not null default 'not_started';
 -- iyzico_onboarding_status: not_started | pending | approved | rejected
-alter table businesses add column iyzico_reject_reason text;
+alter table businesses add column if not exists iyzico_reject_reason text;
 
 -- =========================================================
 -- PLATFORM AYARLARI (tekil satır — yapılandırılabilir komisyon oranı)
 -- =========================================================
 
-create table platform_settings (
+create table if not exists platform_settings (
   id boolean primary key default true,
   commission_rate numeric(4, 3) not null default 0.09,
   updated_at timestamptz not null default now(),
   constraint platform_settings_singleton check (id)
 );
 
-insert into platform_settings (id) values (true);
+insert into platform_settings (id) values (true)
+on conflict (id) do nothing;
 
 alter table platform_settings enable row level security;
+
+drop policy if exists "platform_settings_select_all" on platform_settings;
 
 create policy "platform_settings_select_all"
   on platform_settings for select
   using (true);
+
+drop policy if exists "platform_settings_update_admin" on platform_settings;
 
 create policy "platform_settings_update_admin"
   on platform_settings for update
@@ -1616,23 +1769,23 @@ create policy "platform_settings_update_admin"
 -- PURCHASES: gerçek ödeme akışı alanları
 -- =========================================================
 
-alter table purchases add column business_payout_amount numeric(10, 2);
-alter table purchases add column provider_status text not null default 'pending';
-alter table purchases add column checkout_token text unique;
-alter table purchases add column checkout_form_content text;
-alter table purchases add column payment_transaction_id text;
-alter table purchases add column refund_requested boolean not null default false;
-alter table purchases add column refund_requested_at timestamptz;
-alter table purchases add column refund_reject_reason text;
+alter table purchases add column if not exists business_payout_amount numeric(10, 2);
+alter table purchases add column if not exists provider_status text not null default 'pending';
+alter table purchases add column if not exists checkout_token text unique;
+alter table purchases add column if not exists checkout_form_content text;
+alter table purchases add column if not exists payment_transaction_id text;
+alter table purchases add column if not exists refund_requested boolean not null default false;
+alter table purchases add column if not exists refund_requested_at timestamptz;
+alter table purchases add column if not exists refund_reject_reason text;
 
-create index idx_purchases_checkout_token on purchases (checkout_token);
-create index idx_purchases_refund_requested on purchases (refund_requested) where refund_requested;
+create index if not exists idx_purchases_checkout_token on purchases (checkout_token);
+create index if not exists idx_purchases_refund_requested on purchases (refund_requested) where refund_requested;
 
 -- =========================================================
 -- ÖDEME OLAYI LOGU (webhook/callback tekrarlarına karşı idempotency)
 -- =========================================================
 
-create table payment_events (
+create table if not exists payment_events (
   id uuid primary key default gen_random_uuid(),
   purchase_id uuid references purchases (id) on delete set null,
   conversation_id text not null,
@@ -1644,6 +1797,8 @@ create table payment_events (
 );
 
 alter table payment_events enable row level security;
+
+drop policy if exists "payment_events_select_admin" on payment_events;
 
 create policy "payment_events_select_admin"
   on payment_events for select
@@ -1764,37 +1919,43 @@ grant execute on function public.reject_refund(uuid, text) to authenticated;
 -- Admin paneli: işletme askıya alma durumu ve admin tarafından
 -- kaldırılan içeriği işletmeciye ayırt ettirecek işaretler.
 
-alter type approval_status add value 'suspended';
+alter type approval_status add value if not exists 'suspended';
 
-alter table businesses add column suspend_reason text;
+-- Postgres yeni eklenen bir enum değerinin aynı transaction içinde
+-- kullanılmasına izin vermez; bu commit onu kalıcı hale getirip betiğin
+-- geri kalanı için güvenli hale getirir (değer zaten varsa zararsızdır).
+commit;
 
-alter table packages add column removed_by_admin boolean not null default false;
-alter table flash_deals add column removed_by_admin boolean not null default false;
-alter table events add column removed_by_admin boolean not null default false;
+alter table businesses add column if not exists suspend_reason text;
+
+alter table packages add column if not exists removed_by_admin boolean not null default false;
+alter table flash_deals add column if not exists removed_by_admin boolean not null default false;
+alter table events add column if not exists removed_by_admin boolean not null default false;
 
 -- ==== supabase/migrations/20260722000000_admin_panel.sql SONU ====
-
-
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260723000000_admin_allowlist_and_ai_assistant.sql
+-- (orijinalden farkı: "if not exists" / "on conflict" / "drop policy if
+--  exists" eklendi — mantık ve içerik birebir aynı)
 -- ============================================================================
 
 -- Admin e-posta beyaz listesi: bu tabloda kayıtlı bir e-posta ile kayıt
 -- olan (veya zaten kayıtlı olan) kullanıcıya profiles.role otomatik
 -- 'admin' atanır. Sadece sunucu tarafı (service role) erişebilir; RLS
 -- açık ama hiçbir policy tanımlı değil, yani client'tan asla okunamaz/yazılamaz.
-create table admin_emails (
+create table if not exists admin_emails (
   email text primary key,
   created_at timestamptz not null default now()
 );
 
 alter table admin_emails enable row level security;
 
-insert into admin_emails (email) values ('m.asimdnzl13@gmail.com');
+insert into admin_emails (email) values ('m.asimdnzl13@gmail.com')
+on conflict (email) do nothing;
 
 -- AI kampanya asistanı kullanım logu: hangi işletme, ne zaman, hangi
 -- amaçla (paket başlığı/metni veya duyuru mesajı) ne kadar istek attı.
-create table ai_generation_logs (
+create table if not exists ai_generation_logs (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references businesses (id) on delete cascade,
   kind text not null check (kind in ('paket', 'duyuru')),
@@ -1802,14 +1963,16 @@ create table ai_generation_logs (
   created_at timestamptz not null default now()
 );
 
-create index ai_generation_logs_business_id_idx on ai_generation_logs (business_id);
+create index if not exists ai_generation_logs_business_id_idx on ai_generation_logs (business_id);
 
 alter table ai_generation_logs enable row level security;
 
+drop policy if exists "ai_generation_logs_select_owner_or_admin" on ai_generation_logs;
 create policy "ai_generation_logs_select_owner_or_admin"
   on ai_generation_logs for select
   using (owns_business(business_id) or is_admin());
 
+drop policy if exists "ai_generation_logs_insert_owner" on ai_generation_logs;
 create policy "ai_generation_logs_insert_owner"
   on ai_generation_logs for insert
   with check (owns_business(business_id));
@@ -1819,26 +1982,34 @@ create policy "ai_generation_logs_insert_owner"
 
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260724000000_pilot_mode_enum.sql
+-- (orijinalden farkı: "add value if not exists" + aradaki commit +
+--  "add column if not exists" eklendi — mantık ve içerik birebir aynı)
 -- ============================================================================
 
 -- PİLOT MOD: ödeme platformdan geçmez, işletmede nakit/kart alınır.
--- Yeni purchase_status değerleri ayrı bir migration'da eklenir çünkü
--- Postgres aynı transaction içinde yeni eklenen enum değerini hemen
--- kullanmaya izin vermez (bir sonraki migration'da kullanılır).
+alter type purchase_status add value if not exists 'reserved';
+alter type purchase_status add value if not exists 'cancelled';
 
-alter type purchase_status add value 'reserved';
-alter type purchase_status add value 'cancelled';
+-- Postgres, bir transaction içinde YENİ eklenen bir enum değerinin aynı
+-- transaction içinde kullanılmasına izin vermez. Bu commit, yukarıdaki
+-- değerleri kalıcı hale getirip betiğin geri kalanı (ve ileride bu
+-- değerleri kullanacak her şey) için güvenli hale getirir. Değerler zaten
+-- daha önce eklenmişse bu satırların hiçbir etkisi olmaz, yalnızca
+-- zararsız bir commit gerçekleşir.
+commit;
 
 -- Bir rezervasyonun neden iptal/düşme olduğunu ayırt etmek için
 -- (işletme elle iptal etti mi, yoksa uzun süre gelinmediği için
 -- otomatik mi düştü).
-alter table purchases add column cancelled_reason text;
+alter table purchases add column if not exists cancelled_reason text;
 
 -- ==== supabase/migrations/20260724000000_pilot_mode_enum.sql SONU ====
 
 
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260724000100_pilot_mode.sql
+-- (orijinalden farkı yok — tamamı "create or replace function" +
+--  "revoke"/"grant" olduğu için zaten tekrar çalıştırılmaya dayanıklı)
 -- ============================================================================
 
 -- PİLOT MOD mantığı: kullanıcı paketi uygulamadan "ayırtır" (status='reserved'),
@@ -2140,17 +2311,19 @@ grant execute on function public.decrement_package_sold_count(uuid) to service_r
 
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260725000000_demo_data_flags.sql
+-- (orijinalden farkı: "add column if not exists" / "create index if not
+--  exists" eklendi — mantık ve içerik birebir aynı)
 -- ============================================================================
 
 -- Demo veri seti altyapısı: hangi kayıtların demo olduğunu işaretleyen
 -- bayraklar + admin panelinden tek tıkla temizleme. Gerçek verilere asla
 -- dokunmaz çünkü her şey is_demo = true filtresiyle sınırlanır.
 
-alter table profiles add column is_demo boolean not null default false;
-alter table businesses add column is_demo boolean not null default false;
+alter table profiles add column if not exists is_demo boolean not null default false;
+alter table businesses add column if not exists is_demo boolean not null default false;
 
-create index idx_profiles_is_demo on profiles (is_demo) where is_demo;
-create index idx_businesses_is_demo on businesses (is_demo) where is_demo;
+create index if not exists idx_profiles_is_demo on profiles (is_demo) where is_demo;
+create index if not exists idx_businesses_is_demo on businesses (is_demo) where is_demo;
 
 -- =========================================================
 -- Demo veri özeti (admin panelinde tek bakışta durum göstermek için)
@@ -2253,6 +2426,12 @@ grant execute on function public.admin_clear_demo_data() to authenticated;
 
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260725000100_demo_data_load.sql
+-- (orijinalden farkı yok — dosyanın tamamı zaten "create or replace
+--  function" olarak tanımlanan admin_load_demo_data() fonksiyonunun
+--  GÖVDESİ; içindeki tüm insert'ler zaten "on conflict ... do nothing"
+--  kullanıyor, yani fonksiyon tanımlanırken hiçbir veri satırı hemen
+--  eklenmiyor — veri yalnızca admin panelden "Demo Verisini Yükle"
+--  düğmesine basıldığında, ayrı bir çağrıda eklenir)
 -- ============================================================================
 
 -- Demo veri seti: Bodrum'da 12 kurgusal işletme, paketler, flaş fırsatlar,
@@ -2507,6 +2686,8 @@ grant execute on function public.admin_load_demo_data() to authenticated;
 
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260820000000_admin_role_sync.sql
+-- (orijinalden farkı yok — tek satır bir UPDATE, doğası gereği zaten
+--  tekrar çalıştırılmaya dayanıklı: ikinci çalıştırmada 0 satır etkiler)
 -- ============================================================================
 
 -- admin_emails beyaz listesi yalnızca YENİ kayıt/girişlerde uygulanıyordu
@@ -2527,6 +2708,9 @@ where p.id = u.id
 
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260820000100_test_lab.sql
+-- (orijinalden farkı yok — baştan itibaren "if not exists" / "on conflict
+--  do nothing" / "create or replace function" ile yazıldığı için zaten
+--  tekrar çalıştırılmaya dayanıklıydı)
 -- ============================================================================
 
 -- =============================================================================
@@ -2831,7 +3015,6 @@ grant execute on function public.admin_test_reset_lab_data() to authenticated;
 -- ==== supabase/migrations/20260820000100_test_lab.sql SONU ====
 
 
-
 -- ============================================================================
 -- KAYNAK DOSYA: supabase/migrations/20260820000200_schema_migrations_log.sql
 -- ============================================================================
@@ -3005,7 +3188,9 @@ on conflict (filename) do nothing;
 
 -- =============================================================================
 -- ÖZET SORGUSU — betiğin en altında, çalıştırdıktan sonra bunu görürsün.
--- 22 satır olmalı, hepsinde bir "applied_at" tarihi olmalı.
+-- 22 satır olmalı, hepsinde bir "applied_at" tarihi olmalı. Eksik bir satır
+-- varsa (22'den az satır dönerse), o migration'ın imza nesnesi hâlâ
+-- bulunamadı demektir — yukarıdaki ilgili "KAYNAK DOSYA" bölümünü kontrol et.
 -- =============================================================================
 
 select

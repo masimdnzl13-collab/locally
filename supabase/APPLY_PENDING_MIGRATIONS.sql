@@ -1742,7 +1742,7 @@ create table if not exists business_daily_summaries (
   unique (business_id, summary_date)
 );
 
-create index idx_business_daily_summaries_business_date
+create index if not exists idx_business_daily_summaries_business_date
   on business_daily_summaries (business_id, summary_date desc);
 
 alter table business_daily_summaries enable row level security;
