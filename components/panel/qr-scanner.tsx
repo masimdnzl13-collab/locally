@@ -44,10 +44,21 @@ export default function QrScanner({
       cancelled = true;
       const instance = scannerRef.current;
       if (instance) {
-        instance
-          .stop()
-          .then(() => instance.clear())
-          .catch(() => {});
+        // Kamera hiç başlamamışsa (izin verilmedi, kamera yok, http
+        // bağlamı vb.) html5-qrcode'un stop() metodu bir Promise DÖNMEDEN
+        // senkron throw atabilir ("Cannot stop, scanner is not running or
+        // paused") — bu durumda .then/.catch zinciri hiç kurulamaz ve hata
+        // React'in en yakın hata sınırına kadar yükselip tüm ekranı
+        // çökertir (elle kod girip sonucu gördüğün an tetiklenir, çünkü
+        // bileşen o an unmount olur). Senkron try/catch bunu önler.
+        try {
+          instance
+            .stop()
+            .then(() => instance.clear())
+            .catch(() => {});
+        } catch {
+          // yukarıdaki not
+        }
       }
     };
   }, []);
