@@ -48,6 +48,8 @@ export interface Business {
   iyzico_submerchant_key: string | null;
   iyzico_onboarding_status: "not_started" | "pending" | "approved" | "rejected";
   iyzico_reject_reason: string | null;
+  qr_stand_viewed_at: string | null;
+  password_reminder_dismissed_at: string | null;
   created_at: string;
   updated_at: string;
 }

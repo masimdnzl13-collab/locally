@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { uniqueSlug } from "@/lib/business/slug";
 import type { BusinessCategory } from "@/lib/types";
 
 async function requireUser() {
@@ -10,72 +10,45 @@ async function requireUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/giris?next=/panel/kurulum");
+  if (!user) redirect("/giris?next=/panel");
   return { supabase, user: user! };
 }
 
-export async function saveOnboardingStepOne(formData: FormData) {
+// Kurulum kontrol listesinin "İşletme bilgileri" adımı — kategori, mahalle,
+// adres ve telefonu tek seferde kaydeder. Adımın "tamamlandı" sayılması
+// district/address/phone'un dolu olmasına bağlı (bkz. lib/business/onboarding.ts);
+// kategori her zaman bir varsayılana sahip olduğu için o alan tek başına
+// tamamlanma sinyali değil.
+export async function saveBusinessInfoAction(formData: FormData) {
   const { supabase, user } = await requireUser();
 
-  const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "") as BusinessCategory;
-  const description = String(formData.get("description") ?? "").trim();
-
-  if (!name || !category) {
-    return { error: "İşletme adı ve kategori zorunlu." };
-  }
-
-  const { data: existing } = await supabase
-    .from("businesses")
-    .select("id")
-    .eq("owner_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existing) {
-    const { error } = await supabase
-      .from("businesses")
-      .update({ name, category, description: description || null })
-      .eq("id", existing.id);
-    if (error) return { error: error.message };
-  } else {
-    const { error } = await supabase.from("businesses").insert({
-      owner_id: user.id,
-      name,
-      category,
-      description: description || null,
-      slug: uniqueSlug(name),
-    });
-    if (error) return { error: error.message };
-  }
-
-  return { success: true };
-}
-
-export async function saveOnboardingStepTwo(formData: FormData) {
-  const { supabase, user } = await requireUser();
-
   const district = String(formData.get("district") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
   const instagram = String(formData.get("instagram") ?? "").trim();
 
-  if (!district || !address || !phone) {
-    return { error: "Mahalle, adres ve telefon zorunlu." };
+  if (!category || !district || !address || !phone) {
+    return { error: "Kategori, mahalle, adres ve telefon zorunlu." };
   }
 
   const { error } = await supabase
     .from("businesses")
     .update({
+      category,
       district,
       address,
       phone,
+      description: description || null,
       instagram: instagram || null,
     })
     .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
+
+  revalidatePath("/panel");
+  revalidatePath("/panel/kurulum");
   return { success: true };
 }
 
@@ -85,14 +58,16 @@ function extFromFile(file: File): string {
   return file.type.split("/")[1] ?? "jpg";
 }
 
-export async function finishOnboarding(formData: FormData) {
+// Kurulum kontrol listesinin "Görseller" adımı — logo ve kapak görselini
+// tek seferde yükler. Tamamlanma sinyali: her ikisinin de dolu olması.
+export async function saveBusinessImagesAction(formData: FormData) {
   const { supabase, user } = await requireUser();
 
   const logo = formData.get("logo") as File | null;
   const cover = formData.get("cover") as File | null;
 
-  if (!logo || logo.size === 0 || !cover || cover.size === 0) {
-    return { error: "Logo ve kapak görseli zorunlu." };
+  if ((!logo || logo.size === 0) && (!cover || cover.size === 0)) {
+    return { error: "Logo veya kapak görseli seç." };
   }
 
   const updates: Record<string, string> = {};
@@ -101,6 +76,7 @@ export async function finishOnboarding(formData: FormData) {
     ["logo_url", logo],
     ["cover_url", cover],
   ] as const) {
+    if (!file || file.size === 0) continue;
     const path = `${user.id}/${key === "logo_url" ? "logo" : "cover"}-${Date.now()}.${extFromFile(
       file
     )}`;
@@ -114,12 +90,23 @@ export async function finishOnboarding(formData: FormData) {
     updates[key] = data.publicUrl;
   }
 
-  const { error } = await supabase
-    .from("businesses")
-    .update(updates)
-    .eq("owner_id", user.id);
+  const { error } = await supabase.from("businesses").update(updates).eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
-  redirect("/panel");
+  revalidatePath("/panel");
+  revalidatePath("/panel/kurulum");
+  return { success: true };
+}
+
+// Panele ilk girişte gösterilen "şifreni güçlendir" hatırlatmasını kapatır.
+export async function dismissPasswordReminderAction() {
+  const { supabase, user } = await requireUser();
+
+  await supabase
+    .from("businesses")
+    .update({ password_reminder_dismissed_at: new Date().toISOString() })
+    .eq("owner_id", user.id);
+
+  revalidatePath("/panel");
 }

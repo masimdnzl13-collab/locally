@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectiveRoles } from "@/lib/auth/roles";
+import { generateQrDataUrl } from "@/lib/qr";
 import type { UserRole } from "@/lib/types";
 
 async function requireAdmin() {
@@ -104,6 +105,25 @@ export async function reactivateBusinessAction(
   revalidatePath("/admin/isletmeler");
   revalidatePath("/kesfet");
   return { success: true };
+}
+
+// Sahada işletmeye uzatılacak, önceden işletme adı doldurulmuş kayıt
+// bağlantısı + QR kodu üretir. Hiçbir şey kaydetmez — businesses tablosuna
+// hiç dokunmaz, salt istemci tarafında link/QR birleştirir; bu yüzden aynı
+// isim için istenildiği kadar tekrar üretilebilir.
+export async function generateSignupInviteAction(
+  formData: FormData
+): Promise<{ error?: string; success?: true; url?: string; qrDataUrl?: string; name?: string }> {
+  await requireAdmin();
+
+  const name = String(formData.get("businessName") ?? "").trim();
+  if (!name) return { error: "İşletme adı gerekli." };
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const url = `${siteUrl}/kayit?rol=isletme&isletme=${encodeURIComponent(name)}`;
+  const qrDataUrl = await generateQrDataUrl(url);
+
+  return { success: true, url, qrDataUrl, name };
 }
 
 const CONTENT_TABLES = {

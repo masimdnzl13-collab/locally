@@ -19,7 +19,7 @@ export default function AdminShell({
   return (
     <div className="min-h-dvh bg-background md:flex">
       {/* Masaüstü: sol menü (navy workspace surface) */}
-      <aside className="hidden w-60 shrink-0 bg-navy-900 md:flex md:flex-col">
+      <aside className="hidden w-60 shrink-0 bg-navy-900 print:hidden md:flex md:flex-col">
         <div className="border-b border-white/10 px-5 py-4">
           <div className="flex items-center justify-between gap-2">
             <span className="text-base font-extrabold tracking-tight text-white">
@@ -74,7 +74,7 @@ export default function AdminShell({
       </aside>
 
       <div className="flex-1">
-        <header className="flex items-center justify-between border-b border-white/10 bg-navy-900 px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between border-b border-white/10 bg-navy-900 px-4 py-3 print:hidden md:hidden">
           <span className="font-extrabold tracking-tight text-white">
             Locally <span className="text-teal-300">Admin</span>
           </span>
@@ -85,7 +85,7 @@ export default function AdminShell({
           </form>
         </header>
 
-        <nav className="flex gap-1.5 overflow-x-auto border-b border-border bg-card px-2 py-2 md:hidden">
+        <nav className="flex gap-1.5 overflow-x-auto border-b border-border bg-card px-2 py-2 print:hidden md:hidden">
           {adminNavItems.map((item) => {
             const active = pathname === item.href;
             return (

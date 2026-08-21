@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/auth/ensure-profile";
+import { ensureBusinessForOwner } from "@/lib/business/ensure-business";
 import type { UserRole } from "@/lib/types";
 import { getEffectiveRoles } from "@/lib/auth/roles";
 
@@ -30,6 +31,21 @@ export async function GET(request: Request) {
         // Profil zaten varsa veya oluşturma başarısız olsa da kullanıcıyı
         // akışta tutmaya devam ediyoruz; ilk girişte profil eksikse
         // sonraki bir işlemde tekrar denenir.
+      }
+
+      // E-posta onayı açıkken signUp anında oturum dönmediği için business
+      // satırı signUpAction içinde değil burada oluşuyor — kayıt formunda
+      // topladığımız işletme adı user_metadata üzerinden buraya taşınıyor.
+      if (profile?.role === "business") {
+        const businessName = (data.user.user_metadata?.business_name as string | undefined)?.trim();
+        if (businessName) {
+          try {
+            await ensureBusinessForOwner(data.user.id, businessName);
+          } catch {
+            // Aynı sebeple: işletme oluşturma başarısız olsa bile kullanıcıyı
+            // akışta tutuyoruz, panel ana sayfası eksik işletmeyi tespit eder.
+          }
+        }
       }
 
       if (next === "/kesfet" && profile) {

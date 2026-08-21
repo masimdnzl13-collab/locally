@@ -22,7 +22,7 @@ export default function PanelShell({
   return (
     <div className="md:flex md:min-h-screen">
       {/* Masaüstü: sol menü (navy workspace surface) */}
-      <aside className="hidden w-60 shrink-0 bg-navy-900 md:flex md:flex-col">
+      <aside className="hidden w-60 shrink-0 bg-navy-900 print:hidden md:flex md:flex-col">
         <div className="border-b border-white/10 px-5 py-4">
           <div className="flex items-center justify-between gap-2">
             <span className="text-lg font-extrabold tracking-tight text-white">
@@ -79,7 +79,7 @@ export default function PanelShell({
 
       <div className="flex-1 bg-background">
         {/* Mobil üst bar */}
-        <header className="flex items-center justify-between border-b border-border bg-navy-900 px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between border-b border-border bg-navy-900 px-4 py-3 print:hidden md:hidden">
           <span className="font-extrabold tracking-tight text-white">
             Locally <span className="text-teal-300">İşletme</span>
           </span>
@@ -93,7 +93,7 @@ export default function PanelShell({
         <main className="pb-20 md:pb-0">{children}</main>
 
         {/* Mobil: kaydırmalı alt sekmeler */}
-        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 overflow-x-auto border-t border-border bg-card/95 backdrop-blur md:hidden">
+        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 overflow-x-auto border-t border-border bg-card/95 backdrop-blur print:hidden md:hidden">
           <div className="flex min-w-max">
             {panelNavItems.map((item) => {
               const active = pathname === item.href;

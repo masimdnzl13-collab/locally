@@ -27,8 +27,8 @@ export default function ResetPasswordForm() {
           type="password"
           name="password"
           required
-          minLength={6}
-          placeholder="En az 6 karakter"
+          minLength={8}
+          placeholder="En az 8 karakter"
         />
       </div>
 

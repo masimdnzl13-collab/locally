@@ -11,10 +11,12 @@ import {
   Percent,
   CreditCard,
   Settings,
+  ListChecks,
 } from "lucide-react";
 
 export const panelNavItems = [
   { href: "/panel", label: "Özet", icon: LayoutDashboard },
+  { href: "/panel/kurulum-adimlari", label: "Kurulum", icon: ListChecks },
   { href: "/panel/paketler", label: "Paketlerim", icon: Package },
   { href: "/panel/kuponlar", label: "Kuponlar", icon: Percent },
   { href: "/panel/bu-aksam", label: "Bu Akşam", icon: Flame },

@@ -4,8 +4,11 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/auth/ensure-profile";
+import { ensureBusinessForOwner } from "@/lib/business/ensure-business";
 import type { UserRole } from "@/lib/types";
 import { ACTIVE_ROLE_COOKIE, getEffectiveRoles } from "@/lib/auth/roles";
+
+const MIN_PASSWORD_LENGTH = 8;
 
 function safeNext(next: FormDataEntryValue | null): string | null {
   if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//")) {
@@ -17,12 +20,23 @@ function safeNext(next: FormDataEntryValue | null): string | null {
 export async function signUpAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("fullName") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
   const role = (formData.get("role") === "business" ? "business" : "user") as UserRole;
+  // İşletme kaydı sahada bir buçuk dakikada tamamlanabilsin diye yalnızca
+  // e-posta + şifre + işletme adı istiyor — ad soyad ve telefon burada
+  // sorulmuyor, geri kalan bilgiler panel ana sayfasındaki kurulum kontrol
+  // listesinde tamamlanıyor (bkz. lib/business/onboarding.ts).
+  const businessName = role === "business" ? String(formData.get("businessName") ?? "").trim() : "";
+  const fullName = role === "user" ? String(formData.get("fullName") ?? "").trim() : "";
+  const phone = role === "user" ? String(formData.get("phone") ?? "").trim() : "";
 
   if (!email || !password) {
     return { error: "E-posta ve şifre gerekli." };
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.` };
+  }
+  if (role === "business" && !businessName) {
+    return { error: "İşletme adı gerekli." };
   }
   // Telefon, işletmelerin QR doğrulama sonrası müşteriyi CRM'e
   // düşürebilmesi ve duyuru gönderebilmesi için müşteri hesaplarında zorunlu.
@@ -37,7 +51,7 @@ export async function signUpAction(formData: FormData) {
     email,
     password,
     options: {
-      data: { full_name: fullName, phone, role },
+      data: { full_name: fullName, phone, role, business_name: businessName },
       // E-posta onay bağlantısı /auth/callback'e (PKCE code exchange) düşmezse
       // profiles satırı hiç oluşturulmaz — bkz. ensureProfile.
       emailRedirectTo: `${siteUrl}/auth/callback`,
@@ -68,8 +82,16 @@ export async function signUpAction(formData: FormData) {
     return { error: "Profil oluşturulamadı: " + (err as Error).message };
   }
 
+  if (role === "business" && profile?.role !== "admin") {
+    try {
+      await ensureBusinessForOwner(data.user.id, businessName);
+    } catch (err) {
+      return { error: "İşletme oluşturulamadı: " + (err as Error).message };
+    }
+  }
+
   if (profile?.role === "admin") redirect("/admin");
-  redirect(role === "business" ? "/panel/kurulum" : "/kesfet");
+  redirect(role === "business" ? "/panel" : "/kesfet");
 }
 
 export async function signInAction(formData: FormData) {
@@ -180,8 +202,8 @@ export async function requestPasswordResetAction(formData: FormData) {
 
 export async function updatePasswordAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
-  if (password.length < 6) {
-    return { error: "Şifre en az 6 karakter olmalı." };
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.` };
   }
 
   const supabase = createClient();
@@ -192,4 +214,24 @@ export async function updatePasswordAction(formData: FormData) {
   }
 
   redirect("/hesabim");
+}
+
+// Panelin Ayarlar sayfasındaki şifre değiştirme formu için — updatePasswordAction'dan
+// farkı: e-posta sıfırlama bağlantısı akışına özgü sabit /hesabim yönlendirmesi
+// yerine düz bir başarı mesajı döner, böylece hem müşteri hem işletme panelinde
+// aynı sayfada kalınarak kullanılabilir.
+export async function updatePanelPasswordAction(formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.` };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true, message: "Şifren güncellendi." };
 }

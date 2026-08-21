@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getMyBusiness } from "@/lib/business/current";
 import { getDashboardMetrics, getRecentActivity } from "@/lib/panel/dashboard-queries";
+import { getHasAnyPackage, deriveOnboardingStatus } from "@/lib/business/onboarding";
 import { BUSINESS_CATEGORY_LABELS } from "@/lib/types";
 import WeeklyBarChart from "@/components/panel/weekly-bar-chart";
+import OnboardingChecklist from "@/components/panel/onboarding-checklist";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -33,13 +35,19 @@ export default async function PanelDashboardPage() {
   const business = await getMyBusiness();
   if (!business) return null;
 
-  const [metrics, activity] = await Promise.all([
+  const [metrics, activity, hasPackage] = await Promise.all([
     getDashboardMetrics(business.id),
     getRecentActivity(business.id),
+    getHasAnyPackage(business.id),
   ]);
+  const onboardingStatus = deriveOnboardingStatus(business, hasPackage);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-8">
+      {!onboardingStatus.completed && (
+        <OnboardingChecklist business={business} status={onboardingStatus} />
+      )}
+
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">Hoş geldin,</p>

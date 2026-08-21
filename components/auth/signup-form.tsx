@@ -42,8 +42,10 @@ const ROLE_CARDS: {
 
 export default function SignupForm({
   initialRole,
+  initialBusinessName,
 }: {
   initialRole?: "user" | "business";
+  initialBusinessName?: string;
 }) {
   const [role, setRole] = useState<Role | null>(initialRole ?? null);
   const [error, setError] = useState<string | null>(null);
@@ -129,56 +131,100 @@ export default function SignupForm({
         {role === "user" ? "Müşteri" : "İşletme"} olarak devam ediyorsun · değiştir
       </button>
 
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">
-          Ad Soyad
-        </label>
-        <Input
-          type="text"
-          name="fullName"
-          required
-          placeholder="Adın Soyadın"
-        />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">
-          E-posta
-        </label>
-        <Input
-          type="email"
-          name="email"
-          required
-          placeholder="sen@ornek.com"
-        />
-      </div>
-      {role === "user" && (
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">
-            Telefon
-          </label>
-          <Input
-            type="tel"
-            name="phone"
-            required
-            placeholder="05xx xxx xx xx"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            İşletmeler QR doğrulama sonrası seninle bu numaradan iletişime geçebilir.
-          </p>
-        </div>
+      {role === "business" ? (
+        <>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              İşletme Adı
+            </label>
+            <Input
+              type="text"
+              name="businessName"
+              required
+              defaultValue={initialBusinessName}
+              placeholder="Örn. Liman Kafe"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              E-posta
+            </label>
+            <Input
+              type="email"
+              name="email"
+              required
+              placeholder="mail.adresiniz@gmail.com"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Şifre
+            </label>
+            <Input
+              type="password"
+              name="password"
+              required
+              minLength={8}
+              placeholder="deniz2026"
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Kolay tahmin edilen şifreler, müşteri verisi barındıran bir hesap için risklidir.
+              Panele girdikten sonra Ayarlar bölümünden değiştirebilirsin.
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Ad Soyad
+            </label>
+            <Input
+              type="text"
+              name="fullName"
+              required
+              placeholder="Adın Soyadın"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              E-posta
+            </label>
+            <Input
+              type="email"
+              name="email"
+              required
+              placeholder="sen@ornek.com"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Telefon
+            </label>
+            <Input
+              type="tel"
+              name="phone"
+              required
+              placeholder="05xx xxx xx xx"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              İşletmeler QR doğrulama sonrası seninle bu numaradan iletişime geçebilir.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Şifre
+            </label>
+            <Input
+              type="password"
+              name="password"
+              required
+              minLength={8}
+              placeholder="En az 8 karakter"
+            />
+          </div>
+        </>
       )}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">
-          Şifre
-        </label>
-        <Input
-          type="password"
-          name="password"
-          required
-          minLength={6}
-          placeholder="En az 6 karakter"
-        />
-      </div>
 
       {error && (
         <p className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">

@@ -314,3 +314,33 @@ export async function getLegacyBusinesses(): Promise<LegacyBusinessRow[]> {
   if (error || !data) return [];
   return data as LegacyBusinessRow[];
 }
+
+export interface OnboardingIncompleteBusiness {
+  id: string;
+  name: string;
+  created_at: string;
+  district: string | null;
+  address: string | null;
+  phone: string | null;
+  logo_url: string | null;
+  cover_url: string | null;
+  qr_stand_viewed_at: string | null;
+  has_package: boolean;
+  owner_email: string;
+  owner_phone: string | null;
+  owner_full_name: string | null;
+  last_sign_in_at: string | null;
+}
+
+// Hesabını açmış ama kurulumunu (işletme bilgileri / görseller / ilk paket /
+// QR standı) tamamlamamış işletmeler — saha turundan sonra admin'in tek tek
+// arayıp tamamlamaya teşvik edebilmesi için. auth.users.last_sign_in_at'e
+// ihtiyaç duyduğundan bkz. supabase/migrations/20260821000200_onboarding_checklist.sql'deki
+// admin_onboarding_incomplete_businesses RPC'si (admin_legacy_businesses ile aynı desen).
+export async function getOnboardingIncompleteBusinesses(): Promise<OnboardingIncompleteBusiness[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("admin_onboarding_incomplete_businesses");
+
+  if (error || !data) return [];
+  return data as OnboardingIncompleteBusiness[];
+}
