@@ -151,6 +151,27 @@ export function registerTelephonyRoutes(
       };
       if (restaurant.status !== "ACTIVE")
         return reply.type("text/xml").send(xml(config.closedMessage ?? "Thank you for calling. We are currently closed."));
+      // Abuse guard: every AI call costs Claude + STT + TTS. A caller who already
+      // reached the limit is answered with a fixed message and never reaches the AI.
+      // Throttled calls are not recorded, so the number is released as soon as its
+      // oldest AI call leaves the window: at most MAX AI calls per WINDOW per caller.
+      // Calls without a From share one bucket per restaurant; Twilio sends withheld
+      // numbers as a fixed placeholder, so those share one bucket too.
+      if (env.CALLER_THROTTLE_MAX_CALLS > 0) {
+        const recent = await repo.recentCallsFromCaller({
+          restaurantId: restaurant.restaurantId,
+          caller: parsed.data.From?.trim() || null,
+          windowMinutes: env.CALLER_THROTTLE_WINDOW_MINUTES,
+          excludeProviderCallId: providerId,
+        });
+        if (recent >= env.CALLER_THROTTLE_MAX_CALLS) {
+          request.log.warn(
+            { event: "caller_throttled", restaurantId: restaurant.restaurantId, providerCallId: providerId, recentCalls: recent },
+            "caller throttled: fixed message, AI skipped",
+          );
+          return reply.type("text/xml").send(xml(env.CALLER_THROTTLE_MESSAGE));
+        }
+      }
       const { call, created } = await repo.createCall({
         restaurantId: restaurant.restaurantId,
         provider: "twilio",

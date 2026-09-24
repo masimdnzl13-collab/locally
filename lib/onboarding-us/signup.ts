@@ -12,7 +12,8 @@ export const US_SIGNUP_COOKIE = "locally_us_signup";
 // /terms sayfasında yayınlanan sözleşme sürümü (lib/us/config.ts US_TERMS_VERSION ile aynı).
 export const AGREEMENT_VERSION = "2026-09-us-v1";
 
-export type UsOnboardingStatus = "awaiting_payment" | "activating" | "active";
+// awaiting_menu: ödendi + Tideline kuruldu, ama saat/menü (Brain) henüz yetersiz.
+export type UsOnboardingStatus = "awaiting_payment" | "activating" | "awaiting_menu" | "active";
 
 export interface UsSignup {
   business_id: string;

@@ -20,7 +20,7 @@ const twilioEnv = loadEnv({
   VOICE_PUBLIC_URL: "https://voice.example.com",
 });
 const db = { query: async () => ({ rows: [] }), connect: async () => ({}), end: async () => {} } as never;
-function runtime() {
+function runtime(recentCalls = 0) {
   const calls: string[] = [];
   const attached: string[] = [];
   const audio: string[] = [];
@@ -30,6 +30,10 @@ function runtime() {
         phone === "+15557654321"
           ? { restaurantId: "r1", restaurantName: "Luigi's", status: "ACTIVE", timezone: "UTC", voiceConfig: {}, phoneNumber: phone }
           : undefined,
+      recentCallsFromCaller: async (q: { caller: string | null; windowMinutes: number; excludeProviderCallId: string }) => {
+        calls.push(`recent:${q.caller}:${q.windowMinutes}:${q.excludeProviderCallId}`);
+        return recentCalls;
+      },
       createCall: async () => ({ call: { id: "call-1", restaurantId: "r1" }, created: true }),
       createSession: async () => ({ id: "session-1", callId: "call-1", restaurantId: "r1", state: "INITIALIZING", startedAt: new Date() }),
       event: async () => {},
@@ -53,8 +57,8 @@ const sign = (url: string, params: Record<string, string>) =>
     .digest("base64");
 const apps: Array<{ close: () => Promise<unknown> }> = [];
 afterEach(async () => { await Promise.all(apps.splice(0).map((a) => a.close())); });
-async function start(env: Env) {
-  const r = runtime();
+async function start(env: Env, recentCalls = 0) {
+  const r = runtime(recentCalls);
   const app = createApp(env, db, { voice: r.rt });
   apps.push(app);
   await app.ready();
@@ -88,6 +92,46 @@ describe("telephony routes on the production app", () => {
     expect(response.body).toContain('<Parameter name="sessionId" value="session-1" />');
     expect(response.body).toContain("Thank you for calling Luigi&apos;s");
     expect(calls).toContain("begin:CA111");
+  });
+  it("answers a caller over the per-caller limit with a fixed message and skips the AI", async () => {
+    const env = loadEnv({ ...base, TELEPHONY_MODE: "twilio", TWILIO_ACCOUNT_SID: "AC123", TWILIO_AUTH_TOKEN: "secret-token", VOICE_PUBLIC_URL: "https://voice.example.com", CALLER_THROTTLE_MAX_CALLS: "5", CALLER_THROTTLE_WINDOW_MINUTES: "10" });
+    const params = { CallSid: "CA222", To: "+15557654321", From: "+15551234567" };
+    const post = (app: Awaited<ReturnType<typeof start>>["app"]) =>
+      app.inject({
+        method: "POST",
+        url: "/api/v1/telephony/twilio/incoming",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "x-twilio-signature": sign("https://voice.example.com/api/v1/telephony/twilio/incoming", params),
+        },
+        payload: new URLSearchParams(params).toString(),
+      });
+
+    const under = await start(env, 4);
+    const allowed = await post(under.app);
+    expect(allowed.body).toContain("<Stream");
+    expect(under.calls).toContain("recent:+15551234567:10:CA222");
+    expect(under.calls).toContain("begin:CA222");
+
+    const over = await start(env, 5);
+    const throttled = await post(over.app);
+    expect(throttled.statusCode).toBe(200);
+    expect(throttled.body).toContain("<Say>We're very busy right now.");
+    expect(throttled.body).toContain("<Hangup/>");
+    expect(throttled.body).not.toContain("<Stream");
+    expect(over.calls.some((c) => c.startsWith("begin:"))).toBe(false);
+  });
+  it("skips the per-caller check when CALLER_THROTTLE_MAX_CALLS=0", async () => {
+    const env = loadEnv({ ...base, CALLER_THROTTLE_MAX_CALLS: "0" });
+    const { app, calls } = await start(env, 99);
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/telephony/twilio/incoming",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "CallSid=CA333&To=%2B15557654321",
+    });
+    expect(response.body).toContain("<Stream");
+    expect(calls.some((c) => c.startsWith("recent:"))).toBe(false);
   });
   it("rejects webhooks with a bad signature", async () => {
     const { app, calls } = await start(twilioEnv);

@@ -3,13 +3,26 @@ import { createClient } from "@/lib/supabase/server";
 import { getMyBusiness } from "@/lib/business/current";
 import { hasTidelineAccess } from "@/lib/tideline/access";
 import { getTidelineConfig, mintTidelineAssertion } from "@/lib/tideline/sso";
+import { clientIp, rateLimit } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // Giriş yapmış işletme sahibine, kendi işletmesine eşlenmiş Tideline
 // restoranı için 60 saniyelik, tek kullanımlık bir SSO assertion'ı verir.
 // POST: yan etkili (token üretir) ve GET gibi önbelleğe/prefetch'e düşmesin.
-export async function POST() {
+// ?section=brain → Tideline oturum açınca doğrudan Brain (menü/saat) sayfasına
+// iner (ABD onboarding menü adımı). Yalnızca bu beyaz listedeki yollar.
+const SECTIONS: Record<string, string> = { brain: "/app/brain" };
+
+export async function POST(request: Request) {
+  const limited = await rateLimit("tidelineSso", clientIp(request.headers));
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "Çok fazla istek. Biraz sonra tekrar dene." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } }
+    );
+  }
+  const section = SECTIONS[new URL(request.url).searchParams.get("section") ?? ""];
   const config = getTidelineConfig();
   if (!config) {
     return NextResponse.json(
@@ -47,7 +60,11 @@ export async function POST() {
   // Token URL fragment'ında taşınır: tarayıcı fragment'ı hiçbir sunucuya
   // (ne Tideline'a ne log'lara) göndermez.
   return NextResponse.json(
-    { url: `${config.webUrl}/sso#assertion=${encodeURIComponent(assertion)}&embedded=1` },
+    {
+      url:
+        `${config.webUrl}/sso#assertion=${encodeURIComponent(assertion)}&embedded=1` +
+        (section ? `&next=${encodeURIComponent(section)}` : ""),
+    },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

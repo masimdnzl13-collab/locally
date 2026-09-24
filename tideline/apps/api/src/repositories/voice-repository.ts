@@ -66,6 +66,21 @@ export class VoiceRepository {
       )
     ).rows[0];
   }
+  /** Calls from one caller number to one restaurant in the last `windowMinutes` (the per-caller abuse guard). */
+  async recentCallsFromCaller(input: {
+    restaurantId: string;
+    caller: string | null;
+    windowMinutes: number;
+    excludeProviderCallId: string;
+  }): Promise<number> {
+    const row = (
+      await this.db.query<{ n: string }>(
+        `SELECT COUNT(*) AS n FROM calls WHERE restaurant_id=$1 AND (caller_phone_number = $2 OR ($2::text IS NULL AND caller_phone_number IS NULL)) AND provider_call_id<>$3 AND started_at > $4`,
+        [input.restaurantId, input.caller, input.excludeProviderCallId, new Date(Date.now() - input.windowMinutes * 60_000)],
+      )
+    ).rows[0];
+    return Number(row?.n ?? 0);
+  }
   async createCall(input: {
     restaurantId: string;
     provider: string;

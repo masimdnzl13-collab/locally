@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -8,6 +9,7 @@ import { uniqueSlug } from "@/lib/business/slug";
 import { startBusinessSubscription } from "@/lib/billing/subscriptions";
 import { getStripeClient } from "@/lib/stripe/client";
 import { US_STATES } from "@/lib/onboarding-us/us-states";
+import { clientIp, rateLimit } from "@/lib/security/rate-limit";
 import {
   AGREEMENT_VERSION,
   getCurrentUsSignup,
@@ -17,6 +19,8 @@ import {
 } from "@/lib/onboarding-us/signup";
 
 const MIN_PASSWORD_LENGTH = 8;
+// Görünmez tuzak alanı (bkz. us-signup-form.tsx): insanlar görmez, basit botlar doldurur.
+const HONEYPOT_FIELD = "company_website";
 
 function field(formData: FormData, name: string) {
   return String(formData.get(name) ?? "").trim();
@@ -36,6 +40,15 @@ function normalizeUsPhone(input: string): string | null {
 // market/active_modules'ü yalnızca servis rolü yazabildiği için (guard
 // trigger) insert servis istemcisiyle yapılır.
 export async function startUsSignupAction(formData: FormData): Promise<{ error: string } | void> {
+  // Bot: hiçbir şey oluşturmadan, başarılı gibi görünen boş bir akışa düşür
+  // (hata mesajı vermek botun alanı atlamayı öğrenmesini kolaylaştırır).
+  if (field(formData, HONEYPOT_FIELD)) redirect("/kayit/us");
+
+  const limited = await rateLimit("usSignup", clientIp(headers()));
+  if (!limited.ok) {
+    return { error: `Too many attempts. Please try again in ${limited.retryAfterSeconds} seconds.` };
+  }
+
   const businessName = field(formData, "businessName");
   const contactName = field(formData, "contactName");
   const email = field(formData, "email").toLowerCase();

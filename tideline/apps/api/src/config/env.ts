@@ -59,6 +59,16 @@ const schema = z.object({
   VOICE_RESPONSE_TIMEOUT_MS: z.coerce.number().int().positive().default(12000),
   VOICE_PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
   VOICE_RECONNECT_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  // Per-caller abuse guard: once a caller number has reached MAX calls to the
+  // same restaurant within WINDOW, further calls get a fixed message and no AI.
+  // 0 disables it.
+  CALLER_THROTTLE_MAX_CALLS: z.coerce.number().int().min(0).default(5),
+  CALLER_THROTTLE_WINDOW_MINUTES: z.coerce.number().int().positive().default(10),
+  CALLER_THROTTLE_MESSAGE: z
+    .string()
+    .min(1)
+    .max(300)
+    .default("We're very busy right now. Please call again a little later. Goodbye."),
   STT_PROVIDER: z.enum(["mock", "deepgram"]).default("mock"),
   TTS_PROVIDER: z.enum(["mock", "deepgram", "elevenlabs"]).default("mock"),
   AI_PROVIDER: z.enum(["mock", "anthropic"]).default("mock"),

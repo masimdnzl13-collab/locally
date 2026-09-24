@@ -535,6 +535,9 @@ export function createApp(
       assignNumberBody.parse(req.body).phoneNumber,
     ),
   }));
+  app.get("/api/v1/internal/restaurants/:restaurantId/brain-readiness", internal, async (req) =>
+    brain.readiness(z.object({ restaurantId: z.string().uuid() }).parse(req.params).restaurantId),
+  );
   app.get("/api/v1/internal/restaurants/activity", internal, async (req) => {
     const ids = internalIds.parse((req.query as { ids?: string }).ids ?? "");
     const month = monthWindow();
