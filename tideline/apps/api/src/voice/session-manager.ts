@@ -1,4 +1,5 @@
 import type { Env } from "../config/env.js";
+import { safeError } from "../observability.js";
 import { runWithTenant } from "../database/tenant-context.js";
 import { VoiceRepository } from "../repositories/voice-repository.js";
 import type { CallSession, Language, SpeechToTextProvider, TelephonyProvider, TextToSpeechProvider, VoiceAIEngine, VoiceMediaSink } from "./contracts.js";
@@ -72,7 +73,7 @@ export class VoiceSessionManager {
  private current(a:Active){return this.active.get(a.session.id)===a&&!a.ended;}
  private isTurn(a:Active,turn:number,c:AbortController){return this.current(a)&&a.turn===turn&&!c.signal.aborted;}
  private require(id:string){const a=this.active.get(id);if(!a||a.ended)throw new Error("Unknown voice session");return a;}
- private async fail(a:Active,error:unknown){if(!this.current(a))return;a.terminalStatus="FAILED";await this.repo.event({callId:a.callId,sessionId:a.session.id,restaurantId:a.restaurantId,type:"ERROR",metadata:{category:"provider_failure",message:error instanceof Error?error.message.slice(0,200):"unknown"}});try{await this.end(a.session.id,"PROVIDER_FAILURE");}finally{void error;}}
+ private async fail(a:Active,error:unknown){if(!this.current(a))return;a.terminalStatus="FAILED";await this.repo.event({callId:a.callId,sessionId:a.session.id,restaurantId:a.restaurantId,type:"ERROR",metadata:{category:"provider_failure",message:safeError(error)}});try{await this.end(a.session.id,"PROVIDER_FAILURE");}finally{void error;}}
  private async withTimeout<T>(work:Promise<T>,ms:number,controller:AbortController):Promise<T>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error("Voice provider timeout"));},ms);})]);}finally{if(timer)clearTimeout(timer);}}
  activeCount(){return this.active.size;}
 }
