@@ -12,6 +12,7 @@ import { SearchBar } from "@/components/ui/search-bar";
 import { LocationSelector } from "@/components/ui/location-selector";
 import { AccountDropdown } from "@/components/ui/account-dropdown";
 import type { CurrentUser } from "@/lib/auth/current-user";
+import { isUsPublicPath } from "@/lib/us/config";
 
 const CONTENT_LINKS = [
   { href: "/kesfet", label: "Keşfet" },
@@ -31,7 +32,7 @@ export default function NavBar({ city, user }: { city: string; user: CurrentUser
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  if (pathname?.startsWith("/panel") || pathname?.startsWith("/admin")) return null;
+  if (pathname?.startsWith("/panel") || pathname?.startsWith("/admin") || isUsPublicPath(pathname)) return null;
 
   // Over the hero the panel stays translucent so the photo shows through;
   // once scrolled (or on any non-hero page) it firms up for readability.

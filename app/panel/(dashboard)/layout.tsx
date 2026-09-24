@@ -22,6 +22,12 @@ export default async function DashboardLayout({
     redirect("/panel/kurulum");
   }
 
+  // /kayit/us başvurusu ödemesi tamamlanmadan (active_modules boş) panele
+  // girmesin — kaldığı adıma (ödeme / kurulum durumu) geri döner.
+  if (business.market === "US" && business.active_modules.length === 0) {
+    redirect("/kayit/us/durum");
+  }
+
   // "pending" (yeni kaydın varsayılan durumu) artık paneli BLOKLAMIYOR —
   // yalnızca admin'in bilinçli bir müdahalesi olan "rejected" durumu bloklar.
   // Herkese açık listelemeler (kesfet, paketler vb.) approval_status='approved'

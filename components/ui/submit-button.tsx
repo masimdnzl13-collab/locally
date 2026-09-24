@@ -6,10 +6,12 @@ export default function SubmitButton({
   children,
   className,
   pending,
+  pendingLabel = "Bir saniye...",
 }: {
   children: React.ReactNode;
   className?: string;
   pending?: boolean;
+  pendingLabel?: string;
 }) {
   return (
     <button
@@ -20,7 +22,7 @@ export default function SubmitButton({
         className
       )}
     >
-      {pending ? "Bir saniye..." : children}
+      {pending ? pendingLabel : children}
     </button>
   );
 }

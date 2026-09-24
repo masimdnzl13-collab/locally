@@ -109,3 +109,27 @@ back, and only books it after the caller says yes.
 
 Keep `TELEPHONY_MODE=test` for cost-free local simulation. Never disable
 signature validation in production (startup refuses it).
+
+## Monitoring and cost alerts
+
+Both features send admin alerts through one channel: a Slack-compatible incoming
+webhook (`ALERT_WEBHOOK_URL`), otherwise a plain email via Resend
+(`RESEND_API_KEY`, `ALERT_EMAIL_TO`, `ALERT_EMAIL_FROM`), otherwise a log line.
+
+- **Telephony health (API process).** 5xx responses on the Twilio voice routes
+  (incoming, status) and media-WebSocket failures are counted in memory. More than
+  `TELEPHONY_ALERT_MAX_ERRORS` (3) inside `TELEPHONY_ALERT_WINDOW_SECONDS` (300)
+  sends one "Tideline telephony hata veriyor" alert, then stays quiet for
+  `TELEPHONY_ALERT_COOLDOWN_SECONDS` (900). A crashed process cannot alert about
+  itself, so also point an external uptime check at `/ready`.
+- **Cost guard (worker process, hourly).** Month-to-date cost per restaurant =
+  Claude tokens from `ai_usage` (list prices per model, or `estimated_cost` when
+  set) + billed call minutes × (`COST_TWILIO_PER_MINUTE` + `COST_STT_PER_MINUTE` +
+  `COST_TTS_PER_MINUTE`). Above `SUBSCRIPTION_PRICE_USD` (199) ×
+  `COST_ALERT_THRESHOLD_RATIO` (0.6) the admin is alerted once per restaurant per
+  month (`cost_alerts` table). Nothing is ever cut off; new automatic actions plug
+  in as a `CostThresholdAction` (see `src/services/cost-service.ts`).
+- **Service endpoints for Locally.** `GET /api/v1/internal/restaurants/activity?ids=…`
+  (7-day calls/orders/reservations + month cost) and `GET /api/v1/internal/costs?period=day|month`
+  accept a 60 s HS256 token signed with `JWT_SECRET` (`iss=locally`,
+  `aud=tideline-service`) in the `X-Service-Token` header.

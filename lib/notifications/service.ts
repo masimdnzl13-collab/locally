@@ -1,11 +1,78 @@
 import type { NotificationService, SendEmailInput, SendResult, SendSmsInput } from "@/lib/notifications/types";
 
-// Netgsm (SMS) ve Resend (e-posta) anahtarları ortam değişkenlerinde
+// Netgsm / Twilio (SMS) ve Resend (e-posta) anahtarları ortam değişkenlerinde
 // tanımlıysa gerçek sağlayıcıya gönderir; tanımlı değilse gönderimi
 // simüle eder ("test modu"). Böylece sağlayıcı değişse de bu katmanı
 // çağıran kod (duyuru gönderimi, P16 cron işleri) değişmez.
+//
+// SMS sağlayıcısı numaraya göre seçilir: ABD (+1) numaraları Twilio'dan,
+// diğerleri (TR) Netgsm'den gider — Netgsm yurt dışına gönderemiyor.
+
+function isUsNumber(to: string) {
+  const digits = to.replace(/\D/g, "");
+  return to.trim().startsWith("+1") || (digits.length === 11 && digits.startsWith("1"));
+}
+
+export function smsProviderFor(to: string): { provider: "twilio" | "netgsm"; configured: boolean } {
+  if (isUsNumber(to)) {
+    return {
+      provider: "twilio",
+      configured: Boolean(
+        process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER
+      ),
+    };
+  }
+  return {
+    provider: "netgsm",
+    configured: Boolean(
+      process.env.NETGSM_USERCODE && process.env.NETGSM_PASSWORD && process.env.NETGSM_MSGHEADER
+    ),
+  };
+}
+
+export function isEmailConfigured() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+}
+
 class LocallyNotificationService implements NotificationService {
-  async sendSms({ to, message }: SendSmsInput): Promise<SendResult> {
+  async sendSms(input: SendSmsInput): Promise<SendResult> {
+    return isUsNumber(input.to) ? this.sendTwilioSms(input) : this.sendNetgsmSms(input);
+  }
+
+  private async sendTwilioSms({ to, message }: SendSmsInput): Promise<SendResult> {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_FROM_NUMBER;
+
+    if (!accountSid || !authToken || !from) {
+      return { success: true, simulated: true, providerRef: `TEST-SMS-${Date.now()}` };
+    }
+
+    try {
+      const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: "Basic " + Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
+        },
+        body: new URLSearchParams({ To: "+" + to.replace(/\D/g, ""), From: from, Body: message }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        return { success: false, simulated: false, error: `Twilio hata: ${res.status} ${data?.message ?? ""}`.trim() };
+      }
+      return { success: true, simulated: false, providerRef: String(data?.sid ?? "") };
+    } catch (err) {
+      return {
+        success: false,
+        simulated: false,
+        error: err instanceof Error ? err.message : "SMS gönderilemedi",
+      };
+    }
+  }
+
+  private async sendNetgsmSms({ to, message }: SendSmsInput): Promise<SendResult> {
     const usercode = process.env.NETGSM_USERCODE;
     const password = process.env.NETGSM_PASSWORD;
     const msgheader = process.env.NETGSM_MSGHEADER;

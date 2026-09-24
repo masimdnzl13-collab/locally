@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isUsPublicPath } from "@/lib/us/config";
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
@@ -29,7 +30,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/panel") || pathname?.startsWith("/admin")) return null;
+  if (pathname?.startsWith("/panel") || pathname?.startsWith("/admin") || isUsPublicPath(pathname)) return null;
 
   return (
     <footer className="border-t border-border bg-muted pb-16 md:pb-0">
