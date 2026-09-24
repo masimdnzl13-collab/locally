@@ -1,6 +1,9 @@
+# Local / single-host stack. For production use docker-compose.prod.yml
+# (secrets from the platform's environment instead of .env) — see DEPLOYMENT.md.
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-restaurant_ai}
       POSTGRES_USER: ${POSTGRES_USER:-restaurant_ai}
@@ -14,6 +17,7 @@ services:
       retries: 20
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -22,30 +26,53 @@ services:
       retries: 20
   api:
     build: ./apps/api
+    restart: unless-stopped
     env_file: .env
     ports: ["3000:3000"]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:
+      # /ready also checks the database connection.
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 12
+      start_period: 30s
   worker:
     build: ./apps/api
+    restart: unless-stopped
     command: ["node", "dist/worker.js"]
     env_file: .env
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+      # The API runs migrations on start; the worker should not race it.
+      api: { condition: service_healthy }
+    healthcheck:
+      # The worker has no HTTP port: check it can still reach its database.
+      # A crashed worker exits and is restarted by the restart policy.
+      test: ["CMD", "node", "-e", "const c=new (require('pg').Client)({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:4000});c.connect().then(()=>c.query('SELECT 1')).then(()=>process.exit(0)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
   web:
-    build: ./apps/web
+    build:
+      context: ./apps/web
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    restart: unless-stopped
     ports: ["8080:80"]
     # Read at container start by docker/15-frame-ancestors.envsh (CSP frame-ancestors).
     environment:
       ALLOWED_FRAME_ANCESTORS: ${ALLOWED_FRAME_ANCESTORS:-}
     depends_on:
       api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 volumes:
   postgres-data:

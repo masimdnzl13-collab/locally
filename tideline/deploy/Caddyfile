@@ -1,0 +1,21 @@
+# Used by docker-compose.prod.yml. Caddy obtains and renews Let's Encrypt
+# certificates automatically once both DNS records point at this host.
+{
+	email {$ACME_EMAIL}
+}
+
+# Dashboard (static SPA served by the web container).
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:80
+}
+
+# API + Twilio webhooks + media WebSocket (Caddy upgrades WebSockets as-is).
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:3000 {
+		# Twilio signs the public URL; keep the original host/scheme.
+		header_up Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPaymentService } from "@/lib/payments";
 import { getMyBusiness } from "@/lib/business/current";
 import { PILOT_MODE } from "@/lib/config/pilot";
+import { startUsTicketCheckout } from "@/lib/events/ticket-payments";
 import type { BusinessMarket } from "@/lib/types";
 
 async function requireBusiness() {
@@ -287,7 +288,7 @@ export async function purchaseEventTicketAction(
 
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("is_paid, ticket_price, event_at, businesses(market)")
+    .select("title, is_paid, ticket_price, event_at, businesses(market)")
     .eq("id", eventId)
     .single();
 
@@ -295,11 +296,30 @@ export async function purchaseEventTicketAction(
   if (!event.is_paid || !event.ticket_price) return { error: "Bu etkinlik ücretsiz." };
   if (new Date(event.event_at) < new Date()) return { error: "Bu etkinlik geçti." };
 
-  // PİLOT MOD: platformdan para geçmez, bilet ücreti kapıda alınır — burada
+  const business = event.businesses as unknown as { market: BusinessMarket } | null;
+
+  // ABD: bilet her zaman Stripe Checkout'ta (mode: "payment") ödenir — kart
+  // bilgisi Locally'den geçmez, bilet webhook ödemeyi onaylayınca QR alır
+  // (bkz. lib/events/ticket-payments.ts). TR pilot modu (kapıda ödeme) ABD'yi
+  // kapsamaz; DB de ABD ücretli etkinliğine istemciden bilet açılmasını engeller.
+  if (business?.market === "US") {
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+    const result = await startUsTicketCheckout({
+      eventId,
+      eventTitle: event.title,
+      ticketPrice: Number(event.ticket_price),
+      userId: user.id,
+      userEmail: user.email ?? undefined,
+      siteUrl,
+    });
+    if ("error" in result) return { error: result.error };
+    redirect(result.checkoutUrl);
+  }
+
+  // PİLOT MOD (TR): platformdan para geçmez, bilet ücreti kapıda alınır — burada
   // yalnızca yer ayrılır. PILOT_MODE false yapıldığında gerçek ödeme akışı
   // (lib/payments üzerinden) devreye girer.
   if (!PILOT_MODE) {
-    const business = event.businesses as unknown as { market: BusinessMarket } | null;
     const charge = await getPaymentService(business?.market ?? "TR").charge({
       amount: event.ticket_price,
       userId: user.id,
