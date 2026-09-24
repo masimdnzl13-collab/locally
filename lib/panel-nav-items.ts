@@ -12,6 +12,7 @@ import {
   CreditCard,
   Settings,
   ListChecks,
+  PhoneCall,
 } from "lucide-react";
 
 export const panelNavItems = [
@@ -29,3 +30,7 @@ export const panelNavItems = [
   { href: "/panel/abonelik", label: "Abonelik", icon: CreditCard },
   { href: "/panel/ayarlar", label: "Ayarlar", icon: Settings },
 ] as const;
+
+// Yalnızca hasTidelineAccess(business) olan (US pazarı + tideline modülü +
+// eşlenmiş restoran) işletmelerde menüye eklenir — bkz. PanelShell.
+export const tidelineNavItem = { href: "/panel/tideline", label: "Tideline", icon: PhoneCall } as const;

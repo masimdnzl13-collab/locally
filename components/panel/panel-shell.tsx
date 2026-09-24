@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { panelNavItems } from "@/lib/panel-nav-items";
+import { panelNavItems, tidelineNavItem } from "@/lib/panel-nav-items";
+import { hasTidelineAccess } from "@/lib/tideline/access";
 import { signOutAction } from "@/lib/auth/actions";
 import type { Business } from "@/lib/types";
 
@@ -18,6 +19,11 @@ export default function PanelShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  // Tideline bir modül sekmesi olarak "Ayarlar"ın hemen önüne girer; marka
+  // (üst bar / sol menü başlığı) her durumda "Locally" kalır.
+  const navItems = hasTidelineAccess(business)
+    ? [...panelNavItems.slice(0, -1), tidelineNavItem, panelNavItems[panelNavItems.length - 1]]
+    : panelNavItems;
 
   return (
     <div className="md:flex md:min-h-screen">
@@ -46,7 +52,7 @@ export default function PanelShell({
           )}
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {panelNavItems.map((item) => {
+          {navItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
             return (
@@ -95,7 +101,7 @@ export default function PanelShell({
         {/* Mobil: kaydırmalı alt sekmeler */}
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 overflow-x-auto border-t border-border bg-card/95 backdrop-blur print:hidden md:hidden">
           <div className="flex min-w-max">
-            {panelNavItems.map((item) => {
+            {navItems.map((item) => {
               const active = pathname === item.href;
               const Icon = item.icon;
               return (

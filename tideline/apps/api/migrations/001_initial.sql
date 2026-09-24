@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS restaurants (
+  id UUID PRIMARY KEY, name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'ACTIVE',
+  timezone TEXT NOT NULL DEFAULT 'UTC', phone_number TEXT, address TEXT, city TEXT, state TEXT, postal_code TEXT, country TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT restaurant_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
+);
+CREATE TABLE IF NOT EXISTS restaurant_memberships (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  role TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (user_id, restaurant_id),
+  CONSTRAINT membership_role CHECK (role IN ('OWNER', 'ADMIN', 'STAFF'))
+);

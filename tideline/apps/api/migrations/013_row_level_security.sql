@@ -1,0 +1,35 @@
+DO $$ DECLARE t TEXT; BEGIN
+  FOREACH t IN ARRAY ARRAY['restaurant_brain','business_hours','special_closures','menu_categories','menu_items','modifier_groups','modifier_options','faqs','restaurant_policies','restaurant_settings','reservation_settings','reservations','reservation_events','orders','order_events','calls','call_events','call_sessions','conversations','conversation_tool_calls','ai_usage','action_confirmations','idempotency_records','audit_events','outbox_events','notifications','messages','customer_sms_preferences'] LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
+    EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
+  END LOOP;
+END $$;
+CREATE POLICY tenant_isolation ON restaurant_brain USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON business_hours USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON special_closures USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON menu_categories USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON menu_items USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON modifier_groups USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON modifier_options USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON faqs USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON restaurant_policies USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON restaurant_settings USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON reservation_settings USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON reservations USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON reservation_events USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON orders USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON order_events USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON calls USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON call_events USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON call_sessions USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON conversations USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON conversation_tool_calls USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON ai_usage USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON action_confirmations USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON idempotency_records USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON audit_events USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON outbox_events USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON notifications USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON messages USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));
+CREATE POLICY tenant_isolation ON customer_sms_preferences USING (restaurant_id::text = current_setting('app.restaurant_id', true)) WITH CHECK (restaurant_id::text = current_setting('app.restaurant_id', true));

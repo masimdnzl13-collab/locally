@@ -50,9 +50,17 @@ export interface Business {
   iyzico_reject_reason: string | null;
   qr_stand_viewed_at: string | null;
   password_reminder_dismissed_at: string | null;
+  // P2 — Locally ⇄ Tideline hesap eşlemesi. Yalnızca admin/service role
+  // değiştirebilir (bkz. *_tideline_account_mapping.sql).
+  market: BusinessMarket;
+  active_modules: BusinessModule[];
+  tideline_restaurant_id: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type BusinessMarket = "TR" | "US";
+export type BusinessModule = "tideline" | "locally_core";
 
 export const IYZICO_ONBOARDING_LABELS: Record<Business["iyzico_onboarding_status"], string> = {
   not_started: "Başlanmadı",

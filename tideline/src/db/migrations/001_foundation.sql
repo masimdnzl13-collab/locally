@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS restaurants (id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE','INACTIVE')), timezone TEXT NOT NULL DEFAULT 'UTC', phone_number TEXT, address TEXT, city TEXT, state TEXT, postal_code TEXT, country TEXT NOT NULL DEFAULT 'US', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS restaurant_memberships (user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, restaurant_id TEXT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE, role TEXT NOT NULL CHECK(role IN ('OWNER','ADMIN','STAFF')), created_at TEXT NOT NULL, PRIMARY KEY(user_id,restaurant_id));
+CREATE INDEX IF NOT EXISTS idx_memberships_restaurant ON restaurant_memberships(restaurant_id);
+CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, token_hash TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
