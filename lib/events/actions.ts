@@ -3,9 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { paymentService } from "@/lib/payments";
+import { getPaymentService } from "@/lib/payments";
 import { getMyBusiness } from "@/lib/business/current";
 import { PILOT_MODE } from "@/lib/config/pilot";
+import type { BusinessMarket } from "@/lib/types";
 
 async function requireBusiness() {
   const business = await getMyBusiness();
@@ -286,7 +287,7 @@ export async function purchaseEventTicketAction(
 
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("is_paid, ticket_price, event_at")
+    .select("is_paid, ticket_price, event_at, businesses(market)")
     .eq("id", eventId)
     .single();
 
@@ -298,7 +299,8 @@ export async function purchaseEventTicketAction(
   // yalnızca yer ayrılır. PILOT_MODE false yapıldığında gerçek ödeme akışı
   // (lib/payments üzerinden) devreye girer.
   if (!PILOT_MODE) {
-    const charge = await paymentService.charge({
+    const business = event.businesses as unknown as { market: BusinessMarket } | null;
+    const charge = await getPaymentService(business?.market ?? "TR").charge({
       amount: event.ticket_price,
       userId: user.id,
       packageId: eventId,

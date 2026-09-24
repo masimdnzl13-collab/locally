@@ -51,6 +51,9 @@ describe("foundation API", () => {
     const r = await x.app.inject("/health");
     expect(r.statusCode).toBe(200);
     expect(r.json()).toEqual({ status: "ok" });
+    expect(r.headers["content-security-policy"]).toBe(
+      "frame-ancestors 'self' http://localhost:3001 http://localhost:5173",
+    );
     await x.app.close();
     await x.db.end();
   });

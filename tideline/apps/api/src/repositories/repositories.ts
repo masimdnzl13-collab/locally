@@ -45,6 +45,18 @@ export class Repositories {
       )
     ).rows[0];
   }
+  async restaurantByExternalRef(externalRef: string): Promise<Restaurant | undefined> {
+    return (await this.db.query<Restaurant>(`SELECT ${restaurantColumns} FROM restaurants WHERE external_ref=$1`, [externalRef])).rows[0];
+  }
+  // Self-serve onboarding from Locally: keyed by the Locally business id so retries are idempotent.
+  async createProvisionedRestaurant(data: { externalRef: string; name: string; slug: string; timezone: string; phoneNumber?: string; address?: string; city?: string; state?: string; postalCode?: string }): Promise<Restaurant> {
+    return (
+      await this.db.query<Restaurant>(
+        `INSERT INTO restaurants(id,name,slug,timezone,phone_number,address,city,state,postal_code,country,external_ref) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'US',$10) RETURNING ${restaurantColumns}`,
+        [randomUUID(), data.name, data.slug, data.timezone, data.phoneNumber ?? null, data.address ?? null, data.city ?? null, data.state ?? null, data.postalCode ?? null, data.externalRef],
+      )
+    ).rows[0];
+  }
   async addMembership(userId: string, restaurantId: string, role: Role) {
     await this.db.query(
       "INSERT INTO restaurant_memberships(user_id,restaurant_id,role) VALUES($1,$2,$3)",

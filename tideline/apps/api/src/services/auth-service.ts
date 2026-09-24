@@ -10,6 +10,10 @@ const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 // iss/aud keep them distinct from session tokens: an assertion is never accepted as a bearer
 // token (it has no auth_sessions row), and a session token is never accepted as an assertion.
 export const SSO_ISSUER="locally", SSO_AUDIENCE="tideline-sso";
+// Locally's server (admin pipeline dashboard) calls /api/v1/internal/* with a short-lived
+// service token: same secret, iss=locally, aud=tideline-service, sent in X-Service-Token
+// (not Authorization, which is reserved for user sessions backed by auth_sessions).
+export const SERVICE_AUDIENCE="tideline-service";
 export class AuthService {
   private readonly key: Uint8Array;
   constructor(private readonly repos: Repositories, secret: string) { this.key=new TextEncoder().encode(secret); }
@@ -30,5 +34,6 @@ export class AuthService {
     await this.repos.ensureMembership(user.id,restaurantId,"OWNER");
     return {user,restaurantId,token:await this.token(user.id)};
   }
+  async verifyServiceToken(token:string) { try { await jwtVerify(token,this.key,{algorithms:["HS256"],issuer:SSO_ISSUER,audience:SERVICE_AUDIENCE,maxTokenAge:"2m",requiredClaims:["exp","iat"]}); } catch { throw new AppError("UNAUTHENTICATED","Service authentication required",401); } }
   async revoke(token:string) { try { const p=decodeJwt(token); if(typeof p.jti === "string") await this.repos.revokeAuthSession(p.jti,hashToken(token)); } catch { throw new AppError("UNAUTHENTICATED","Authentication required",401); } }
 }

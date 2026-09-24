@@ -2,10 +2,13 @@ import { createDb } from "./database/db.js";
 import { migrate } from "./database/migrate.js";
 import { loadEnv } from "./config/env.js";
 import { createApp } from "./app.js";
+import { resolveFrameAncestors } from "./config/frame-ancestors.js";
 
 // The API entrypoint serves the authenticated dashboard API and the Twilio voice
 // routes (incoming webhook, media WebSocket, status callback) from one process.
 const env = loadEnv();
+if (resolveFrameAncestors(env.ALLOWED_FRAME_ANCESTORS).isDefault)
+  console.warn("ALLOWED_FRAME_ANCESTORS ayarlanmadı, sadece localhost'a izin veriliyor");
 const start = async () => {
   const migrationDb = createDb(env.DATABASE_URL);
   try {

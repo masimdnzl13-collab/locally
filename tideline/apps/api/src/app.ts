@@ -5,12 +5,17 @@ import websocket from "@fastify/websocket";
 import Fastify, { type FastifyRequest } from "fastify";
 import { z, ZodError } from "zod";
 import type { Env } from "./config/env.js";
+import { frameAncestorsHeader, resolveFrameAncestors } from "./config/frame-ancestors.js";
 import type { Db } from "./database/db.js";
-import { enterTenant } from "./database/tenant-context.js";
+import { enterTenant, runWithTenant } from "./database/tenant-context.js";
+import { createAlertNotifier, type AlertNotifier } from "./alerts/notifier.js";
+import { TelephonyErrorMonitor } from "./alerts/telephony-monitor.js";
+import { CostService, costRatesFromEnv, dayWindow, monthWindow } from "./services/cost-service.js";
 import { AppError } from "./domain/errors.js";
 import type { Role, User } from "./domain/types.js";
 import { Repositories } from "./repositories/repositories.js";
 import { AuthService } from "./services/auth-service.js";
+import { createNumberPurchaser, PhoneProvisioningService, type NumberPurchaser } from "./services/phone-provisioning-service.js";
 import { RestaurantBrainService } from "./services/restaurant-brain-service.js";
 import { StatsService } from "./services/stats-service.js";
 import { createVoiceRuntime, type VoiceRuntime } from "./voice/runtime.js";
@@ -36,6 +41,19 @@ const restaurantBody = z.object({
     .max(80),
   timezone: z.string().min(1).max(80).default("UTC"),
 });
+const provisionBody = z.object({
+  externalRef: z.string().trim().min(1).max(64),
+  name: z.string().trim().min(1).max(120),
+  timezone: z.string().min(1).max(80).default("America/New_York"),
+  contactPhone: z.string().trim().max(32).optional(),
+  address: z.string().trim().max(200).optional(),
+  city: z.string().trim().max(80).optional(),
+  state: z.string().trim().max(40).optional(),
+  postalCode: z.string().trim().max(16).optional(),
+});
+const assignNumberBody = z.object({ phoneNumber: z.string().trim() });
+const slugBase = (name: string) =>
+  name.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "restaurant";
 const twilioStatusBody = z
   .object({
     MessageSid: z.string().trim().min(1).max(64),
@@ -74,12 +92,27 @@ function validTwilioSignature(env: Env, req: FastifyRequest): boolean {
   const url = new URL(req.url, env.VOICE_PUBLIC_URL ?? env.API_URL).toString();
   return validateTwilioSignature(env.TWILIO_AUTH_TOKEN, url, (req.body ?? {}) as Record<string, unknown>, signature);
 }
-export function createApp(env: Env, db: Db, options: { voice?: VoiceRuntime } = {}) {
+// Comma-separated restaurant ids for the /internal/* read endpoints.
+const internalIds = z
+  .string()
+  .max(200 * 37)
+  .transform((value) => [...new Set(value.split(",").map((x) => x.trim()).filter(Boolean))])
+  .pipe(z.array(z.string().uuid()).min(1).max(200));
+export function createApp(
+  env: Env,
+  db: Db,
+  options: {
+    voice?: VoiceRuntime;
+    numberPurchaser?: NumberPurchaser | null;
+    notifier?: AlertNotifier;
+    telephonyMonitor?: TelephonyErrorMonitor;
+  } = {},
+) {
   const app = Fastify({
     logger: {
       level: env.LOG_LEVEL,
       redact: [
-        "req.headers.authorization", "req.headers.cookie", "req.headers.x-api-key", "req.body.password", "req.body.token", "req.body.assertion", "req.body.accessToken", "req.body.recording", "req.body.transcript",
+        "req.headers.authorization", "req.headers.cookie", "req.headers.x-api-key", "req.headers.x-service-token", "req.body.password", "req.body.token", "req.body.assertion", "req.body.accessToken", "req.body.recording", "req.body.transcript",
         "res.headers.set-cookie",
       ],
     },
@@ -94,6 +127,16 @@ export function createApp(env: Env, db: Db, options: { voice?: VoiceRuntime } = 
   const auth = new AuthService(repos, env.JWT_SECRET);
   const brain = new RestaurantBrainService(db);
   const stats = new StatsService(db);
+  const costs = new CostService(db, costRatesFromEnv(env));
+  const notifier = options.notifier ?? createAlertNotifier(env, app.log);
+  const telephonyMonitor =
+    options.telephonyMonitor ??
+    new TelephonyErrorMonitor(notifier, {
+      maxErrors: env.TELEPHONY_ALERT_MAX_ERRORS ?? 3,
+      windowMs: (env.TELEPHONY_ALERT_WINDOW_SECONDS ?? 300) * 1000,
+      cooldownMs: (env.TELEPHONY_ALERT_COOLDOWN_SECONDS ?? 900) * 1000,
+    });
+  const phones = new PhoneProvisioningService(db, options.numberPurchaser === undefined ? createNumberPurchaser(env) : options.numberPurchaser, app.log);
   app.addHook("onRequest", async (req) => {
     // Do not inherit a previous request's tenant in AsyncLocalStorage.
     enterTenant(undefined);
@@ -124,6 +167,12 @@ export function createApp(env: Env, db: Db, options: { voice?: VoiceRuntime } = 
       },
       "request complete",
     );
+  });
+  // Tideline pages are embedded in Locally's panel; only the configured parents may frame them.
+  const frameAncestors = frameAncestorsHeader(resolveFrameAncestors(env.ALLOWED_FRAME_ANCESTORS).origins);
+  app.addHook("onSend", async (_req, res, payload) => {
+    res.header("content-security-policy", frameAncestors);
+    return payload;
   });
   app.register(cors, {
     origin: env.CORS_ORIGINS.split(",").map((x) => x.trim()),
@@ -237,8 +286,9 @@ export function createApp(env: Env, db: Db, options: { voice?: VoiceRuntime } = 
     const data = restaurantBody.parse(req.body);
     const restaurant = await repos.createRestaurant(data);
     await repos.addMembership(user.id, restaurant.id, "OWNER");
+    const phone = await phones.ensureNumber(restaurant);
     res.status(201);
-    return { restaurant };
+    return { restaurant, phone };
   });
   app.get(
     "/api/v1/restaurants/:id",
@@ -442,9 +492,88 @@ export function createApp(env: Env, db: Db, options: { voice?: VoiceRuntime } = 
       return { ok: true };
     },
   );
+  // Service-to-service routes for Locally's admin (pipeline dashboard, cost visibility).
+  const requireService = async (req: FastifyRequest) => {
+    const token = req.headers["x-service-token"];
+    if (typeof token !== "string" || !token)
+      throw new AppError("UNAUTHENTICATED", "Service authentication required", 401);
+    await auth.verifyServiceToken(token);
+  };
+  const internal = { preHandler: requireService, config: { rateLimit: { max: 60, timeWindow: "1 minute" } } };
+  // Self-serve onboarding from Locally (Prompt F): create the restaurant and buy its Twilio number.
+  app.post("/api/v1/internal/provisioning/restaurants", internal, async (req, res) => {
+    const body = provisionBody.parse(req.body);
+    let restaurant = await repos.restaurantByExternalRef(body.externalRef);
+    let created = false;
+    if (!restaurant) {
+      try {
+        restaurant = await repos.createProvisionedRestaurant({
+          externalRef: body.externalRef, name: body.name, timezone: body.timezone,
+          slug: `${slugBase(body.name)}-${randomUUID().slice(0, 6)}`,
+          phoneNumber: body.contactPhone, address: body.address, city: body.city, state: body.state, postalCode: body.postalCode,
+        });
+        created = true;
+      } catch (error) {
+        // Two concurrent retries for the same business: the loser returns the winner's restaurant.
+        restaurant = await repos.restaurantByExternalRef(body.externalRef);
+        if (!restaurant) throw error;
+      }
+    }
+    // A failed Twilio purchase never fails this request: the restaurant exists either way and the
+    // number lands in the pending_manual queue.
+    const phone = await phones.ensureNumber(restaurant, body.contactPhone);
+    res.status(created ? 201 : 200);
+    return { restaurant: { id: restaurant.id, name: restaurant.name }, phone: phone ?? null };
+  });
+  app.get("/api/v1/internal/provisioning/phone-numbers/pending", internal, async () => ({ numbers: await phones.pending() }));
+  app.post("/api/v1/internal/provisioning/phone-numbers/:numberId/retry", internal, async (req) => ({
+    phone: await phones.retry(z.string().uuid().parse((req.params as { numberId: string }).numberId)),
+  }));
+  app.post("/api/v1/internal/provisioning/phone-numbers/:numberId/assign", internal, async (req) => ({
+    phone: await phones.assignManually(
+      z.string().uuid().parse((req.params as { numberId: string }).numberId),
+      assignNumberBody.parse(req.body).phoneNumber,
+    ),
+  }));
+  app.get("/api/v1/internal/restaurants/activity", internal, async (req) => {
+    const ids = internalIds.parse((req.query as { ids?: string }).ids ?? "");
+    const month = monthWindow();
+    const restaurants = [];
+    for (const restaurant of await costs.restaurants(ids)) {
+      const [calls, orders, reservations] = await runWithTenant(restaurant.id, () =>
+        Promise.all([
+          db.query<{ n: string }>("SELECT COUNT(*) AS n FROM calls WHERE restaurant_id=$1 AND started_at > NOW() - INTERVAL '7 days'", [restaurant.id]),
+          db.query<{ n: string }>("SELECT COUNT(*) AS n FROM orders WHERE restaurant_id=$1 AND created_at > NOW() - INTERVAL '7 days'", [restaurant.id]),
+          db.query<{ n: string }>("SELECT COUNT(*) AS n FROM reservations WHERE restaurant_id=$1 AND created_at > NOW() - INTERVAL '7 days'", [restaurant.id]),
+        ]),
+      );
+      const cost = await costs.restaurantCost(restaurant, month);
+      restaurants.push({
+        restaurantId: restaurant.id,
+        name: restaurant.name,
+        calls7d: Number(calls.rows[0]?.n ?? 0),
+        orders7d: Number(orders.rows[0]?.n ?? 0),
+        reservations7d: Number(reservations.rows[0]?.n ?? 0),
+        costMonthUsd: cost.totalUsd,
+        costOverThreshold: cost.overThreshold,
+      });
+    }
+    return { restaurants, thresholdUsd: costs.thresholdUsd };
+  });
+  app.get("/api/v1/internal/costs", internal, async (req) => {
+    const query = z
+      .object({ period: z.enum(["day", "month"]).default("month"), ids: internalIds.optional() })
+      .parse(req.query);
+    const window = query.period === "day" ? dayWindow() : monthWindow();
+    return {
+      period: window.period,
+      thresholdUsd: costs.thresholdUsd,
+      restaurants: await costs.allCosts(window, query.ids),
+    };
+  });
   // Voice: Twilio webhooks + media stream are served by the same production API process.
   app.register(async (voice) => {
-    registerTelephonyRoutes(voice, env, options.voice ?? createVoiceRuntime(env, db));
+    registerTelephonyRoutes(voice, env, options.voice ?? createVoiceRuntime(env, db), telephonyMonitor);
   });
   return app;
 }

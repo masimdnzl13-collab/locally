@@ -4,6 +4,7 @@ import type { Env } from "../config/env.js";
 import { enterTenant } from "../database/tenant-context.js";
 import type { VoiceRuntime } from "./runtime.js";
 import { validateTwilioSignature } from "./twilio-provider.js";
+import type { TelephonyErrorMonitor } from "../alerts/telephony-monitor.js";
 type RawData = Buffer | string | Buffer[];
 
 const xml = (body: string) =>
@@ -58,10 +59,21 @@ export function twilioRequestIsValid(env: Env, request: FastifyRequest): boolean
  * call status callback, and (test mode only) a transcript injection endpoint.
  * Requires @fastify/websocket to be registered on the app.
  */
-export function registerTelephonyRoutes(app: FastifyInstance, env: Env, runtime: VoiceRuntime) {
+export function registerTelephonyRoutes(
+  app: FastifyInstance,
+  env: Env,
+  runtime: VoiceRuntime,
+  monitor?: TelephonyErrorMonitor,
+) {
   const { repo, telephony, manager } = runtime;
   const streamPath = env.VOICE_STREAM_PATH || "/api/v1/telephony/twilio/media";
   registerFormParser(app);
+  // Encapsulated to this plugin: only voice routes feed the telephony failure counter.
+  if (monitor)
+    app.addHook("onResponse", async (request, reply) => {
+      if (reply.statusCode >= 500)
+        monitor.record({ route: request.routeOptions.url ?? request.url, statusCode: reply.statusCode });
+    });
   app.get(streamPath, { websocket: true }, (socket, request) => {
     let sessionId = String((request.query as { sessionId?: string }).sessionId ?? "");
     let streamSid = "";
@@ -104,6 +116,7 @@ export function registerTelephonyRoutes(app: FastifyInstance, env: Env, runtime:
         if (message.event === "stop" && attached) await manager.end(sessionId, "MEDIA_STOP");
       } catch (error) {
         app.log.warn({ error, sessionId }, "media stream message failed");
+        monitor?.record({ route: streamPath, reason: "media processing failed" });
         socket.close(1011, "media processing failed");
       }
     });
@@ -111,6 +124,7 @@ export function registerTelephonyRoutes(app: FastifyInstance, env: Env, runtime:
       if (!attached) return;
       void manager.end(sessionId, "MEDIA_DISCONNECTED").catch((error) => {
         app.log.error({ error, sessionId }, "voice session cleanup failed");
+        monitor?.record({ route: streamPath, reason: "voice session cleanup failed" });
       });
     });
   });

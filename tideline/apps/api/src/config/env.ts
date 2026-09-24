@@ -2,6 +2,7 @@ import { config as loadDotenv } from "dotenv";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { resolveFrameAncestors } from "./frame-ancestors.js";
 
 // API commands are commonly run from apps/api, while the canonical local
 // configuration lives at the repository root. Load that file in both cases;
@@ -34,6 +35,7 @@ const schema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),
   CORS_ORIGINS: z.string().min(1),
+  ALLOWED_FRAME_ANCESTORS: z.string().optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
@@ -68,6 +70,25 @@ const schema = z.object({
   DEEPGRAM_STT_MODEL: z.string().min(1).default("nova-3"),
   VOICE_ENGLISH_VOICE: z.string().default("en-US"),
   VOICE_SPANISH_VOICE: z.string().default("es-US"),
+  // Admin alerts (telephony failures, cost thresholds). Slack-compatible incoming
+  // webhook first; otherwise a plain email through Resend; otherwise log only.
+  ALERT_WEBHOOK_URL: z.string().url().optional(),
+  ALERT_EMAIL_TO: z.string().email().optional(),
+  ALERT_EMAIL_FROM: z.string().min(3).optional(),
+  RESEND_API_KEY: z.string().optional(),
+  TELEPHONY_ALERT_MAX_ERRORS: z.coerce.number().int().positive().default(3),
+  TELEPHONY_ALERT_WINDOW_SECONDS: z.coerce.number().int().positive().default(300),
+  TELEPHONY_ALERT_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(900),
+  // Cost guard: alert when a restaurant's month-to-date cost passes
+  // SUBSCRIPTION_PRICE_USD * COST_ALERT_THRESHOLD_RATIO. Visibility only, never a cut-off.
+  SUBSCRIPTION_PRICE_USD: z.coerce.number().positive().default(199),
+  COST_ALERT_THRESHOLD_RATIO: z.coerce.number().positive().max(10).default(0.6),
+  // Per-minute voice rates (USD) — estimates, override with your actual invoices.
+  COST_TWILIO_PER_MINUTE: z.coerce.number().min(0).default(0.0125),
+  COST_STT_PER_MINUTE: z.coerce.number().min(0).default(0.0077),
+  COST_TTS_PER_MINUTE: z.coerce.number().min(0).default(0.01),
+  // Locally -> Tideline service-to-service calls (pipeline dashboard) are signed
+  // with JWT_SECRET, iss=locally, aud=tideline-service.
 });
 const emptyToUndefined = (input: NodeJS.ProcessEnv | Record<string, unknown>) =>
   Object.fromEntries(
@@ -123,5 +144,7 @@ export function loadEnv(input: NodeJS.ProcessEnv | Record<string, unknown> = pro
         "Production AI_API_KEY (or ANTHROPIC_API_KEY) is required for the configured AI provider",
       );
   }
+  // Fail at startup on a malformed origin instead of emitting a broken CSP.
+  resolveFrameAncestors(env.ALLOWED_FRAME_ANCESTORS);
   return env;
 }

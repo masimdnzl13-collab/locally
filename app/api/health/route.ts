@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
 // (değerleri göstermeden, sadece var/yok), Supabase'e bağlanılabiliyor mu.
 // Sır sızdırmaz — tüm bu bilgi kimlik doğrulaması olmadan görülebilir
 // olduğu için burada asla anahtar değeri, e-posta, kullanıcı verisi yok.
+// Günlük keep-alive workflow'u (.github/workflows/keep-alive.yml) da bu ucu
+// çağırır: Supabase sorgusu, ücretsiz plandaki 7 günlük hareketsizlik
+// duraklatmasını önleyen aktiviteyi üretir.
 export async function GET() {
   const envStatus = getEnvVarStatus();
   const missing = REQUIRED_ENV_VARS.filter((key) => !envStatus[key]);
@@ -45,6 +48,7 @@ export async function GET() {
 
   return NextResponse.json(
     {
+      status: ok ? "ok" : "error",
       ok,
       timestamp: new Date().toISOString(),
       env: envStatus,
