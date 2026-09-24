@@ -98,16 +98,18 @@ export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const next = safeNext(formData.get("next"));
+  // /us/login (ABD) aynı action'ı kullanır; hata metinleri İngilizce döner.
+  const en = formData.get("lang") === "en";
 
   if (!email || !password) {
-    return { error: "E-posta ve şifre gerekli." };
+    return { error: en ? "Email and password are required." : "E-posta ve şifre gerekli." };
   }
 
   const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: "E-posta veya şifre hatalı." };
+    return { error: en ? "Incorrect email or password." : "E-posta veya şifre hatalı." };
   }
 
   // ensureProfile hem eksik profiles satırını (e-posta onayı akışındaki

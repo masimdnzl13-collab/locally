@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { startUsSignupAction } from "@/lib/onboarding-us/actions";
 import { US_STATES } from "@/lib/onboarding-us/us-states";
+import { US_LOGIN_PATH } from "@/lib/us/config";
 import SubmitButton from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 
@@ -111,7 +112,7 @@ export default function UsSignupForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/giris" className="font-semibold text-teal-700">
+        <Link href={US_LOGIN_PATH} className="font-semibold text-teal-700">
           Sign in
         </Link>
       </p>

@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { provisionTidelineRestaurant } from "@/lib/tideline/internal-api";
+import { provisionTidelineRestaurant } from "@/lib/tideline/service-api";
 import { US_SIGNUP_COLUMNS, type UsSignup } from "@/lib/onboarding-us/signup";
 
 // Ödeme sonrası kurulum: tideline modülünü açar ve Tideline'dan restoran +
@@ -90,4 +90,15 @@ export async function activateUsSignup(businessId: string): Promise<UsSignup | n
 
   const { data: fresh } = await service.from("us_onboarding").select(US_SIGNUP_COLUMNS).eq("business_id", businessId).maybeSingle();
   return fresh as unknown as UsSignup | null;
+}
+
+// Stripe webhook'u (checkout.session.completed → subscription.activated)
+// kurulumu kullanıcının durum sayfasına dönmesini beklemeden tamamlar:
+// ödemeyi işaretler, tideline modülünü açar, Tideline restoran + numara
+// kurulumunu tetikler. ABD kaydı olmayan işletmeler için hiçbir şey yapmaz.
+// Durum sayfası aynı adımları idempotent olarak yine dener; buradaki bir
+// hata kullanıcıyı tıkamaz.
+export async function completeUsSignupFromWebhook(businessId: string, subscriptionId: string) {
+  await markUsSignupPaid(businessId, { mode: "stripe", ref: subscriptionId });
+  return activateUsSignup(businessId);
 }

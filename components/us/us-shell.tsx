@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { US_SIGNUP_HREF, US_SUPPORT_EMAIL, US_TERMS_PATH } from "@/lib/us/config";
+import { US_LOGIN_PATH, US_SIGNUP_HREF, US_SUPPORT_EMAIL, US_TERMS_PATH } from "@/lib/us/config";
 
-// English header/footer for the US public pages (/us, /terms). The Turkish
+// English header/footer for the US public pages (/us, /terms, /kayit/us). The Turkish
 // NavBar/Footer from the root layout hide themselves on these paths.
 export default function UsShell({ children }: { children: React.ReactNode }) {
   return (
@@ -15,7 +15,7 @@ export default function UsShell({ children }: { children: React.ReactNode }) {
             <Link href="/us#pricing" className="hidden text-muted-foreground hover:text-foreground sm:inline">
               Pricing
             </Link>
-            <Link href="/giris" className="text-muted-foreground hover:text-foreground">
+            <Link href={US_LOGIN_PATH} className="text-muted-foreground hover:text-foreground">
               Log in
             </Link>
             <Link

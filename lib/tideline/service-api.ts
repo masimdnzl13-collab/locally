@@ -1,10 +1,16 @@
 import { SignJWT } from "jose";
 
-// Locally sunucusu → Tideline API'sinin /api/v1/internal/* uçları. Her çağrı
-// 60 saniyelik bir servis token'ı taşır: SSO ile aynı sır (TIDELINE_JWT_SECRET,
-// HS256), iss="locally" ama aud="tideline-service" — Tideline bunu ne kullanıcı
-// oturumu ne de SSO assertion'ı olarak kabul eder (bkz. tideline AuthService).
-// Yalnızca sunucu tarafında çağrılır.
+// Locally sunucusu → Tideline API'sinin /api/v1/internal/* uçları: tek giriş
+// noktası. Her çağrı 60 saniyelik bir servis token'ı taşır: SSO ile aynı sır
+// (TIDELINE_JWT_SECRET, HS256), iss="locally" ama aud="tideline-service" —
+// Tideline bunu ne kullanıcı oturumu ne de SSO assertion'ı olarak kabul eder
+// (bkz. tideline AuthService.verifyServiceToken). Authorization yerine
+// X-Service-Token başlığıyla gider. Yalnızca sunucu tarafında çağrılır.
+
+const SERVICE_TOKEN_TTL_SECONDS = 60;
+const DEFAULT_TIMEOUT_MS = 20_000;
+// Admin sayfalarını besleyen okuma çağrıları: Tideline yavaşsa sayfa beklemesin.
+const READ_TIMEOUT_MS = 6000;
 
 export type TidelinePhone =
   | { status: "active"; id: string; phoneNumber: string }
@@ -19,11 +25,19 @@ export interface TidelinePendingNumber {
   createdAt: string;
 }
 
+export interface TidelineActivity {
+  restaurantId: string;
+  name: string;
+  calls7d: number;
+  orders7d: number;
+  reservations7d: number;
+  costMonthUsd: number;
+  costOverThreshold: boolean;
+}
+
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
-const REQUEST_TIMEOUT_MS = 20_000;
-
-function getInternalConfig() {
+function getServiceConfig() {
   const secret = process.env.TIDELINE_JWT_SECRET;
   const apiUrl = process.env.TIDELINE_API_URL;
   if (!secret || secret.length < 32 || !apiUrl) return null;
@@ -31,31 +45,36 @@ function getInternalConfig() {
 }
 
 export function isTidelineApiConfigured() {
-  return getInternalConfig() !== null;
+  return getServiceConfig() !== null;
 }
 
-async function callTideline<T>(path: string, init: { method?: "GET" | "POST"; body?: unknown } = {}): Promise<Result<T>> {
-  const config = getInternalConfig();
-  if (!config) return { ok: false, error: "Tideline API yapılandırılmamış (TIDELINE_API_URL / TIDELINE_JWT_SECRET)." };
-
-  const token = await new SignJWT({})
+function mintServiceToken(secret: string) {
+  return new SignJWT({})
     .setProtectedHeader({ alg: "HS256" })
     .setIssuer("locally")
     .setAudience("tideline-service")
     .setIssuedAt()
-    .setExpirationTime("60s")
-    .sign(new TextEncoder().encode(config.secret));
+    .setExpirationTime(`${SERVICE_TOKEN_TTL_SECONDS}s`)
+    .sign(new TextEncoder().encode(secret));
+}
+
+async function callTideline<T>(
+  path: string,
+  init: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number } = {}
+): Promise<Result<T>> {
+  const config = getServiceConfig();
+  if (!config) return { ok: false, error: "Tideline API yapılandırılmamış (TIDELINE_API_URL / TIDELINE_JWT_SECRET)." };
 
   try {
     const res = await fetch(`${config.apiUrl}${path}`, {
       method: init.method ?? "GET",
       headers: {
-        "X-Service-Token": token,
+        "X-Service-Token": await mintServiceToken(config.secret),
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       cache: "no-store",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(init.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
     const data = (await res.json().catch(() => null)) as (T & { error?: { message?: string } }) | null;
     if (!res.ok || !data) {
@@ -111,4 +130,30 @@ export function assignTidelineNumber(numberId: string, phoneNumber: string) {
     `/api/v1/internal/provisioning/phone-numbers/${encodeURIComponent(numberId)}/assign`,
     { method: "POST", body: { phoneNumber } }
   );
+}
+
+export type TidelineActivityResult =
+  | { ok: true; byRestaurant: Map<string, TidelineActivity>; thresholdUsd: number }
+  | { ok: false; reason: "not_configured" | "unavailable" };
+
+/**
+ * Son 7 günün çağrı/sipariş sayıları + bu ayki maliyet, verilen Tideline
+ * restoranları için. Tideline erişilemezse sayfa çökmez: ok=false döner ve
+ * tablo o sütunları "—" gösterir.
+ */
+export async function fetchTidelineActivity(restaurantIds: string[]): Promise<TidelineActivityResult> {
+  if (!isTidelineApiConfigured()) return { ok: false, reason: "not_configured" };
+  if (restaurantIds.length === 0) return { ok: true, byRestaurant: new Map(), thresholdUsd: 0 };
+
+  const ids = restaurantIds.slice(0, 200).map(encodeURIComponent).join(",");
+  const result = await callTideline<{ restaurants: TidelineActivity[]; thresholdUsd: number }>(
+    `/api/v1/internal/restaurants/activity?ids=${ids}`,
+    { timeoutMs: READ_TIMEOUT_MS }
+  );
+  if (!result.ok) return { ok: false, reason: "unavailable" };
+  return {
+    ok: true,
+    byRestaurant: new Map(result.data.restaurants.map((r) => [r.restaurantId, r])),
+    thresholdUsd: result.data.thresholdUsd,
+  };
 }

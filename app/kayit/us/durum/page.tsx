@@ -6,6 +6,7 @@ import AuthShell from "@/components/auth/auth-shell";
 import { getCurrentUsSignup, type UsSignup } from "@/lib/onboarding-us/signup";
 import { activateUsSignup, findActiveSubscriptionRef, markUsSignupPaid } from "@/lib/onboarding-us/complete";
 import { getStripeClient } from "@/lib/stripe/client";
+import { US_LOGIN_PATH } from "@/lib/us/config";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +108,7 @@ export default async function UsStatusPage({
             <MailCheck size={16} className="mt-0.5 shrink-0" />
             <span>
               Please confirm your email address using the link we sent you, then{" "}
-              <Link href="/giris" className="font-semibold underline">
+              <Link href={US_LOGIN_PATH} className="font-semibold underline">
                 sign in
               </Link>{" "}
               to your dashboard.

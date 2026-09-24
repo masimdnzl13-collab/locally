@@ -2,7 +2,7 @@ import { PhoneOff, PlugZap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PendingNumberActions, RetryActivationButton } from "@/components/admin/tideline-setup-actions";
-import { isTidelineApiConfigured, listPendingTidelineNumbers } from "@/lib/tideline/internal-api";
+import { isTidelineApiConfigured, listPendingTidelineNumbers } from "@/lib/tideline/service-api";
 
 export const dynamic = "force-dynamic";
 

@@ -1,0 +1,3 @@
+# nginx entrypoint scripts/templates run in Linux containers; CRLF breaks them.
+*.envsh text eol=lf
+*.template text eol=lf

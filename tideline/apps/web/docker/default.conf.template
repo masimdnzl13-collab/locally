@@ -1,0 +1,16 @@
+# Rendered by the nginx image at container start (envsubst over /etc/nginx/templates).
+# ${FRAME_ANCESTORS_CSP} is derived from ALLOWED_FRAME_ANCESTORS by 15-frame-ancestors.envsh.
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Applies to every response, including the SPA fallback below ("always" keeps it on errors too).
+    add_header Content-Security-Policy "${FRAME_ANCESTORS_CSP}" always;
+
+    location / {
+        # Client-side routes (/sso, /app/...) must resolve to index.html.
+        try_files $uri $uri/ /index.html;
+    }
+}

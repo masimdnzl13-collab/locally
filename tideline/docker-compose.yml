@@ -42,6 +42,9 @@ services:
   web:
     build: ./apps/web
     ports: ["8080:80"]
+    # Read at container start by docker/15-frame-ancestors.envsh (CSP frame-ancestors).
+    environment:
+      ALLOWED_FRAME_ANCESTORS: ${ALLOWED_FRAME_ANCESTORS:-}
     depends_on:
       api: { condition: service_healthy }
 volumes:

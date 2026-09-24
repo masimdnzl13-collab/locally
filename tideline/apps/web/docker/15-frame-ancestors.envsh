@@ -1,0 +1,10 @@
+#!/bin/sh
+# Sourced by the nginx image entrypoint; the 15- prefix sorts it before
+# 20-envsubst-on-templates.sh so FRAME_ANCESTORS_CSP exists when templates render.
+# ALLOWED_FRAME_ANCESTORS is comma-separated (same as the API); CSP needs spaces.
+if [ -z "$(echo "${ALLOWED_FRAME_ANCESTORS:-}" | tr -d ' ,')" ]; then
+  echo "ALLOWED_FRAME_ANCESTORS ayarlanmadı, sadece localhost'a izin veriliyor" >&2
+  ALLOWED_FRAME_ANCESTORS="http://localhost:3001,http://localhost:5173"
+fi
+origins=$(echo "$ALLOWED_FRAME_ANCESTORS" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's#/*$##' | grep -v '^$' | tr '\n' ' ' | sed 's/ *$//')
+export FRAME_ANCESTORS_CSP="frame-ancestors 'self' ${origins}"

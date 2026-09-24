@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { fetchTidelineActivity, type TidelineActivity } from "@/lib/tideline/service";
+import { fetchTidelineActivity, type TidelineActivity } from "@/lib/tideline/service-api";
 import type { SalesLeadStatus } from "@/lib/admin/pipeline-constants";
 
 export interface SalesLead {

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getEffectiveRoles } from "@/lib/auth/roles";
 import { addModule, removeModule, runWinterActivation, WINTER_MODULE } from "@/lib/modules/seasonal";
 import { activateUsSignup } from "@/lib/onboarding-us/complete";
-import { assignTidelineNumber, retryTidelineNumber } from "@/lib/tideline/internal-api";
+import { assignTidelineNumber, retryTidelineNumber } from "@/lib/tideline/service-api";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { UserRole } from "@/lib/types";
 

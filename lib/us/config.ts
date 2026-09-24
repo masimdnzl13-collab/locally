@@ -29,7 +29,17 @@ export const US_GOVERNING_LAW = process.env.NEXT_PUBLIC_US_GOVERNING_LAW || "the
 // (?market=tr ile ayarlanır; bkz. middleware.ts).
 export const MARKET_PREF_COOKIE = "locally_market";
 
+// ABD kullanıcısının İngilizce giriş sayfası (/us altında olduğu için ayrıca
+// isUsPublicPath'e eklenmesi gerekmez).
+export const US_LOGIN_PATH = "/us/login";
+
 // Bu yollar kendi İngilizce başlık/altlığını çizer; Türkçe NavBar/Footer gizlenir.
+// /qr bir yönlendirme ama yine de burada: hedefi ileride bir sayfaya dönerse
+// Türkçe başlık görünmesin.
+const US_PUBLIC_PREFIXES = ["/us", US_SIGNUP_HREF, US_QR_PATH];
+
 export function isUsPublicPath(pathname: string | null) {
-  return pathname === "/us" || pathname?.startsWith("/us/") === true || pathname === US_TERMS_PATH;
+  if (!pathname) return false;
+  if (pathname === US_TERMS_PATH) return true;
+  return US_PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }

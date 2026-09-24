@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPaymentService } from "@/lib/payments";
 import { applySubscriptionWebhookEvent } from "@/lib/billing/subscriptions";
+import { completeUsSignupFromWebhook } from "@/lib/onboarding-us/complete";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const outcome = await applySubscriptionWebhookEvent("stripe", result.event);
+    const event = result.event;
+    const outcome = await applySubscriptionWebhookEvent("stripe", event);
+    if (outcome === "applied" && event.type === "subscription.activated") {
+      // Abonelik kaydedildi; kurulum hatası Stripe'a 500 olarak dönmemeli
+      // (olay zaten işlendi, tekrar denemesi "duplicate" sayılır). Kalan adımları
+      // /kayit/us/durum ve admin kuyruğu idempotent olarak tamamlar.
+      try {
+        await completeUsSignupFromWebhook(event.businessId, event.subscriptionId);
+      } catch (err) {
+        console.error("[stripe-webhook] onboarding", event.businessId, (err as Error).message);
+      }
+    }
     return NextResponse.json({ received: true, outcome });
   } catch (err) {
     // 500 → Stripe olayı daha sonra yeniden dener.
