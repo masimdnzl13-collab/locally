@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function loadDemoDataAction(): Promise<{ error?: string; success?: true }> {
-  const supabase = createClient();
+  const { supabase } = await requireAdmin("action:loadDemoData");
   const { error } = await supabase.rpc("admin_load_demo_data");
 
   if (error) return { error: "Demo verisi yüklenemedi: " + error.message };
@@ -17,7 +17,7 @@ export async function loadDemoDataAction(): Promise<{ error?: string; success?: 
 }
 
 export async function clearDemoDataAction(): Promise<{ error?: string; success?: true }> {
-  const supabase = createClient();
+  const { supabase } = await requireAdmin("action:clearDemoData");
   const { error } = await supabase.rpc("admin_clear_demo_data");
 
   if (error) return { error: "Demo verisi temizlenemedi: " + error.message };
@@ -38,7 +38,8 @@ export interface DemoDataSummary {
 }
 
 export async function getDemoDataSummary(): Promise<DemoDataSummary> {
-  const supabase = createClient();
+  // "use server" dosyasından export edildiği için bu da istemciden çağrılabilir.
+  const { supabase } = await requireAdmin();
   const { data, error } = await supabase.rpc("admin_demo_data_summary");
 
   if (error || !data) {

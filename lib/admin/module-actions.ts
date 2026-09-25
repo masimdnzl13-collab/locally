@@ -1,38 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getEffectiveRoles } from "@/lib/auth/roles";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { addModule, removeModule, runWinterActivation, WINTER_MODULE } from "@/lib/modules/seasonal";
 import { activateUsSignup } from "@/lib/onboarding-us/complete";
 import { assignTidelineNumber, retryTidelineNumber } from "@/lib/tideline/service-api";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { UserRole } from "@/lib/types";
 
 type Result = { error?: string; success?: true; message?: string };
 
-// Modül değişiklikleri servis rolüyle yapılır (bkz. lib/modules/seasonal.ts);
-// bu kontrol tek yetki kapısı olduğu için zorunlu.
-async function requireAdmin() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/giris");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, additional_roles")
-    .eq("id", user!.id)
-    .single();
-  const roles = getEffectiveRoles({
-    role: (profile?.role as UserRole) ?? "user",
-    additional_roles: profile?.additional_roles as UserRole[] | null,
-  });
-  if (!roles.includes("admin")) redirect("/");
-  return user!.id;
-}
 
 function summary(verb: string, changed: number, notified: number, failures: number) {
   if (changed === 0) return "Değişiklik yok — seçilen işletmelerin hepsi zaten bu durumdaydı.";
@@ -43,7 +19,7 @@ function summary(verb: string, changed: number, notified: number, failures: numb
 }
 
 export async function setWinterModuleAction(formData: FormData): Promise<Result> {
-  const actorId = await requireAdmin();
+  const { userId: actorId } = await requireAdmin("action:setWinterModule");
   const ids = formData.getAll("businessId").map(String).filter(Boolean);
   const mode = formData.get("mode");
   if (ids.length === 0) return { error: "En az bir işletme seç." };
@@ -67,7 +43,7 @@ export async function setWinterModuleAction(formData: FormData): Promise<Result>
 
 // 1 Ekim cron işinin aynısını şimdi çalıştırır (tüm ABD işletmeleri).
 export async function runWinterActivationNowAction(): Promise<Result> {
-  const actorId = await requireAdmin();
+  const { userId: actorId } = await requireAdmin("action:runWinterActivationNow");
   try {
     const r = await runWinterActivation("admin", actorId);
     revalidatePath("/admin/moduller");
@@ -80,7 +56,7 @@ export async function runWinterActivationNowAction(): Promise<Result> {
 // --- Tideline kurulum kuyruğu (/admin/tideline-kurulum) ---
 
 export async function retryUsActivationAction(formData: FormData): Promise<Result> {
-  await requireAdmin();
+  await requireAdmin("action:retryUsActivation");
   const businessId = String(formData.get("businessId") ?? "");
   if (!businessId) return { error: "İşletme bulunamadı." };
   try {
@@ -111,7 +87,7 @@ async function syncOnboardingPhone(externalRef: string | null, phone: { status: 
 }
 
 export async function retryTidelineNumberAction(formData: FormData): Promise<Result> {
-  await requireAdmin();
+  await requireAdmin("action:retryTidelineNumber");
   const numberId = String(formData.get("numberId") ?? "");
   const externalRef = String(formData.get("externalRef") ?? "") || null;
   const result = await retryTidelineNumber(numberId);
@@ -124,7 +100,7 @@ export async function retryTidelineNumberAction(formData: FormData): Promise<Res
 }
 
 export async function assignTidelineNumberAction(formData: FormData): Promise<Result> {
-  await requireAdmin();
+  await requireAdmin("action:assignTidelineNumber");
   const numberId = String(formData.get("numberId") ?? "");
   const externalRef = String(formData.get("externalRef") ?? "") || null;
   const phoneNumber = String(formData.get("phoneNumber") ?? "").replace(/[\s()-]/g, "");

@@ -1,38 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getEffectiveRoles } from "@/lib/auth/roles";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { generateQrDataUrl } from "@/lib/qr";
-import type { UserRole } from "@/lib/types";
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/giris");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, additional_roles")
-    .eq("id", user!.id)
-    .single();
-
-  const effectiveRoles = getEffectiveRoles({
-    role: (profile?.role as UserRole) ?? "user",
-    additional_roles: profile?.additional_roles as UserRole[] | null,
-  });
-  if (!effectiveRoles.includes("admin")) redirect("/");
-
-  return supabase;
-}
 
 export async function approveBusinessAction(
   formData: FormData
 ): Promise<{ error?: string; success?: true }> {
-  const supabase = await requireAdmin();
+  const { supabase } = await requireAdmin("action:approveBusiness");
   const businessId = String(formData.get("businessId") ?? "");
   if (!businessId) return { error: "İşletme bulunamadı." };
 
@@ -51,7 +27,7 @@ export async function approveBusinessAction(
 export async function rejectBusinessAction(
   formData: FormData
 ): Promise<{ error?: string; success?: true }> {
-  const supabase = await requireAdmin();
+  const { supabase } = await requireAdmin("action:rejectBusiness");
   const businessId = String(formData.get("businessId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
   if (!businessId) return { error: "İşletme bulunamadı." };
@@ -71,7 +47,7 @@ export async function rejectBusinessAction(
 export async function suspendBusinessAction(
   formData: FormData
 ): Promise<{ error?: string; success?: true }> {
-  const supabase = await requireAdmin();
+  const { supabase } = await requireAdmin("action:suspendBusiness");
   const businessId = String(formData.get("businessId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
   if (!businessId) return { error: "İşletme bulunamadı." };
@@ -91,7 +67,7 @@ export async function suspendBusinessAction(
 export async function reactivateBusinessAction(
   formData: FormData
 ): Promise<{ error?: string; success?: true }> {
-  const supabase = await requireAdmin();
+  const { supabase } = await requireAdmin("action:reactivateBusiness");
   const businessId = String(formData.get("businessId") ?? "");
   if (!businessId) return { error: "İşletme bulunamadı." };
 
@@ -114,7 +90,7 @@ export async function reactivateBusinessAction(
 export async function generateSignupInviteAction(
   formData: FormData
 ): Promise<{ error?: string; success?: true; url?: string; qrDataUrl?: string; name?: string }> {
-  await requireAdmin();
+  await requireAdmin("action:generateSignupInvite");
 
   const name = String(formData.get("businessName") ?? "").trim();
   if (!name) return { error: "İşletme adı gerekli." };
@@ -135,7 +111,7 @@ const CONTENT_TABLES = {
 export async function removeContentAction(
   formData: FormData
 ): Promise<{ error?: string; success?: true }> {
-  const supabase = await requireAdmin();
+  const { supabase } = await requireAdmin("action:removeContent");
   const kind = String(formData.get("kind") ?? "") as keyof typeof CONTENT_TABLES;
   const id = String(formData.get("id") ?? "");
   if (!id || !CONTENT_TABLES[kind]) return { error: "İçerik bulunamadı." };
@@ -163,7 +139,7 @@ export async function removeContentAction(
 export async function deleteLegacyBusinessAction(
   formData: FormData
 ): Promise<{ error?: string; success?: true }> {
-  const supabase = await requireAdmin();
+  const { supabase } = await requireAdmin("action:deleteLegacyBusiness");
   const businessId = String(formData.get("businessId") ?? "");
   if (!businessId) return { error: "İşletme bulunamadı." };
 

@@ -5,6 +5,7 @@ import websocket from "@fastify/websocket";
 import Fastify, { type FastifyRequest } from "fastify";
 import { z, ZodError } from "zod";
 import type { Env } from "./config/env.js";
+import { serializeLoggedError } from "./observability.js";
 import { frameAncestorsHeader, resolveFrameAncestors } from "./config/frame-ancestors.js";
 import type { Db } from "./database/db.js";
 import { enterTenant, runWithTenant } from "./database/tenant-context.js";
@@ -115,8 +116,12 @@ export function createApp(
       level: env.LOG_LEVEL,
       redact: [
         "req.headers.authorization", "req.headers.cookie", "req.headers.x-api-key", "req.headers.x-service-token", "req.body.password", "req.body.token", "req.body.assertion", "req.body.accessToken", "req.body.recording", "req.body.transcript",
+        // Twilio webhooks and customer-facing bodies: caller numbers, speech, order contents.
+        "req.body.From", "req.body.To", "req.body.Caller", "req.body.Called", "req.body.SpeechResult", "req.body.Body",
+        "req.body.phone", "req.body.customerPhone", "req.body.customerName", "req.body.items", "req.body.notes", "req.body.contactPhone",
         "res.headers.set-cookie",
       ],
+      serializers: { err: serializeLoggedError, error: serializeLoggedError },
     },
     genReqId: (req) => {
       const input = req.headers["x-request-id"];

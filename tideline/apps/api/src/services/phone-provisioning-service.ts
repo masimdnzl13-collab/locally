@@ -3,6 +3,7 @@ import type { FastifyBaseLogger } from "fastify";
 import type { Env } from "../config/env.js";
 import type { Db } from "../database/db.js";
 import { AppError } from "../domain/errors.js";
+import { redactPii } from "../observability.js";
 
 export interface PurchasedNumber { phoneNumber: string; sid: string }
 export interface NumberPurchaser { purchase(input: { areaCode?: string; friendlyName: string }): Promise<PurchasedNumber> }
@@ -154,7 +155,7 @@ export class PhoneProvisioningService {
         // A number bought but not recorded is still ours on Twilio; keep its SID in the reason so
         // an admin can attach it instead of buying a second one.
         failureReason = purchased ? `Purchased ${purchased.phoneNumber} (${purchased.sid}) but could not save it: ${message}` : message;
-        this.log.warn({ restaurantId: restaurant.id, error: message }, "twilio number provisioning failed; queued for manual assignment");
+        this.log.warn({ restaurantId: restaurant.id, error: redactPii(message) }, "twilio number provisioning failed; queued for manual assignment");
       }
     }
     failureReason = failureReason.slice(0, 500);
