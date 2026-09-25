@@ -723,3 +723,133 @@ textarea.code {
 .shell.embedded .sidebar-footer .nav-link {
   display: none;
 }
+
+/* ---------- Brain form (pages/BrainForm.tsx) ---------- */
+.brain-form {
+  display: grid;
+  gap: 18px;
+}
+.brain-form-section .card-head {
+  padding: 0 0 12px;
+  border: 0;
+}
+.brain-form-section .editor-actions {
+  margin-top: 16px;
+}
+.brain-form input[type="text"],
+.brain-form input:not([type]),
+.brain-form input[type="time"] {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  min-width: 0;
+}
+.brain-form input:focus {
+  outline: 2px solid var(--series-1);
+  outline-offset: -1px;
+}
+.btn-primary.btn-inline {
+  width: auto;
+}
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--series-1);
+  font-weight: 600;
+  font-size: 13px;
+}
+.link-button.small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+.link-button.danger {
+  color: var(--critical);
+  font-weight: 500;
+}
+.icon-button {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1;
+}
+.muted-text {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.hours-list {
+  display: grid;
+  gap: 8px;
+}
+.hours-row {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+}
+.hours-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.hours-times {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.menu-category {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.menu-category-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.brain-form .menu-category-name {
+  flex: 1;
+  font-weight: 600;
+}
+.menu-items {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+.menu-item {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 6.5rem minmax(0, 3fr) 32px;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .hours-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .menu-item {
+    grid-template-columns: minmax(0, 1fr) 6rem 32px;
+  }
+  .menu-item input:nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

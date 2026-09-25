@@ -1,10 +1,33 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, userMessage } from "../api";
 import { useAuth } from "../auth";
+import { BrainForm } from "./BrainForm";
 
 const SECTIONS = ["profile", "context", "hours", "closures", "categories", "items", "faqs", "settings"] as const;
 
+// Default view: the owner-friendly hours + menu form. The raw JSON editor covers
+// every Brain section (profile, closures, FAQs, settings…) and stays one click away.
 export function BrainPage({ restaurantId }: { restaurantId: string }) {
+  const [params, setParams] = useSearchParams();
+  const advanced = params.get("mode") === "json";
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Restaurant Brain</h1>
+          <p>The knowledge your AI receptionist uses on every call — hours, menu, policies and FAQs.</p>
+        </div>
+        <button type="button" className="link-button small" onClick={() => setParams(advanced ? {} : { mode: "json" })}>
+          {advanced ? "Back to simple editor" : "Advanced (JSON) editor"}
+        </button>
+      </div>
+      {advanced ? <BrainJsonEditor restaurantId={restaurantId} /> : <BrainForm restaurantId={restaurantId} />}
+    </>
+  );
+}
+
+function BrainJsonEditor({ restaurantId }: { restaurantId: string }) {
   const { session } = useAuth();
   const [section, setSection] = useState<(typeof SECTIONS)[number]>("profile");
   const [text, setText] = useState("");
@@ -54,12 +77,6 @@ export function BrainPage({ restaurantId }: { restaurantId: string }) {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Restaurant Brain</h1>
-          <p>The knowledge your AI receptionist uses on every call — hours, menu, policies and FAQs.</p>
-        </div>
-      </div>
       <div className="tabs">
         {SECTIONS.map((x) => (
           <button type="button" key={x} onClick={() => setSection(x)} aria-pressed={section === x}>

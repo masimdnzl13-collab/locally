@@ -46,6 +46,18 @@ async function register(
   return r.json() as { token: string; user: { id: string } };
 }
 describe("foundation API", () => {
+  it("allows the web origin to PATCH and DELETE (Brain editor preflight)", async () => {
+    const x = await setup();
+    apps.push(x.app);
+    const r = await x.app.inject({
+      method: "OPTIONS",
+      url: "/api/v1/restaurants/r1/brain/items/i1",
+      headers: { origin: "http://localhost:5173", "access-control-request-method": "PATCH" },
+    });
+    expect(r.statusCode).toBe(204);
+    expect(r.headers["access-control-allow-methods"]).toContain("PATCH");
+    expect(r.headers["access-control-allow-methods"]).toContain("DELETE");
+  });
   it("starts and reports health", async () => {
     const x = await setup();
     const r = await x.app.inject("/health");

@@ -184,6 +184,9 @@ export function createApp(
   app.register(cors, {
     origin: env.CORS_ORIGINS.split(",").map((x) => x.trim()),
     credentials: true,
+    // @fastify/cors only allows GET/HEAD/POST by default; the web app (a different
+    // origin) also edits the Brain with PUT/PATCH/DELETE.
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
   });
   app.register(rateLimit, { global: false });
   app.register(websocket);
