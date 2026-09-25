@@ -82,6 +82,11 @@ services:
       retries: 10
 
   api:
+    # EXACTLY ONE instance: live call state is in this process's memory (docs/ARCHITECTURE.md,
+    # "Single API instance"). Do not add deploy.replicas or `--scale api=N`. A fixed
+    # container_name makes compose itself refuse `--scale api=2`, and the API also refuses to
+    # start if another instance holds its Postgres advisory lock (src/database/singleton-lock.ts).
+    container_name: tideline-api
     build: ./apps/api
     image: ${TIDELINE_API_IMAGE:-tideline-api:latest}
     <<: [*restart, *logging]

@@ -6,8 +6,15 @@ import { MailCheck } from "lucide-react";
 import { requestPasswordResetAction } from "@/lib/auth/actions";
 import SubmitButton from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
+import { US_LOGIN_PATH } from "@/lib/us/config";
 
-export default function ForgotPasswordForm() {
+const COPY = {
+  tr: { email: "E-posta", placeholder: "sen@ornek.com", submit: "Sıfırlama Bağlantısı Gönder", pending: "Bir saniye...", back: "Girişe dön", backHref: "/giris" },
+  en: { email: "Email", placeholder: "you@restaurant.com", submit: "Send reset link", pending: "One moment...", back: "Back to log in", backHref: US_LOGIN_PATH },
+} as const;
+
+export default function ForgotPasswordForm({ locale = "tr" }: { locale?: keyof typeof COPY }) {
+  const t = COPY[locale];
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -35,15 +42,16 @@ export default function ForgotPasswordForm() {
 
   return (
     <form action={handleSubmit} className="space-y-4">
+      {locale === "en" && <input type="hidden" name="lang" value="en" />}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">
-          E-posta
+          {t.email}
         </label>
         <Input
           type="email"
           name="email"
           required
-          placeholder="sen@ornek.com"
+          placeholder={t.placeholder}
         />
       </div>
 
@@ -53,11 +61,11 @@ export default function ForgotPasswordForm() {
         </p>
       )}
 
-      <SubmitButton pending={isPending}>Sıfırlama Bağlantısı Gönder</SubmitButton>
+      <SubmitButton pending={isPending} pendingLabel={t.pending}>{t.submit}</SubmitButton>
 
       <p className="text-center text-sm text-muted-foreground">
-        <Link href="/giris" className="font-semibold text-teal-700">
-          Girişe dön
+        <Link href={t.backHref} className="font-semibold text-teal-700">
+          {t.back}
         </Link>
       </p>
     </form>

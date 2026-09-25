@@ -8,6 +8,7 @@ import { panelNavItems, tidelineNavItem } from "@/lib/panel-nav-items";
 import { hasTidelineAccess } from "@/lib/tideline/access";
 import { signOutAction } from "@/lib/auth/actions";
 import type { Business } from "@/lib/types";
+import { navLabel, panelCopy } from "@/lib/panel/copy";
 
 export default function PanelShell({
   business,
@@ -19,6 +20,8 @@ export default function PanelShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  // ABD (market=US) işletmeleri paneli İngilizce görür — bkz. lib/panel/copy.ts.
+  const t = panelCopy(business.market);
   // Tideline bir modül sekmesi olarak "Ayarlar"ın hemen önüne girer; marka
   // (üst bar / sol menü başlığı) her durumda "Locally" kalır.
   const navItems = hasTidelineAccess(business)
@@ -32,11 +35,11 @@ export default function PanelShell({
         <div className="border-b border-white/10 px-5 py-4">
           <div className="flex items-center justify-between gap-2">
             <span className="text-lg font-extrabold tracking-tight text-white">
-              Locally <span className="text-teal-300">İşletme</span>
+              Locally <span className="text-teal-300">{t.brandSuffix}</span>
             </span>
             {isMultiRole && (
               <span className="shrink-0 rounded-full bg-teal-500/20 px-2 py-0.5 text-[10px] font-bold text-teal-300">
-                İşletme modu
+                {t.businessMode}
               </span>
             )}
           </div>
@@ -47,7 +50,7 @@ export default function PanelShell({
               className="mt-2 flex items-center gap-1.5 text-xs font-medium text-navy-300 transition-colors hover:text-white"
             >
               <Repeat size={12} />
-              Rol değiştir
+              {t.switchRole}
             </Link>
           )}
         </div>
@@ -67,7 +70,7 @@ export default function PanelShell({
                 )}
               >
                 <Icon size={18} className={active ? "text-teal-300" : undefined} />
-                {item.label}
+                {navLabel(t, item.href, item.label)}
               </Link>
             );
           })}
@@ -78,7 +81,7 @@ export default function PanelShell({
             className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium text-navy-300 transition-colors hover:bg-white/5 hover:text-white"
           >
             <LogOut size={18} />
-            Çıkış Yap
+            {t.signOut}
           </button>
         </form>
       </aside>
@@ -87,11 +90,11 @@ export default function PanelShell({
         {/* Mobil üst bar */}
         <header className="flex items-center justify-between border-b border-border bg-navy-900 px-4 py-3 print:hidden md:hidden">
           <span className="font-extrabold tracking-tight text-white">
-            Locally <span className="text-teal-300">İşletme</span>
+            Locally <span className="text-teal-300">{t.brandSuffix}</span>
           </span>
           <form action={signOutAction}>
             <button type="submit" className="text-xs font-medium text-navy-300">
-              Çıkış
+              {t.signOutShort}
             </button>
           </form>
         </header>
@@ -114,7 +117,7 @@ export default function PanelShell({
                   )}
                 >
                   <Icon size={20} strokeWidth={active ? 2.4 : 2} />
-                  {item.label}
+                  {navLabel(t, item.href, item.label)}
                 </Link>
               );
             })}

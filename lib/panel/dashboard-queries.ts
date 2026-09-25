@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { BusinessMarket } from "@/lib/types";
 
 export interface DashboardMetrics {
   monthlySalesCount: number;
@@ -80,7 +81,8 @@ export async function getDashboardMetrics(businessId: string): Promise<Dashboard
   };
 }
 
-export async function getRecentActivity(businessId: string): Promise<ActivityItem[]> {
+export async function getRecentActivity(businessId: string, market: BusinessMarket = "TR"): Promise<ActivityItem[]> {
+  const en = market === "US";
   const supabase = createClient();
 
   const [salesRes, redemptionsRes, ticketsRes] = await Promise.all([
@@ -112,7 +114,9 @@ export async function getRecentActivity(businessId: string): Promise<ActivityIte
     items.push({
       id: `sale-${row.id}`,
       type: "sale",
-      label: `Paket satışı: ${pkg?.title ?? ""} — ${Number(row.amount).toLocaleString("tr-TR")}₺`,
+      label: en
+        ? `Package sale: ${pkg?.title ?? ""} — ${Number(row.amount).toLocaleString("en-US", { style: "currency", currency: "USD" })}`
+        : `Paket satışı: ${pkg?.title ?? ""} — ${Number(row.amount).toLocaleString("tr-TR")}₺`,
       at: row.created_at,
     });
   }
@@ -121,7 +125,7 @@ export async function getRecentActivity(businessId: string): Promise<ActivityIte
     items.push({
       id: `redemption-${row.id}`,
       type: "redemption",
-      label: "QR kullanımı",
+      label: en ? "QR redemption" : "QR kullanımı",
       at: row.redeemed_at,
     });
   }
@@ -131,7 +135,7 @@ export async function getRecentActivity(businessId: string): Promise<ActivityIte
     items.push({
       id: `ticket-${row.id}`,
       type: "ticket",
-      label: `Etkinlik kaydı: ${event?.title ?? ""}`,
+      label: en ? `Event registration: ${event?.title ?? ""}` : `Etkinlik kaydı: ${event?.title ?? ""}`,
       at: row.created_at,
     });
   }
