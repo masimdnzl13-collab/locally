@@ -14,16 +14,6 @@ export const metadata: Metadata = {
   title: "Add your menu · Locally",
 };
 
-const HOURS_EXAMPLE = `[
-  { "weekday": 1, "startTime": "11:00", "endTime": "22:00" },
-  { "weekday": 2, "startTime": "11:00", "endTime": "22:00" }
-]`;
-const CATEGORY_EXAMPLE = `{ "name": "Pizzas" }`;
-const ITEMS_EXAMPLE = `[
-  { "categoryId": "<id from Categories>", "name": "Margherita", "priceCents": 1400 },
-  { "categoryId": "<id from Categories>", "name": "Pepperoni", "priceCents": 1600 }
-]`;
-
 function Step({ done, children }: { done: boolean; children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2 text-sm">
@@ -40,7 +30,9 @@ function Step({ done, children }: { done: boolean; children: React.ReactNode }) 
 // P-V — ABD onboarding menü adımı (ödeme + Tideline kurulumundan sonra).
 // Saat ve menü Tideline'ın Brain'inde yaşar; burada sıfırdan form yazmak
 // yerine Tideline panelindeki mevcut Brain düzenleyicisi SSO ile gömülür
-// (TidelineFrame, section="brain"). Sayfa her yüklemede Tideline'dan sayıları
+// (TidelineFrame, section="brain"); Brain sayfası varsayılan olarak saat + menü
+// formunu açar, JSON düzenleyicisi küçük bir "Advanced" bağlantısında durur
+// (tideline/apps/web/src/pages/BrainForm.tsx). Sayfa her yüklemede Tideline'dan sayıları
 // okur; eşik tutunca başvuru "active" olur (bkz. lib/onboarding-us/complete.ts).
 export default async function UsMenuStepPage() {
   const current = await getCurrentUsSignup();
@@ -95,25 +87,20 @@ export default async function UsMenuStepPage() {
             )}
           </div>
 
-          <details className="rounded-lg border border-border p-4 text-sm" open>
-            <summary className="cursor-pointer font-medium text-foreground">How to fill it in</summary>
-            <ol className="mt-3 list-decimal space-y-3 pl-4 text-muted-foreground">
+          <div className="rounded-lg border border-border p-4 text-sm">
+            <p className="font-medium text-foreground">How to fill it in</p>
+            <ol className="mt-3 list-decimal space-y-2 pl-4 text-muted-foreground">
               <li>
-                <strong className="text-foreground">Hours</strong> tab — one entry per open day (0 = Sunday,
-                1 = Monday … 6 = Saturday), then Save:
-                <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 text-xs">{HOURS_EXAMPLE}</pre>
+                <strong className="text-foreground">Opening hours</strong> — tick the days you&apos;re open, set
+                the times, then <em>Save hours</em>.
               </li>
               <li>
-                <strong className="text-foreground">Categories</strong> tab — add a category and copy its{" "}
-                <code>id</code>:
-                <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 text-xs">{CATEGORY_EXAMPLE}</pre>
+                <strong className="text-foreground">Menu</strong> — add a category (like &ldquo;Pizzas&rdquo;),
+                then its items with a name and price. Click <em>Save menu</em>.
               </li>
-              <li>
-                <strong className="text-foreground">Items</strong> tab — prices in cents:
-                <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 text-xs">{ITEMS_EXAMPLE}</pre>
-              </li>
+              <li>Come back here and check again.</li>
             </ol>
-          </details>
+          </div>
         </aside>
 
         {current.signedIn ? (
