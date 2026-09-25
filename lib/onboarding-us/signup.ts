@@ -13,6 +13,10 @@ export const US_SIGNUP_COOKIE = "locally_us_signup";
 export const AGREEMENT_VERSION = "2026-09-us-v1";
 
 // awaiting_menu: ödendi + Tideline kuruldu, ama saat/menü (Brain) henüz yetersiz.
+// us_onboarding.payment_mode: aboneliği hangi sağlayıcı aldı ("test": sağlayıcı
+// yapılandırılmamışken simüle edilen ödeme).
+export type UsPaymentMode = "paypal" | "stripe" | "test";
+
 export type UsOnboardingStatus = "awaiting_payment" | "activating" | "awaiting_menu" | "active";
 
 export interface UsSignup {
@@ -25,7 +29,7 @@ export interface UsSignup {
   state: string;
   postal_code: string;
   status: UsOnboardingStatus;
-  payment_mode: "stripe" | "test" | null;
+  payment_mode: UsPaymentMode | null;
   tideline_phone_number: string | null;
   tideline_phone_status: "active" | "pending_manual" | null;
   provisioning_error: string | null;

@@ -10,7 +10,7 @@ import {
   markUsSignupPaid,
   MIN_MENU_ITEMS,
 } from "@/lib/onboarding-us/complete";
-import { getStripeClient } from "@/lib/stripe/client";
+import { isPayPalConfigured } from "@/lib/paypal/client";
 import { US_LOGIN_PATH } from "@/lib/us/config";
 
 export const dynamic = "force-dynamic";
@@ -19,49 +19,44 @@ export const metadata: Metadata = {
   title: "Setting up · Locally",
 };
 
-function stripeConfigured() {
-  try {
-    return getStripeClient() !== null;
-  } catch {
-    return true;
-  }
-}
 
-// P6 — 3/3: ödeme dönüşü ve kurulum durumu. Hem Stripe'ın success_url'i hem
+// P6 — 3/3: ödeme dönüşü ve kurulum durumu. Hem PayPal'ın return_url'i hem
 // panelin "US kaydı yarım" yönlendirmesi buraya gelir. Sayfa idempotent:
 // ödeme doğrulanınca tideline modülünü açar ve Tideline kurulumunu dener
 // (bkz. lib/onboarding-us/complete.ts); tekrar yüklenmesi güvenlidir.
 export default async function UsStatusPage({
   searchParams,
 }: {
-  searchParams: { session_id?: string; simulated?: string };
+  // PayPal onaydan sonra ?subscription_id=I-...&ba_token=...&token=... ekler.
+  searchParams: { subscription_id?: string; simulated?: string };
 }) {
   const current = await getCurrentUsSignup();
   if (!current) redirect("/kayit/us");
   let signup: UsSignup | null = current.signup;
 
   if (signup.status === "awaiting_payment") {
-    if (!stripeConfigured()) {
+    if (!isPayPalConfigured()) {
       // Test modu: sağlayıcı ödemeyi simüle edip ?simulated=1 ile döner.
       if (searchParams.simulated !== "1") redirect("/kayit/us/odeme");
       await markUsSignupPaid(signup.business_id, { mode: "test", ref: `TEST-${Date.now()}` });
     } else {
-      // Gerçek ödeme: tek kanıt, Stripe webhook'unun yazdığı aktif abonelik.
+      // Gerçek ödeme: tek kanıt, PayPal webhook'unun yazdığı aktif abonelik —
+      // dönüş URL'indeki subscription_id'ye güvenilmez.
       const subscriptionRef = await findActiveSubscriptionRef(signup.business_id);
       if (!subscriptionRef) {
-        if (!searchParams.session_id) redirect("/kayit/us/odeme");
+        if (!searchParams.subscription_id) redirect("/kayit/us/odeme");
         return (
           <AuthShell title="Confirming your payment" description="This usually takes a few seconds.">
             {/* Webhook gelene kadar sayfa kendini yeniler. */}
             <meta httpEquiv="refresh" content="4" />
             <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
               <Loader2 className="animate-spin text-teal-600" size={28} />
-              <p>We&apos;re waiting for Stripe to confirm your subscription. This page will refresh automatically.</p>
+              <p>We&apos;re waiting for PayPal to confirm your subscription. This page will refresh automatically.</p>
             </div>
           </AuthShell>
         );
       }
-      await markUsSignupPaid(signup.business_id, { mode: "stripe", ref: subscriptionRef });
+      await markUsSignupPaid(signup.business_id, { mode: "paypal", ref: subscriptionRef });
     }
   }
 

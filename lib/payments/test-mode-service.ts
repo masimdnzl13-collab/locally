@@ -1,5 +1,6 @@
 import type {
   CancelSubscriptionResult,
+  CaptureOneTimeResult,
   ChargeInput,
   ChargeResult,
   CreateOneTimeCheckoutResult,
@@ -45,6 +46,10 @@ class TestModePaymentService implements PaymentService {
   }
 
   async expireOneTimeCheckout(): Promise<void> {}
+
+  async captureOneTimeCheckout(): Promise<CaptureOneTimeResult> {
+    return { success: false, error: "Barındırılan ödeme sayfası bu pazarda (TR / iyzico) henüz yok." };
+  }
 
   async handleWebhook(): Promise<WebhookResult> {
     return { success: false, error: UNSUPPORTED };

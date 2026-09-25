@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireCronSecret, logCronRun } from "@/lib/cron/guard";
+import { expireStaleTicketPayments } from "@/lib/events/ticket-payments";
 
 export const dynamic = "force-dynamic";
 
@@ -49,15 +50,19 @@ export async function GET(request: Request) {
       expiredCount++;
     }
 
+    // ABD bileti: 30 dk içinde PayPal onayı gelmeyen bekleyen biletler. Asıl
+    // temizlik yeni ödeme başlarken etkinlik bazında yapılır; bu, kalanlar için.
+    const expiredTickets = await expireStaleTicketPayments();
+
     await logCronRun(
       supabase,
       "reservation-expiry",
       "success",
       expiredCount,
-      `${expiredCount} rezervasyon ${RESERVATION_EXPIRY_DAYS} gün içinde gelinmediği için düştü`
+      `${expiredCount} rezervasyon ${RESERVATION_EXPIRY_DAYS} gün içinde gelinmediği için düştü; ${expiredTickets} ödenmemiş bilet düştü`
     );
 
-    return NextResponse.json({ ok: true, expiredCount });
+    return NextResponse.json({ ok: true, expiredCount, expiredTickets });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Bilinmeyen hata";
     await logCronRun(supabase, "reservation-expiry", "error", expiredCount, message);
