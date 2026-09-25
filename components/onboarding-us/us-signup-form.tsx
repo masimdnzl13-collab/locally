@@ -35,6 +35,14 @@ export default function UsSignupForm() {
 
   return (
     <form action={handleSubmit} className="space-y-4">
+      {/* Honeypot: ekran dışı, tab sırasında yok, ekran okuyucudan gizli.
+          Doluysa sunucu isteği sessizce yok sayar (lib/onboarding-us/actions.ts). */}
+      <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+        <label>
+          Company website
+          <input type="text" name="company_website" tabIndex={-1} autoComplete="off" defaultValue="" />
+        </label>
+      </div>
       <SectionTitle>Restaurant</SectionTitle>
       <Field label="Restaurant name">
         <Input name="businessName" required maxLength={120} placeholder="Harbor Grill" />

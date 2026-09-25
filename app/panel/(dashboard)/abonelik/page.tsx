@@ -1,10 +1,6 @@
-import ComingSoon from "@/components/coming-soon";
+import { redirect } from "next/navigation";
 
+// Eski "Abonelik" yer tutucusu; gerçek sayfa Faturalandırma.
 export default function AbonelikPage() {
-  return (
-    <ComingSoon
-      title="Abonelik yönetimi çok yakında"
-      description="Locally şu an ücretsiz erken erişim döneminde. İleride burada plan ve fatura bilgilerini yönetebileceksin."
-    />
-  );
+  redirect("/panel/faturalandirma");
 }

@@ -27,7 +27,7 @@ export const panelNavItems = [
   { href: "/panel/musteriler", label: "Müşteriler", icon: Users },
   { href: "/panel/yorumlar", label: "Yorumlar", icon: MessageSquareText },
   { href: "/panel/duyurular", label: "Duyurular", icon: Megaphone },
-  { href: "/panel/abonelik", label: "Abonelik", icon: CreditCard },
+  { href: "/panel/faturalandirma", label: "Faturalandırma", icon: CreditCard },
   { href: "/panel/ayarlar", label: "Ayarlar", icon: Settings },
 ] as const;
 

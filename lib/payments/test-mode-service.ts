@@ -2,8 +2,10 @@ import type {
   CancelSubscriptionResult,
   ChargeInput,
   ChargeResult,
+  CreateOneTimeCheckoutResult,
   CreateSubscriptionResult,
   PaymentService,
+  SubscriptionSummaryResult,
   WebhookResult,
 } from "@/lib/payments/types";
 
@@ -32,6 +34,17 @@ class TestModePaymentService implements PaymentService {
   async cancelSubscription(): Promise<CancelSubscriptionResult> {
     return { success: false, error: UNSUPPORTED };
   }
+
+  async getSubscriptionSummary(): Promise<SubscriptionSummaryResult> {
+    return { success: false, error: UNSUPPORTED };
+  }
+
+  // TR'de tek seferlik ödeme charge() + (ileride) iyzico checkout ile yürür.
+  async createOneTimeCheckout(): Promise<CreateOneTimeCheckoutResult> {
+    return { success: false, error: "Barındırılan ödeme sayfası bu pazarda (TR / iyzico) henüz yok." };
+  }
+
+  async expireOneTimeCheckout(): Promise<void> {}
 
   async handleWebhook(): Promise<WebhookResult> {
     return { success: false, error: UNSUPPORTED };

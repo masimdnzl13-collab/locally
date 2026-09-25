@@ -47,6 +47,10 @@ This builds and runs Postgres, Redis, the API (`:3000`), a background worker,
 and the web app served via nginx (`:8080`). Migrations run automatically on API
 startup.
 
+For production (restart policies, health checks, secrets from the platform
+instead of `.env`, TLS) see [DEPLOYMENT.md](DEPLOYMENT.md) and
+`docker-compose.prod.yml`.
+
 ## Quality checks
 
 Run inside `apps/api` and `apps/web` respectively:

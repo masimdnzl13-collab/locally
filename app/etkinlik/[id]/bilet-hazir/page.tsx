@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
-import { getTicketWithQr } from "@/lib/events/queries";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { getTicketPaymentStatus, getTicketWithQr } from "@/lib/events/queries";
 import { generateQrDataUrl } from "@/lib/qr";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -17,7 +17,11 @@ export default async function BiletHazirPage({
   if (!searchParams.ticket) redirect(`/etkinlik/${params.id}`);
 
   const ticket = await getTicketWithQr(searchParams.ticket);
-  if (!ticket) redirect(`/etkinlik/${params.id}`);
+  if (!ticket) {
+    const paymentStatus = await getTicketPaymentStatus(searchParams.ticket);
+    if (paymentStatus === "pending") return <PaymentPending />;
+    redirect(`/etkinlik/${params.id}?odeme=${paymentStatus === "failed" ? "hata" : "iptal"}`);
+  }
 
   const qrDataUrl = await generateQrDataUrl(ticket.qr_code);
 
@@ -52,6 +56,21 @@ export default async function BiletHazirPage({
       >
         Biletlerime Git
       </Link>
+    </section>
+  );
+}
+
+// Ödeme sağlayıcıdan döndük ama onay (webhook) henüz gelmedi: birkaç saniyede
+// bir sayfayı yeniler; onay gelince bilet ve QR görünür.
+function PaymentPending() {
+  return (
+    <section className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center px-6 py-10 text-center md:min-h-[calc(100dvh-4.5rem)]">
+      <meta httpEquiv="refresh" content="3" />
+      <Loader2 className="mb-5 h-10 w-10 animate-spin text-teal-600" aria-hidden />
+      <h1 className="font-serif text-3xl italic tracking-tight text-foreground">Ödemen onaylanıyor…</h1>
+      <p className="mt-2 max-w-sm text-balance text-sm text-muted-foreground">
+        Bu birkaç saniye sürebilir. Onay gelince biletin ve QR kodun burada görünecek.
+      </p>
     </section>
   );
 }

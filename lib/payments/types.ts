@@ -37,6 +37,46 @@ export type CancelSubscriptionResult =
   | { success: true; simulated: boolean }
   | { success: false; error: string };
 
+// Abonelik özeti (Faturalandırma sayfası): sağlayıcıdan canlı çekilir, kart
+// numarasının yalnızca markası ve son 4 hanesi gelir.
+export interface SubscriptionSummary {
+  planName: string | null;
+  amount: number | null;
+  currency: string | null;
+  interval: string | null;
+  status: string;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  paymentMethod: { brand: string; last4: string; expMonth: number; expYear: number } | null;
+}
+
+export type SubscriptionSummaryResult =
+  | { success: true; simulated: boolean; summary: SubscriptionSummary }
+  | { success: false; error: string };
+
+// Tek seferlik ödeme (ör. etkinlik bileti): sağlayıcının barındırdığı ödeme
+// sayfası (Stripe Checkout, mode: "payment"). Ödeme gerçekten alındığında
+// webhook "one_time.completed" olayıyla haber verir; reference, ödemenin hangi
+// kayda (bilet vb.) ait olduğunu webhook'a taşır.
+export type OneTimeReference = { kind: "event_ticket"; id: string };
+
+export interface CreateOneTimeCheckoutInput {
+  reference: OneTimeReference;
+  // Ana para birimi cinsinden (ör. 25.00 USD); sağlayıcıya kuruş olarak gider.
+  amount: number;
+  currency: string;
+  description: string;
+  customerEmail?: string;
+  successUrl: string;
+  cancelUrl: string;
+  // Platform komisyonu vb. — yalnızca kayıt/raporlama amaçlı metadata.
+  metadata?: Record<string, string>;
+}
+
+export type CreateOneTimeCheckoutResult =
+  | { success: true; simulated: boolean; checkoutUrl: string; sessionId: string }
+  | { success: false; error: string };
+
 // Sağlayıcıya özgü webhook olayları bu ortak şekle çevrilir; uygulama kodu
 // (bkz. app/api/webhooks/stripe) yalnızca bununla konuşur.
 export type PaymentWebhookEvent = { eventId: string; rawType: string } & (
@@ -55,6 +95,17 @@ export type PaymentWebhookEvent = { eventId: string; rawType: string } & (
     }
   | { type: "payment.failed"; subscriptionId: string; amount: number; currency: string }
   | { type: "subscription.canceled"; subscriptionId: string }
+  | {
+      type: "one_time.completed";
+      sessionId: string;
+      reference: OneTimeReference;
+      paymentId: string | null;
+      // Sağlayıcının bildirdiği tahsil edilen tutar (ana para birimi).
+      amount: number;
+      currency: string;
+      paid: boolean;
+    }
+  | { type: "one_time.expired"; sessionId: string; reference: OneTimeReference }
   | { type: "ignored" }
 );
 
@@ -67,6 +118,10 @@ export interface PaymentService {
   charge(input: ChargeInput): Promise<ChargeResult>;
   createSubscription(input: CreateSubscriptionInput): Promise<CreateSubscriptionResult>;
   cancelSubscription(input: CancelSubscriptionInput): Promise<CancelSubscriptionResult>;
+  getSubscriptionSummary(subscriptionId: string): Promise<SubscriptionSummaryResult>;
+  createOneTimeCheckout(input: CreateOneTimeCheckoutInput): Promise<CreateOneTimeCheckoutResult>;
+  // Yarım kalan bir ödeme sayfasını kapatır (aynı bilet için ikinci ödeme olmasın).
+  expireOneTimeCheckout(sessionId: string): Promise<void>;
   // rawBody imza doğrulaması için ayrıştırılmamış gövde olmalı.
   handleWebhook(rawBody: string, headers: Headers): Promise<WebhookResult>;
 }

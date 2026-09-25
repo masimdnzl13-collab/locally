@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckCircle2, Clock, Loader2, MailCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MailCheck, Sparkles } from "lucide-react";
 import AuthShell from "@/components/auth/auth-shell";
 import { getCurrentUsSignup, type UsSignup } from "@/lib/onboarding-us/signup";
-import { activateUsSignup, findActiveSubscriptionRef, markUsSignupPaid } from "@/lib/onboarding-us/complete";
+import {
+  activateUsSignup,
+  findActiveSubscriptionRef,
+  markUsSignupPaid,
+  MIN_MENU_ITEMS,
+} from "@/lib/onboarding-us/complete";
 import { getStripeClient } from "@/lib/stripe/client";
 import { US_LOGIN_PATH } from "@/lib/us/config";
 
@@ -65,6 +70,8 @@ export default async function UsStatusPage({
   }
 
   const ready = Boolean(signup.business.tideline_restaurant_id) && signup.tideline_phone_status === "active";
+  // Restoran kuruldu ama Brain'de saat/menü yok: asistan arayana cevap veremez.
+  const needsMenu = Boolean(signup.business.tideline_restaurant_id) && signup.status !== "active";
 
   return (
     <AuthShell title={`Welcome to Locally, ${signup.business.name}`}>
@@ -73,6 +80,24 @@ export default async function UsStatusPage({
           <Sparkles size={22} strokeWidth={1.75} />
         </div>
         <p className="text-base font-semibold text-foreground">Your Tideline ordering assistant is being activated.</p>
+
+        {needsMenu && (
+          <div role="alert" className="space-y-2 rounded-md border border-border bg-muted/40 p-4 text-left text-sm">
+            <p className="flex items-center gap-1.5 font-semibold text-foreground">
+              <AlertTriangle size={16} className="shrink-0 text-discount-700" /> Setup not complete — add your menu
+            </p>
+            <p className="text-muted-foreground">
+              Your assistant can&apos;t answer callers until your opening hours and at least {MIN_MENU_ITEMS} menu
+              items are added.
+            </p>
+            <Link
+              href="/kayit/us/menu"
+              className="flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 font-semibold text-white hover:bg-teal-700"
+            >
+              Add your menu
+            </Link>
+          </div>
+        )}
 
         {ready ? (
           <div className="space-y-2 rounded-md border border-border p-4 text-sm">

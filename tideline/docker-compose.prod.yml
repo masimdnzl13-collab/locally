@@ -1,0 +1,164 @@
+# Production stack for a single Docker host (VPS). Standalone — do NOT combine
+# with docker-compose.yml.
+#
+# Secrets are NOT read from a .env file. Every ${VAR} below is interpolated from
+# the environment of the `docker compose` process, which the deploy platform's
+# secret manager provides, e.g.:
+#   doppler run -- docker compose -f docker-compose.prod.yml up -d --build
+#   op run --env-file=prod.env.tpl -- docker compose -f docker-compose.prod.yml up -d
+#   (CI) secrets exported as env vars in the deploy job
+# ${VAR:?...} makes compose refuse to start when a required secret is missing.
+# See DEPLOYMENT.md for the full list and platform options.
+
+x-restart: &restart
+  restart: unless-stopped
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+# Shared by api and worker. Only non-secret tuning has defaults.
+x-api-env: &api-env
+  APP_ENV: production
+  PORT: "3000"
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+  APP_URL: https://${APP_DOMAIN:?APP_DOMAIN is required}
+  API_URL: https://${API_DOMAIN:?API_DOMAIN is required}
+  VOICE_PUBLIC_URL: https://${API_DOMAIN}
+  CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required (e.g. https://app.example.com,https://locally.example.com)}
+  ALLOWED_FRAME_ANCESTORS: ${ALLOWED_FRAME_ANCESTORS:-}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (same value as Locally TIDELINE_JWT_SECRET)}
+  SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+  TELEPHONY_MODE: twilio
+  TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:?TWILIO_ACCOUNT_SID is required}
+  TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:?TWILIO_AUTH_TOKEN is required}
+  TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:?TWILIO_PHONE_NUMBER is required}
+  TWILIO_VALIDATE_SIGNATURES: "true"
+  STT_PROVIDER: ${STT_PROVIDER:-deepgram}
+  STT_API_KEY: ${STT_API_KEY:?STT_API_KEY is required}
+  TTS_PROVIDER: ${TTS_PROVIDER:-deepgram}
+  TTS_API_KEY: ${TTS_API_KEY:?TTS_API_KEY is required}
+  AI_PROVIDER: anthropic
+  AI_API_KEY: ${AI_API_KEY:?AI_API_KEY is required}
+  AI_MODEL: ${AI_MODEL:-claude-opus-5}
+  AI_EFFORT: ${AI_EFFORT:-low}
+  ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+  RESEND_API_KEY: ${RESEND_API_KEY:-}
+  ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+  ALERT_EMAIL_FROM: ${ALERT_EMAIL_FROM:-}
+  SUBSCRIPTION_PRICE_USD: ${SUBSCRIPTION_PRICE_USD:-199}
+  COST_ALERT_THRESHOLD_RATIO: ${COST_ALERT_THRESHOLD_RATIO:-0.6}
+
+services:
+  # Bundled database for the VPS option. With a managed Postgres, delete this
+  # service (and its depends_on entries) and point DATABASE_URL at the provider.
+  postgres:
+    image: postgres:16-alpine
+    <<: [*restart, *logging]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-restaurant_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-restaurant_ai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    # No published port: reachable only on the internal compose network.
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    <<: [*restart, *logging]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./apps/api
+    image: ${TIDELINE_API_IMAGE:-tideline-api:latest}
+    <<: [*restart, *logging]
+    environment: *api-env
+    # Only the reverse proxy talks to the API.
+    expose: ["3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    stop_grace_period: 30s
+
+  worker:
+    image: ${TIDELINE_API_IMAGE:-tideline-api:latest}
+    <<: [*restart, *logging]
+    command: ["node", "dist/worker.js"]
+    environment: *api-env
+    depends_on:
+      redis: { condition: service_healthy }
+      # The API applies migrations at startup.
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "const c=new (require('pg').Client)({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:4000});c.connect().then(()=>c.query('SELECT 1')).then(()=>process.exit(0)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        VITE_API_URL: https://${API_DOMAIN}
+    image: ${TIDELINE_WEB_IMAGE:-tideline-web:latest}
+    <<: [*restart, *logging]
+    environment:
+      ALLOWED_FRAME_ANCESTORS: ${ALLOWED_FRAME_ANCESTORS:-}
+    expose: ["80"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # TLS termination + automatic Let's Encrypt certificates for both domains.
+  # Proxies HTTP and the Twilio media WebSocket (wss://API_DOMAIN/...).
+  caddy:
+    image: caddy:2-alpine
+    <<: [*restart, *logging]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required (Let's Encrypt account)}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api: { condition: service_healthy }
+      web: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:2019/config/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

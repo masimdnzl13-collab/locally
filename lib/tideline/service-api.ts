@@ -132,6 +132,20 @@ export function assignTidelineNumber(numberId: string, phoneNumber: string) {
   );
 }
 
+export interface TidelineBrainReadiness {
+  hoursDays: number;
+  menuItems: number;
+}
+
+// Onboarding menü adımı: restoranın Brain'inde kaç günün saati ve kaç aktif
+// menü kalemi var (eşik Locally'de, bkz. lib/onboarding-us/complete.ts).
+export function getTidelineBrainReadiness(restaurantId: string) {
+  return callTideline<TidelineBrainReadiness>(
+    `/api/v1/internal/restaurants/${encodeURIComponent(restaurantId)}/brain-readiness`,
+    { timeoutMs: READ_TIMEOUT_MS }
+  );
+}
+
 export type TidelineActivityResult =
   | { ok: true; byRestaurant: Map<string, TidelineActivity>; thresholdUsd: number }
   | { ok: false; reason: "not_configured" | "unavailable" };

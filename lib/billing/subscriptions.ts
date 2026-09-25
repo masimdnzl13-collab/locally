@@ -4,7 +4,9 @@ import type {
   CancelSubscriptionResult,
   CreateSubscriptionResult,
   PaymentWebhookEvent,
+  SubscriptionSummary,
 } from "@/lib/payments";
+import { applyTicketPaymentEvent } from "@/lib/events/ticket-payments";
 import type { BusinessMarket } from "@/lib/types";
 
 // İşletme aboneliği akışları. Sağlayıcı businesses.market'e göre seçilir
@@ -52,17 +54,77 @@ export async function cancelBusinessSubscription(
   if (!subscription) return { success: false, error: "Aktif abonelik bulunamadı." };
 
   // Durum burada değil, sağlayıcının "subscription.canceled" webhook'unda
-  // güncellenir — tek doğruluk kaynağı sağlayıcı kalsın.
-  return getPaymentService(market).cancelSubscription({
+  // güncellenir — tek doğruluk kaynağı sağlayıcı kalsın. "Dönem sonunda"
+  // iptalde abonelik dönem bitene kadar aktif kalır; yalnızca işaretlenir.
+  const result = await getPaymentService(market).cancelSubscription({
     subscriptionId: subscription.provider_subscription_id,
     atPeriodEnd: options.atPeriodEnd,
   });
+  if (result.success && options.atPeriodEnd) {
+    await createServiceClient()
+      .from("business_subscriptions")
+      .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
+      .eq("provider_subscription_id", subscription.provider_subscription_id);
+  }
+  return result;
 }
 
-// Webhook'tan gelen ortak olayı business_subscriptions'a yansıtır. Olay
-// payment_events'e önce yazılır; aynı olay tekrar gelirse insert benzersizlik
-// ihlaline düşer ve işlenmeden atlanır.
-export async function applySubscriptionWebhookEvent(
+export interface BusinessBilling {
+  market: BusinessMarket;
+  provider: "stripe" | "iyzico";
+  subscription: {
+    status: "active" | "past_due" | "canceled";
+    cancelAtPeriodEnd: boolean;
+    currentPeriodEnd: string | null;
+    lastPaymentAt: string | null;
+    canceledAt: string | null;
+  } | null;
+  // Sağlayıcıdan canlı çekilen ayrıntılar (plan, tutar, kart). Sağlayıcıya
+  // ulaşılamazsa null — sayfa yerel kayıtla idare eder.
+  live: SubscriptionSummary | null;
+  liveError: string | null;
+  simulated: boolean;
+}
+
+/**
+ * Faturalandırma sayfası için işletmenin abonelik özeti. Yetki kontrolü
+ * YAPMAZ: çağıran, businessId'nin oturumdaki kullanıcıya ait olduğunu
+ * getMyBusiness ile doğrulamış olmalı.
+ */
+export async function getBusinessBilling(businessId: string, market: BusinessMarket): Promise<BusinessBilling> {
+  const provider = market === "US" ? "stripe" : "iyzico";
+  const { data: row } = await createServiceClient()
+    .from("business_subscriptions")
+    .select("provider_subscription_id, status, cancel_at_period_end, current_period_end, last_payment_at, canceled_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!row) return { market, provider, subscription: null, live: null, liveError: null, simulated: false };
+
+  const subscription = {
+    status: row.status as "active" | "past_due" | "canceled",
+    cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+    currentPeriodEnd: row.current_period_end as string | null,
+    lastPaymentAt: row.last_payment_at as string | null,
+    canceledAt: row.canceled_at as string | null,
+  };
+  if (subscription.status === "canceled") {
+    return { market, provider, subscription, live: null, liveError: null, simulated: false };
+  }
+
+  const live = await getPaymentService(market).getSubscriptionSummary(row.provider_subscription_id);
+  return live.success
+    ? { market, provider, subscription, live: live.summary, liveError: null, simulated: live.simulated }
+    : { market, provider, subscription, live: null, liveError: live.error, simulated: false };
+}
+
+// Webhook'tan gelen ortak olayı işler: abonelik olayları
+// business_subscriptions'a, tek seferlik ödemeler (etkinlik bileti) bilete
+// yansır. Olay payment_events'e önce yazılır; aynı olay tekrar gelirse insert
+// benzersizlik ihlaline düşer ve işlenmeden atlanır.
+export async function applyPaymentWebhookEvent(
   provider: "stripe" | "iyzico",
   event: PaymentWebhookEvent
 ): Promise<"applied" | "duplicate" | "ignored"> {
@@ -82,7 +144,11 @@ export async function applySubscriptionWebhookEvent(
   }
 
   try {
-    await applyToSubscription(supabase, provider, event);
+    if (event.type === "one_time.completed" || event.type === "one_time.expired") {
+      await applyTicketPaymentEvent(event);
+    } else {
+      await applyToSubscription(supabase, provider, event);
+    }
   } catch (err) {
     // Log satırı kalırsa sağlayıcının yeniden denemesi "duplicate" sayılıp
     // hiç uygulanmaz; geri al ki bir sonraki deneme işlensin.
@@ -99,7 +165,7 @@ export async function applySubscriptionWebhookEvent(
 async function applyToSubscription(
   supabase: ReturnType<typeof createServiceClient>,
   provider: "stripe" | "iyzico",
-  event: Exclude<PaymentWebhookEvent, { type: "ignored" }>
+  event: Exclude<PaymentWebhookEvent, { type: "ignored" | "one_time.completed" | "one_time.expired" }>
 ): Promise<void> {
   const now = new Date().toISOString();
 

@@ -165,6 +165,20 @@ export class RestaurantBrainService {
     if (!row) throw new AppError("NOT_FOUND", "Restaurant not found", 404);
     return row;
   }
+  // Onboarding gate (Locally /kayit/us/menu): the AI can only answer callers once
+  // opening hours and a basic menu exist. Counts only; the threshold lives in Locally.
+  async readiness(restaurantId: string) {
+    await this.restaurantExists(restaurantId);
+    const row = (
+      await this.db.query<{ hours_days: string; menu_items: string }>(
+        `SELECT
+           (SELECT COUNT(DISTINCT weekday) FROM business_hours WHERE restaurant_id=$1) AS hours_days,
+           (SELECT COUNT(*) FROM menu_items WHERE restaurant_id=$1 AND active) AS menu_items`,
+        [restaurantId],
+      )
+    ).rows[0];
+    return { hoursDays: Number(row?.hours_days ?? 0), menuItems: Number(row?.menu_items ?? 0) };
+  }
   async list(restaurantId: string, resource: Resource) {
     await this.restaurantExists(restaurantId);
     return (

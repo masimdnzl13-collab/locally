@@ -1,5 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { provisionTidelineRestaurant } from "@/lib/tideline/service-api";
+import {
+  getTidelineBrainReadiness,
+  provisionTidelineRestaurant,
+  type TidelineBrainReadiness,
+} from "@/lib/tideline/service-api";
 import { US_SIGNUP_COLUMNS, type UsSignup } from "@/lib/onboarding-us/signup";
 
 // Ödeme sonrası kurulum: tideline modülünü açar ve Tideline'dan restoran +
@@ -9,8 +13,20 @@ import { US_SIGNUP_COLUMNS, type UsSignup } from "@/lib/onboarding-us/signup";
 // business id) ile idempotent, ikinci bir restoran/numara açılmaz.
 //
 // Tideline'a ulaşılamazsa ya da numara alınamazsa akış TIKANMAZ: başvuru
-// yine "active" olur, tideline_restaurant_id boş kalır ve kullanıcı "24 saat
-// içinde" bekleme ekranını görür; admin /admin/tideline-kurulum'dan tamamlar.
+// yine "awaiting_menu"ya geçer, tideline_restaurant_id boş kalır ve kullanıcı
+// "24 saat içinde" bekleme ekranını görür; admin /admin/tideline-kurulum'dan
+// tamamlar.
+//
+// "active" yalnızca Brain'de çalışma saatleri ve en az MIN_MENU_ITEMS aktif
+// menü kalemi varken olur (menü adımı: /kayit/us/menu). Bu veri olmadan
+// Tideline'ın AI asistanı arayana saat/menü sorularında cevap veremez.
+
+export const MIN_MENU_ITEMS = 5;
+export const MIN_HOURS_DAYS = 1;
+
+export function isMenuReady(readiness: TidelineBrainReadiness) {
+  return readiness.hoursDays >= MIN_HOURS_DAYS && readiness.menuItems >= MIN_MENU_ITEMS;
+}
 
 export async function markUsSignupPaid(businessId: string, payment: { mode: "stripe" | "test"; ref: string }) {
   await createServiceClient()
@@ -55,7 +71,8 @@ export async function activateUsSignup(businessId: string): Promise<UsSignup | n
   }
 
   const update: Record<string, unknown> = {};
-  if (!signup.business.tideline_restaurant_id) {
+  let restaurantId = signup.business.tideline_restaurant_id;
+  if (!restaurantId) {
     const result = await provisionTidelineRestaurant({
       businessId,
       name: signup.business.name,
@@ -71,6 +88,7 @@ export async function activateUsSignup(businessId: string): Promise<UsSignup | n
         .update({ tideline_restaurant_id: result.data.restaurant.id })
         .eq("id", businessId);
       if (error) throw new Error(error.message);
+      restaurantId = result.data.restaurant.id;
       update.tideline_phone_status = result.data.phone?.status ?? null;
       update.tideline_phone_number = result.data.phone?.phoneNumber ?? null;
       update.provisioning_error =
@@ -80,9 +98,15 @@ export async function activateUsSignup(businessId: string): Promise<UsSignup | n
     }
   }
 
-  if (signup.status !== "active") {
-    update.status = "active";
-    update.completed_at = new Date().toISOString();
+  if (signup.status === "activating") update.status = "awaiting_menu";
+  // Menü adımı: Tideline'a ulaşılamazsa "awaiting_menu"da kalır, bir sonraki
+  // çağrıda (durum/menü sayfası yenilemesi) yeniden bakılır.
+  if (signup.status !== "active" && restaurantId) {
+    const readiness = await getTidelineBrainReadiness(restaurantId);
+    if (readiness.ok && isMenuReady(readiness.data)) {
+      update.status = "active";
+      update.completed_at = new Date().toISOString();
+    }
   }
   if (Object.keys(update).length) {
     await service.from("us_onboarding").update(update).eq("business_id", businessId);
