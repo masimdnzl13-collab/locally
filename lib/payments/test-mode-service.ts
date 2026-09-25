@@ -2,6 +2,7 @@ import type {
   CancelSubscriptionResult,
   ChargeInput,
   ChargeResult,
+  ConfirmOneTimeResult,
   CreateOneTimeCheckoutResult,
   CreateSubscriptionResult,
   PaymentService,
@@ -19,6 +20,14 @@ const UNSUPPORTED = "Abonelik bu pazarda (TR / iyzico) henüz desteklenmiyor.";
 
 class TestModePaymentService implements PaymentService {
   readonly provider = "test" as const;
+
+  isConfigured() {
+    return false;
+  }
+
+  async confirmOneTimeCheckout(): Promise<ConfirmOneTimeResult> {
+    return { status: "not_needed" };
+  }
 
   async charge(input: ChargeInput): Promise<ChargeResult> {
     return {

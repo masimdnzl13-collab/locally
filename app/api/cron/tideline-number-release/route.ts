@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 
 // AC — günlük (vercel.json: "15 3 * * *", UTC). Dönem sonu iptali dönemi biten
 // ya da iptal edilmiş ama numarası henüz serbest bırakılmamış abonelikler için
-// Tideline'daki Twilio numarasını bırakır. Asıl tetikleyici Stripe'ın
-// customer.subscription.deleted webhook'u; bu iş kaçanları ve test modunu yakalar.
+// Tideline'daki Twilio numarasını bırakır; PayPal'da dönem sonuna ertelenmiş
+// iptalleri de dönem bitince kapatır. Asıl tetikleyici sağlayıcının iptal
+// webhook'u; bu iş kaçanları, ertelenenleri ve test modunu yakalar.
 export async function GET(request: Request) {
   const unauthorized = requireCronSecret(request);
   if (unauthorized) return unauthorized;

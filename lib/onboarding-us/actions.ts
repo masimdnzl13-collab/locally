@@ -7,7 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ensureProfile } from "@/lib/auth/ensure-profile";
 import { uniqueSlug } from "@/lib/business/slug";
 import { startBusinessSubscription } from "@/lib/billing/subscriptions";
-import { getStripeClient } from "@/lib/stripe/client";
+import { getPaymentService } from "@/lib/payments";
 import { US_STATES } from "@/lib/onboarding-us/us-states";
 import { clientIp, rateLimit } from "@/lib/security/rate-limit";
 import {
@@ -147,33 +147,29 @@ export async function startUsSignupAction(formData: FormData): Promise<{ error: 
   redirect("/kayit/us/odeme");
 }
 
-// 2. adım: ödeme. Prompt C'nin Stripe akışına bağlı — STRIPE_SECRET_KEY yoksa
-// sağlayıcı ödemeyi simüle eder ve doğrudan dönüş sayfasına (?simulated=1)
-// yönlendirir (test modu).
+// 2. adım: ödeme. ABD sağlayıcısı (PayPal) Billing Plan'ına abonelik; kullanıcı
+// PayPal'ın onay sayfasına gider. PAYPAL_CLIENT_ID/SECRET yoksa sağlayıcı
+// ödemeyi simüle eder ve doğrudan dönüş sayfasına (?simulated=1) yönlendirir
+// (test modu).
 export async function startUsCheckoutAction(): Promise<{ error: string } | void> {
   const current = await getCurrentUsSignup();
   if (!current) return { error: "We couldn't find your registration. Please start again." };
   const { signup } = current;
   if (signup.status !== "awaiting_payment") redirect("/kayit/us/durum");
 
-  let stripeConfigured: boolean;
-  try {
-    stripeConfigured = getStripeClient() !== null;
-  } catch (err) {
-    return { error: (err as Error).message };
-  }
-  const priceId = process.env.STRIPE_US_PRICE_ID;
-  if (stripeConfigured && !priceId) {
-    return { error: "Payments are not fully configured yet (STRIPE_US_PRICE_ID). Please try again later." };
+  const configured = getPaymentService("US").isConfigured();
+  const planId = process.env.PAYPAL_US_PLAN_ID;
+  if (configured && !planId) {
+    return { error: "Payments are not fully configured yet (PAYPAL_US_PLAN_ID). Please try again later." };
   }
 
   const { data: owner } = await createServiceClient().auth.admin.getUserById(signup.owner_id);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const result = await startBusinessSubscription({
     businessId: signup.business_id,
-    priceId: priceId ?? "price_test_mode",
+    priceId: planId ?? "plan_test_mode",
     customerEmail: owner?.user?.email ?? undefined,
-    successUrl: `${siteUrl}/kayit/us/durum?session_id={CHECKOUT_SESSION_ID}`,
+    successUrl: `${siteUrl}/kayit/us/durum?returned=1`,
     cancelUrl: `${siteUrl}/kayit/us/odeme?canceled=1`,
   });
   if (!result.success) return { error: result.error };

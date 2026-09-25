@@ -25,7 +25,7 @@ export interface UsSignup {
   state: string;
   postal_code: string;
   status: UsOnboardingStatus;
-  payment_mode: "stripe" | "test" | null;
+  payment_mode: "paypal" | "stripe" | "test" | null;
   tideline_phone_number: string | null;
   tideline_phone_status: "active" | "pending_manual" | null;
   provisioning_error: string | null;

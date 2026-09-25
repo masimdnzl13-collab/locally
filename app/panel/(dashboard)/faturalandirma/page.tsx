@@ -6,7 +6,7 @@ import CancelSubscriptionForm from "@/components/panel/cancel-subscription-form"
 
 export const dynamic = "force-dynamic";
 
-// TR (iyzico) ve US (Stripe) işletmeleri için ortak Faturalandırma sayfası.
+// TR (iyzico) ve US (PayPal) işletmeleri için ortak Faturalandırma sayfası.
 // Sağlayıcı businesses.market'e göre seçilir (lib/payments), veriler yalnızca
 // oturumdaki kullanıcının kendi işletmesi için çekilir (getMyBusiness).
 export default async function BillingPage() {
@@ -82,6 +82,8 @@ export default async function BillingPage() {
                     {String(live.paymentMethod.expYear).slice(-2)})
                   </span>
                 </span>
+              ) : billing.provider === "paypal" ? (
+                <span className="text-muted-foreground">{t.paypalAccount}</span>
               ) : (
                 <span className="text-muted-foreground">{t.noPaymentMethod}</span>
               )}

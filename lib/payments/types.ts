@@ -1,4 +1,4 @@
-export type PaymentProviderName = "test" | "iyzico" | "stripe";
+export type PaymentProviderName = "test" | "iyzico" | "stripe" | "paypal";
 
 export interface ChargeInput {
   amount: number;
@@ -12,11 +12,13 @@ export interface ChargeResult {
   error?: string;
 }
 
-// Abonelik ödeme sayfası sağlayıcıda (Stripe Checkout) açılır: kart bilgisi
-// hiçbir zaman Locally sunucusundan geçmez. Abonelik gerçekten başladığında
-// sağlayıcı webhook'u "subscription.activated" olayıyla haber verir.
+// Abonelik onay sayfası sağlayıcıda açılır (PayPal onay akışı / Stripe
+// Checkout): kart bilgisi hiçbir zaman Locally sunucusundan geçmez. Abonelik
+// gerçekten başladığında sağlayıcı webhook'u "subscription.activated" olayıyla
+// haber verir.
 export interface CreateSubscriptionInput {
   businessId: string;
+  // Sağlayıcıdaki plan/fiyat kimliği: PayPal'da Billing Plan (P-...), Stripe'ta price_...
   priceId: string;
   customerEmail?: string;
   successUrl: string;
@@ -106,8 +108,19 @@ export type PaymentWebhookEvent = { eventId: string; rawType: string } & (
       paid: boolean;
     }
   | { type: "one_time.expired"; sessionId: string; reference: OneTimeReference }
+  // Ödeyen onayladı ama para henüz alınmadı (PayPal Orders: sunucu "capture"
+  // etmeli). Stripe'ta yok — Checkout onayla birlikte tahsil eder.
+  | { type: "one_time.approved"; sessionId: string; reference: OneTimeReference }
   | { type: "ignored" }
 );
+
+// Tek seferlik ödemenin sunucu tarafında kesinleştirilmesi (PayPal: capture).
+// completed: para alındı, olay bilete uygulanabilir. pending: ödeyen henüz
+// onaylamadı. Stripe'ta her zaman not_needed (Checkout kendi tahsil eder).
+export type ConfirmOneTimeResult =
+  | { status: "completed"; event: Extract<PaymentWebhookEvent, { type: "one_time.completed" }> }
+  | { status: "pending" | "not_needed" }
+  | { status: "failed"; error: string };
 
 export type WebhookResult =
   | { success: true; event: PaymentWebhookEvent }
@@ -115,6 +128,8 @@ export type WebhookResult =
 
 export interface PaymentService {
   readonly provider: PaymentProviderName;
+  // Gerçek sağlayıcı anahtarları tanımlı mı? false → akışlar simüle edilir.
+  isConfigured(): boolean;
   charge(input: ChargeInput): Promise<ChargeResult>;
   createSubscription(input: CreateSubscriptionInput): Promise<CreateSubscriptionResult>;
   cancelSubscription(input: CancelSubscriptionInput): Promise<CancelSubscriptionResult>;
@@ -122,6 +137,8 @@ export interface PaymentService {
   createOneTimeCheckout(input: CreateOneTimeCheckoutInput): Promise<CreateOneTimeCheckoutResult>;
   // Yarım kalan bir ödeme sayfasını kapatır (aynı bilet için ikinci ödeme olmasın).
   expireOneTimeCheckout(sessionId: string): Promise<void>;
+  // Ödeyenin onayından sonra ödemeyi kesinleştirir (idempotent).
+  confirmOneTimeCheckout(sessionId: string, reference: OneTimeReference): Promise<ConfirmOneTimeResult>;
   // rawBody imza doğrulaması için ayrıştırılmamış gövde olmalı.
   handleWebhook(rawBody: string, headers: Headers): Promise<WebhookResult>;
 }

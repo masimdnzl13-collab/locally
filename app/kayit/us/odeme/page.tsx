@@ -4,7 +4,7 @@ import { CreditCard, FlaskConical } from "lucide-react";
 import AuthShell from "@/components/auth/auth-shell";
 import CheckoutButton from "@/components/onboarding-us/checkout-button";
 import { getCurrentUsSignup } from "@/lib/onboarding-us/signup";
-import { getStripeClient } from "@/lib/stripe/client";
+import { getPaymentService } from "@/lib/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -12,22 +12,14 @@ export const metadata: Metadata = {
   title: "Payment · Locally",
 };
 
-function stripeConfigured() {
-  try {
-    return getStripeClient() !== null;
-  } catch {
-    return true; // yanlış yapılandırılmış canlı anahtar: action hatayı gösterir
-  }
-}
-
-// P6 — 2/3: ödeme. Kart bilgisi Stripe'ın hosted Checkout sayfasında girilir;
-// STRIPE_SECRET_KEY yoksa test modunda simüle edilir.
+// P6 — 2/3: ödeme. Ödeme bilgisi sağlayıcının (PayPal) kendi onay sayfasında
+// girilir; sağlayıcı anahtarları yoksa test modunda simüle edilir.
 export default async function UsPaymentPage({ searchParams }: { searchParams: { canceled?: string } }) {
   const current = await getCurrentUsSignup();
   if (!current) redirect("/kayit/us");
   if (current.signup.status !== "awaiting_payment") redirect("/kayit/us/durum");
 
-  const testMode = !stripeConfigured();
+  const testMode = !getPaymentService("US").isConfigured();
 
   return (
     <AuthShell title="Almost there" description={`Start your Locally subscription for ${current.signup.business.name}`}>
@@ -59,7 +51,7 @@ export default async function UsPaymentPage({ searchParams }: { searchParams: { 
 
         <CheckoutButton label={testMode ? "Complete test payment" : "Continue to secure payment"} />
 
-        <p className="text-center text-xs text-muted-foreground">Payments are processed securely by Stripe.</p>
+        <p className="text-center text-xs text-muted-foreground">Payments are processed securely by PayPal.</p>
       </div>
     </AuthShell>
   );

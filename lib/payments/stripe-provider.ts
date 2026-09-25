@@ -5,6 +5,7 @@ import type {
   CancelSubscriptionResult,
   ChargeInput,
   ChargeResult,
+  ConfirmOneTimeResult,
   CreateOneTimeCheckoutInput,
   CreateOneTimeCheckoutResult,
   CreateSubscriptionInput,
@@ -17,6 +18,10 @@ import type {
   WebhookResult,
 } from "@/lib/payments/types";
 
+// ŞU AN AKTİF DEĞİL: ABD pazarı PayPal'a taşındı (bkz. lib/payments/index.ts,
+// lib/payments/paypal-provider.ts). Bu sağlayıcı ileride yeniden gerekebilir
+// diye referans olarak duruyor; /api/webhooks/stripe route'u da yerinde.
+//
 // ABD pazarı (businesses.market = 'US') ödeme sağlayıcısı. STRIPE_SECRET_KEY
 // yoksa gerçek API'ye hiç gidilmez, simüle edilir (lib/iyzico ile aynı desen);
 // sk_test_ anahtarıyla Stripe'ın test modunda gerçek API çağrıları yapılır.
@@ -118,6 +123,21 @@ export function toWebhookEvent(event: Stripe.Event): PaymentWebhookEvent {
 
 class StripePaymentProvider implements PaymentService {
   readonly provider = "stripe" as const;
+
+  isConfigured() {
+    try {
+      return getStripeClient() !== null;
+    } catch {
+      // sk_live_ koruması: anahtar var ama kullanılamaz — yapılandırılmış say,
+      // çağrılar anlaşılır hatayla dönsün, sessizce simülasyona düşmesin.
+      return true;
+    }
+  }
+
+  // Stripe Checkout ödemeyi onayla birlikte tahsil eder; ayrıca kesinleştirme yok.
+  async confirmOneTimeCheckout(): Promise<ConfirmOneTimeResult> {
+    return { status: "not_needed" };
+  }
 
   // Stripe'ta kart bilgisi Locally sunucusundan hiç geçmez; tek seferlik
   // ödemeler createOneTimeCheckout (Checkout, mode: "payment") ile alınır.

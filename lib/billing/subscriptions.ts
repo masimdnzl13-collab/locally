@@ -10,8 +10,10 @@ import type {
 import { applyTicketPaymentEvent } from "@/lib/events/ticket-payments";
 import type { BusinessMarket } from "@/lib/types";
 
+export type SubscriptionProvider = "stripe" | "iyzico" | "paypal";
+
 // İşletme aboneliği akışları. Sağlayıcı businesses.market'e göre seçilir
-// (TR → iyzico, US → Stripe). Bu fonksiyonlar yetki kontrolü YAPMAZ —
+// (TR → iyzico, US → PayPal). Bu fonksiyonlar yetki kontrolü YAPMAZ —
 // çağıran server action, kullanıcının işletmenin sahibi olduğunu (bkz.
 // getMyBusiness) doğrulamış olmalı.
 
@@ -45,7 +47,7 @@ export async function cancelBusinessSubscription(
 
   const { data: subscription } = await createServiceClient()
     .from("business_subscriptions")
-    .select("provider_subscription_id")
+    .select("provider_subscription_id, current_period_end")
     .eq("business_id", businessId)
     .neq("status", "canceled")
     .order("created_at", { ascending: false })
@@ -53,11 +55,26 @@ export async function cancelBusinessSubscription(
     .maybeSingle();
 
   if (!subscription) return { success: false, error: "Aktif abonelik bulunamadı." };
+  const service = getPaymentService(market);
+
+  // Dönem sonu iptalinde erişim current_period_end'e kadar sürer. PayPal'da
+  // "dönem sonunda iptal" olmadığından abonelik PayPal'da hemen iptal edilir;
+  // dönem sonu bilinmiyorsa (ör. ilk tahsilat olayı henüz işlenmedi) iptalden
+  // ÖNCE sağlayıcıdan okunur, sonra okunamaz.
+  if (options.atPeriodEnd && !subscription.current_period_end) {
+    const live = await service.getSubscriptionSummary(subscription.provider_subscription_id);
+    if (live.success && live.summary.currentPeriodEnd) {
+      await createServiceClient()
+        .from("business_subscriptions")
+        .update({ current_period_end: live.summary.currentPeriodEnd, updated_at: new Date().toISOString() })
+        .eq("provider_subscription_id", subscription.provider_subscription_id);
+    }
+  }
 
   // Durum burada değil, sağlayıcının "subscription.canceled" webhook'unda
   // güncellenir — tek doğruluk kaynağı sağlayıcı kalsın. "Dönem sonunda"
   // iptalde abonelik dönem bitene kadar aktif kalır; yalnızca işaretlenir.
-  const result = await getPaymentService(market).cancelSubscription({
+  const result = await service.cancelSubscription({
     subscriptionId: subscription.provider_subscription_id,
     atPeriodEnd: options.atPeriodEnd,
   });
@@ -82,7 +99,7 @@ export async function cancelBusinessSubscription(
 
 export interface BusinessBilling {
   market: BusinessMarket;
-  provider: "stripe" | "iyzico";
+  provider: SubscriptionProvider;
   subscription: {
     status: "active" | "past_due" | "canceled";
     cancelAtPeriodEnd: boolean;
@@ -103,16 +120,18 @@ export interface BusinessBilling {
  * getMyBusiness ile doğrulamış olmalı.
  */
 export async function getBusinessBilling(businessId: string, market: BusinessMarket): Promise<BusinessBilling> {
-  const provider = market === "US" ? "stripe" : "iyzico";
+  const marketProvider: SubscriptionProvider = market === "US" ? "paypal" : "iyzico";
   const { data: row } = await createServiceClient()
     .from("business_subscriptions")
-    .select("provider_subscription_id, status, cancel_at_period_end, current_period_end, last_payment_at, canceled_at")
+    .select("provider, provider_subscription_id, status, cancel_at_period_end, current_period_end, last_payment_at, canceled_at")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!row) return { market, provider, subscription: null, live: null, liveError: null, simulated: false };
+  if (!row) return { market, provider: marketProvider, subscription: null, live: null, liveError: null, simulated: false };
+  // Mevcut abonelik hangi sağlayıcıda açıldıysa o gösterilir (Stripe'tan kalma olabilir).
+  const provider = (row.provider as SubscriptionProvider | null) ?? marketProvider;
 
   const subscription = {
     status: row.status as "active" | "past_due" | "canceled",
@@ -135,10 +154,16 @@ export async function getBusinessBilling(businessId: string, market: BusinessMar
 // business_subscriptions'a, tek seferlik ödemeler (etkinlik bileti) bilete
 // yansır. Olay payment_events'e önce yazılır; aynı olay tekrar gelirse insert
 // benzersizlik ihlaline düşer ve işlenmeden atlanır.
+//
+// "deferred": iptal olayı geldi ama abonelik dönem sonuna kadar sürüyor
+// (PayPal'da dönem sonu iptali) — abonelik aktif kalır, numara bırakılmaz;
+// dönem bitince günlük iş kapatır (lib/billing/number-release.ts).
+export type WebhookOutcome = "applied" | "duplicate" | "ignored" | "deferred";
+
 export async function applyPaymentWebhookEvent(
-  provider: "stripe" | "iyzico",
+  provider: SubscriptionProvider,
   event: PaymentWebhookEvent
-): Promise<"applied" | "duplicate" | "ignored"> {
+): Promise<WebhookOutcome> {
   if (event.type === "ignored") return "ignored";
 
   const supabase = createServiceClient();
@@ -155,10 +180,10 @@ export async function applyPaymentWebhookEvent(
   }
 
   try {
-    if (event.type === "one_time.completed" || event.type === "one_time.expired") {
+    if (event.type === "one_time.completed" || event.type === "one_time.expired" || event.type === "one_time.approved") {
       await applyTicketPaymentEvent(event);
-    } else {
-      await applyToSubscription(supabase, provider, event);
+    } else if ((await applyToSubscription(supabase, provider, event)) === "deferred") {
+      return "deferred";
     }
   } catch (err) {
     // Log satırı kalırsa sağlayıcının yeniden denemesi "duplicate" sayılıp
@@ -175,9 +200,9 @@ export async function applyPaymentWebhookEvent(
 
 async function applyToSubscription(
   supabase: ReturnType<typeof createServiceClient>,
-  provider: "stripe" | "iyzico",
-  event: Exclude<PaymentWebhookEvent, { type: "ignored" | "one_time.completed" | "one_time.expired" }>
-): Promise<void> {
+  provider: SubscriptionProvider,
+  event: Exclude<PaymentWebhookEvent, { type: "ignored" | "one_time.completed" | "one_time.expired" | "one_time.approved" }>
+): Promise<"deferred" | void> {
   const now = new Date().toISOString();
 
   switch (event.type) {
@@ -220,6 +245,15 @@ async function applyToSubscription(
       break;
     }
     case "subscription.canceled": {
+      const { data: row, error: readError } = await supabase
+        .from("business_subscriptions")
+        .select("cancel_at_period_end, current_period_end")
+        .eq("provider_subscription_id", event.subscriptionId)
+        .maybeSingle();
+      if (readError) throw new Error(readError.message);
+      if (row?.cancel_at_period_end && row.current_period_end && new Date(row.current_period_end as string) > new Date()) {
+        return "deferred";
+      }
       const { error } = await supabase
         .from("business_subscriptions")
         .update({ status: "canceled", canceled_at: now, updated_at: now })

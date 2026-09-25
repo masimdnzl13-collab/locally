@@ -8,18 +8,25 @@ import { cancelMySubscriptionAction } from "@/lib/billing/actions";
 //
 // Mocked: getMyBusiness (the RLS boundary — returns the caller's business), the Supabase service
 // client (in-memory fake with two businesses), the payment provider (a spy standing in for
-// Stripe's subscriptions.cancel/update), revalidatePath, and the Twilio-number release hook (AC).
+// PayPal's subscription cancel + summary), revalidatePath, and the Twilio-number release hook (AC).
 
 const state = vi.hoisted(() => ({
   myBusiness: null as { id: string; market: "US" | "TR" } | null,
   db: null as ReturnType<typeof import("./helpers/fake-supabase").createFakeSupabase> | null,
   cancel: vi.fn(async () => ({ success: true as const, simulated: false })),
+  summary: vi.fn(async () => ({
+    success: true as const,
+    simulated: false,
+    summary: { currentPeriodEnd: "2026-10-25T10:00:00Z" },
+  })),
   release: vi.fn(async () => "released"),
 }));
 
 vi.mock("@/lib/business/current", () => ({ getMyBusiness: async () => state.myBusiness }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => state.db }));
-vi.mock("@/lib/payments", () => ({ getPaymentService: () => ({ cancelSubscription: state.cancel }) }));
+vi.mock("@/lib/payments", () => ({
+  getPaymentService: () => ({ cancelSubscription: state.cancel, getSubscriptionSummary: state.summary }),
+}));
 vi.mock("@/lib/billing/number-release", () => ({ releaseNumberForSubscription: state.release }));
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
@@ -78,7 +85,13 @@ describe("cancelMySubscriptionAction", () => {
     const result = await cancelMySubscriptionAction(form({ businessId: "biz-B", when: "period_end", confirm: "yes" }));
     expect(result).toEqual({ success: true, atPeriodEnd: true });
     const subs = state.db!.tables.business_subscriptions;
-    expect(subs.find((s) => s.provider_subscription_id === "sub_A")).toMatchObject({ cancel_at_period_end: true });
+    // PayPal has no native end-of-period cancel and stops reporting the period end once cancelled,
+    // so the period end is read from the provider BEFORE cancelling.
+    expect(state.summary).toHaveBeenCalledWith("sub_A");
+    expect(subs.find((s) => s.provider_subscription_id === "sub_A")).toMatchObject({
+      cancel_at_period_end: true,
+      current_period_end: "2026-10-25T10:00:00Z",
+    });
     expect(subs.find((s) => s.provider_subscription_id === "sub_B")).toMatchObject({ cancel_at_period_end: false });
     expect(state.release).not.toHaveBeenCalled();
   });

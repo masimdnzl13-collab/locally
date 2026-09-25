@@ -28,7 +28,7 @@ export function isMenuReady(readiness: TidelineBrainReadiness) {
   return readiness.hoursDays >= MIN_HOURS_DAYS && readiness.menuItems >= MIN_MENU_ITEMS;
 }
 
-export async function markUsSignupPaid(businessId: string, payment: { mode: "stripe" | "test"; ref: string }) {
+export async function markUsSignupPaid(businessId: string, payment: { mode: "paypal" | "stripe" | "test"; ref: string }) {
   await createServiceClient()
     .from("us_onboarding")
     .update({
@@ -123,6 +123,13 @@ export async function activateUsSignup(businessId: string): Promise<UsSignup | n
 // Durum sayfası aynı adımları idempotent olarak yine dener; buradaki bir
 // hata kullanıcıyı tıkamaz.
 export async function completeUsSignupFromWebhook(businessId: string, subscriptionId: string) {
-  await markUsSignupPaid(businessId, { mode: "stripe", ref: subscriptionId });
+  // Ödeme modu, aboneliği yazan sağlayıcıdan (webhook bu satırı az önce yazdı).
+  const { data: sub } = await createServiceClient()
+    .from("business_subscriptions")
+    .select("provider")
+    .eq("provider_subscription_id", subscriptionId)
+    .maybeSingle();
+  const mode = sub?.provider === "stripe" ? "stripe" : "paypal";
+  await markUsSignupPaid(businessId, { mode, ref: subscriptionId });
   return activateUsSignup(businessId);
 }

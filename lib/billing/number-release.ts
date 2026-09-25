@@ -76,6 +76,18 @@ export async function releaseNumberForSubscription(providerSubscriptionId: strin
 // henüz serbest bırakılmamış abonelikler.
 export async function releaseNumbersForEndedSubscriptions(now = new Date()) {
   const supabase = createServiceClient();
+
+  // Dönem sonu iptali dönemi biten abonelikleri kapat. Stripe bunu dönem
+  // bitince kendi webhook'uyla yapar; PayPal'da iptal olayı iptal anında gelir
+  // ve dönem sonuna ertelenir ("deferred", bkz. applyPaymentWebhookEvent) —
+  // kapanış buradan olur.
+  const { error: closeError } = await supabase
+    .from("business_subscriptions")
+    .update({ status: "canceled", canceled_at: now.toISOString(), updated_at: now.toISOString() })
+    .eq("cancel_at_period_end", true)
+    .neq("status", "canceled")
+    .lt("current_period_end", now.toISOString());
+  if (closeError) throw new Error(closeError.message);
   const { data, error } = await supabase
     .from("business_subscriptions")
     .select("provider_subscription_id, status, cancel_at_period_end, current_period_end")

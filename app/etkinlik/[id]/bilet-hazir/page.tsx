@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { getTicketPaymentStatus, getTicketWithQr } from "@/lib/events/queries";
+import { confirmUsTicketPayment } from "@/lib/events/ticket-payments";
 import { generateQrDataUrl } from "@/lib/qr";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -11,10 +12,23 @@ export default async function BiletHazirPage({
   searchParams,
   params,
 }: {
-  searchParams: { ticket?: string };
+  // token: PayPal'ın onaydan sonra eklediği sipariş kimliği.
+  searchParams: { ticket?: string; token?: string };
   params: { id: string };
 }) {
   if (!searchParams.ticket) redirect(`/etkinlik/${params.id}`);
+
+  // PayPal'da para, ödeyen onaylayınca değil sunucu "capture" edince alınır.
+  // Bilet sipariş kimliğiyle bulunur (URL'deki ticket'a güvenilmez); capture
+  // idempotent, webhook da aynı işi yapabilir. 30 dakikayı geçmiş onay tahsil
+  // edilmez (bkz. lib/events/ticket-payments.ts).
+  if (searchParams.token) {
+    try {
+      await confirmUsTicketPayment(searchParams.token);
+    } catch (err) {
+      console.error("[bilet-hazir] capture", searchParams.token, (err as Error).message);
+    }
+  }
 
   const ticket = await getTicketWithQr(searchParams.ticket);
   if (!ticket) {
