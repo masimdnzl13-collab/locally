@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { requireAdminSession } from "@/lib/admin/admin-session";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { SALES_LEAD_PHOTO_BUCKET } from "@/lib/admin/pipeline-constants";
 
 // AN — sahada telefondan hızlı aday ekleme (/admin/isletme-hatti/ekle).
@@ -22,7 +22,7 @@ export type FieldLeadResult =
 const text = (fd: FormData, key: string, max: number) => String(fd.get(key) ?? "").trim().slice(0, max);
 
 export async function createFieldLeadAction(formData: FormData): Promise<FieldLeadResult> {
-  const { supabase, userId } = await requireAdminSession("/admin/isletme-hatti/ekle");
+  const { supabase, userId } = await requireAdmin("action:createFieldLead");
   const name = text(formData, "businessName", 120);
   if (!name) return { error: "Restoran adı gerekli." };
   const city = text(formData, "city", 80);

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminSession } from "@/lib/admin/admin-session";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 // AO — /admin/gizlilik-talepleri kuyruğunda talebin durumunu ve iç notunu günceller.
 const STATUSES = ["new", "in_progress", "completed", "rejected"] as const;
@@ -9,7 +9,7 @@ type Status = (typeof STATUSES)[number];
 const PATH = "/admin/gizlilik-talepleri";
 
 export async function updatePrivacyRequestAction(formData: FormData): Promise<{ error?: string; success?: true }> {
-  const { supabase, userId } = await requireAdminSession(PATH);
+  const { supabase, userId } = await requireAdmin("action:updatePrivacyRequest");
   const id = String(formData.get("requestId") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim() as Status;
   const note = String(formData.get("adminNote") ?? "").trim().slice(0, 2000);
