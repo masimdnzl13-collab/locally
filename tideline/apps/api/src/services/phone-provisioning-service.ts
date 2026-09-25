@@ -21,7 +21,7 @@ const areaCodeOf = (phone?: string | null) => {
 
 // Twilio "Available Phone Numbers" + "Incoming Phone Numbers" APIs: find a voice+SMS capable US
 // local number (preferring the restaurant's own area code), buy it, and point its voice webhooks
-// at this API so calls route straight into the receptionist.
+// and SMS webhooks at this API so calls route straight into the receptionist and STOP texts are honoured.
 export class TwilioNumberPurchaser implements NumberPurchaser {
   private readonly auth: string;
   constructor(private readonly accountSid: string, authToken: string, private readonly publicUrl: string) {
@@ -55,6 +55,9 @@ export class TwilioNumberPurchaser implements NumberPurchaser {
         VoiceMethod: "POST",
         StatusCallback: new URL("/api/v1/telephony/twilio/status", this.publicUrl).toString(),
         StatusCallbackMethod: "POST",
+        // Inbound texts (STOP/START/HELP) → customer_sms_preferences; see notifications/sms-inbound-routes.ts.
+        SmsUrl: new URL("/api/v1/telephony/twilio/sms", this.publicUrl).toString(),
+        SmsMethod: "POST",
       }),
     });
     if (!bought.sid || !bought.phone_number) throw new Error("Twilio did not return the purchased number");

@@ -42,14 +42,18 @@ Required: `DATABASE_URL`, `JWT_SECRET` (**must equal Locally's
 `AI_API_KEY`, and the two domains (`APP_DOMAIN`, `API_DOMAIN`), which become
 `APP_URL`, `API_URL` and `VOICE_PUBLIC_URL`.
 
-Recommended: `ALLOWED_FRAME_ANCESTORS` (Locally's origin, so the dashboard can be
-embedded in the Locally panel), plus `ALERT_WEBHOOK_URL`, or `RESEND_API_KEY` +
-`ALERT_EMAIL_TO` + `ALERT_EMAIL_FROM`, so telephony and cost alerts reach you.
+Also required in production: `ALLOWED_FRAME_ANCESTORS` (Locally's origin, so the
+dashboard can be embedded in the Locally panel), `REDIS_URL`, and an alert channel:
+`ALERT_WEBHOOK_URL`, or `RESEND_API_KEY` + `ALERT_EMAIL_TO` + `ALERT_EMAIL_FROM`.
 
-In production the API refuses to start with mock providers, `localhost` CORS
-origins, placeholder secrets or unsigned Twilio webhooks (see
-`apps/api/src/config/env.ts`). A misconfigured deploy fails at startup instead of
-running half-working.
+In production the API and worker refuse to start when anything above is missing,
+still a placeholder, `localhost`, a mock provider or unsigned Twilio webhooks, and
+print **every** problem at once (`productionEnvProblems` in
+`apps/api/src/config/env.ts`). The web image fails to build without
+`VITE_API_URL`, and its container refuses to start without
+`ALLOWED_FRAME_ANCESTORS` when `REQUIRE_FRAME_ANCESTORS=true` (set in
+`apps/web/fly.toml`). A misconfigured deploy fails at startup instead of running
+half-working.
 
 Generate the secrets with `openssl rand -base64 48`.
 
@@ -234,11 +238,109 @@ and **Caddy**, which terminates TLS and gets certificates automatically.
 
 1. `curl https://API_DOMAIN/ready` → `{"status":"ready"}`.
 2. In the Twilio console, set the phone number's **Voice webhook** to
-   `https://API_DOMAIN/api/v1/telephony/twilio/incoming` (POST) and the
-   **status callback** to `https://API_DOMAIN/api/v1/telephony/twilio/status`.
+   `https://API_DOMAIN/api/v1/telephony/twilio/incoming` (POST), the
+   **status callback** to `https://API_DOMAIN/api/v1/telephony/twilio/status`, and
+   the **Messaging webhook** ("A message comes in") to
+   `https://API_DOMAIN/api/v1/telephony/twilio/sms` (POST) so STOP/START texts are
+   recorded (TCPA). Numbers bought through provisioning get all three
+   automatically; `node scripts/twilio-sms-webhooks.mjs` (repo root) checks every
+   number on the account and fixes the SMS webhook with `--apply`.
 3. In Locally's environment, set `TIDELINE_API_URL=https://API_DOMAIN`,
    `TIDELINE_WEB_URL=https://APP_DOMAIN` and `TIDELINE_JWT_SECRET` (same value
    as Tideline's `JWT_SECRET`).
 4. Add an external uptime monitor on `https://API_DOMAIN/ready`. The built-in
    telephony alert cannot fire if the whole process is down.
 5. Place a test call and watch `docker compose logs -f api` or `fly logs`.
+
+---
+
+## Disaster recovery (Felaket kurtarma)
+
+Calls, transcripts, orders and reservations exist only in Tideline's Postgres;
+restaurants, owners, subscriptions and the sales pipeline only in Locally's
+Supabase database. Without a backup that can be restored, losing either one
+cannot be undone.
+
+### What is backed up (checked 2026-09-26)
+
+| Data | Where | Automatic backup | Status |
+|---|---|---|---|
+| Tideline: calls, transcripts, orders, reservations, SMS opt-outs | Postgres on the chosen host (Fly Managed Postgres or external) | Fly MPG: daily backups + point-in-time recovery | **Not verified yet:** Fly CLI was not logged in where this was written. Check it with the list below. |
+| Locally: businesses, users, subscriptions, pipeline, privacy requests | Supabase project `locally` (`flgkzywlbrpqnarseyww`, Frankfurt) | Free plan: none. Pro: daily, 7 days; PITR is a paid add-on | **No restorable backup exists.** `supabase backups list` shows PITR off and no backup timestamps. Upgrade to Pro (or add PITR) before launch. |
+| Redis (Upstash) | Notification queue | Not needed | The `outbox_events` table in Postgres is the source of truth; the worker re-queues pending events. |
+| Secrets, Twilio numbers | Fly secrets, Vercel env, Twilio console | Not data | Keep a copy of every secret in a password manager; Fly/Vercel don't show them back. |
+
+### Monthly check (5 minutes)
+
+- Supabase: `supabase backups list --project-ref flgkzywlbrpqnarseyww`
+  should show a backup from the last 24 hours (Dashboard → Database → Backups).
+- Fly: Dashboard → Managed Postgres → the cluster → Backups should show a recent
+  daily backup (`fly mpg --help` for the CLI equivalent). With an external
+  provider, check its backup page.
+- Restore drill, below: at least every quarter and after any large migration.
+
+### Restore drill (the real test)
+
+`deploy/restore-drill.sh` takes a logical backup (`pg_dump`), restores it into an
+**empty** Postgres and compares every table's row count and the latest migration.
+It exits 1 on any difference.
+
+```sh
+# With Docker (starts and removes a scratch postgres:16):
+SOURCE_DATABASE_URL='postgresql://<admin-user>:...@<host>/<db>' bash deploy/restore-drill.sh
+# Without Docker: local pg_dump/pg_restore/psql 16 and an empty database you created:
+SOURCE_DATABASE_URL=... TARGET_DATABASE_URL=postgresql://.../empty_db PG_BIN=/path/to/pgsql/bin \
+  bash deploy/restore-drill.sh
+```
+
+Use an admin connection that bypasses RLS: the tables use `FORCE ROW LEVEL
+SECURITY`, so an ordinary role cannot dump them. The dump file stays in
+`backups/` (git-ignored). It holds customer data: delete it or keep it encrypted.
+
+Last run: 2026-09-26, local Postgres 16.14, all migrations through
+`023_sms_opt_out.sql` plus the development seed: 42 tables and 144 rows restored
+identically, all 28 RLS policies and forced-RLS tables back, and the API's
+migrator found nothing pending on the restored copy. Dump 1 s, restore 2 s. A
+drill against production data has **not** been run yet; run it once the
+production database exists.
+
+Locally (Supabase) depends on its `auth` and `storage` schemas, so a plain
+`pg_restore` into vanilla Postgres is not a meaningful test. On Pro, use
+Dashboard → Database → Backups → "Restore to a new project" to test restoring
+to a separate project.
+
+### If data is lost or corrupted (bad migration, accidental delete)
+
+1. **Stop writes:** `fly scale count app=0 worker=0 -a <api-app>`. Calls go
+   unanswered, so tell restaurants to forward to their own line.
+2. **Pick the restore point:** the last moment before the incident (PITR), or
+   the latest daily backup.
+3. **Restore into a new database, never over the damaged one:** Fly MPG
+   restore to a new cluster, or `pg_restore --no-owner` a dump into an empty
+   database. Keep the damaged database for comparison.
+4. **Point the app at it:** `fly secrets set DATABASE_URL=... -a <api-app>`,
+   then `fly scale count app=1 worker=1`. Check `curl https://API_DOMAIN/ready`
+   and place a test call.
+5. **Locally:** Supabase Dashboard → Database → Backups → Restore (Pro/PITR).
+   This restores the project in place, and Locally is down while it runs.
+6. Write down what was lost: the time between the restore point and the
+   incident. Affected restaurants may need to re-enter orders from that window.
+
+### If the server crashes
+
+- Fly restarts crashed machines by itself. The database is separate, so no data
+  is lost; only calls in progress drop.
+- A bad deploy: `fly releases -a <api-app>` and redeploy the previous image
+  (`fly deploy --image <previous-image> -a <api-app>`).
+- The machine won't start: `fly logs -a <api-app>`. A missing environment
+  variable is printed as a list at startup (see "Secrets and settings").
+- Region or provider outage: create the apps in another region
+  (`deploy/fly-deploy.sh` with `FLY_REGION`), restore the latest backup there,
+  then update DNS and the Twilio webhooks.
+
+### Targets
+
+With daily backups up to 24 hours of data can be lost (RPO); with PITR, minutes.
+Aim to be back within 1 hour (RTO). Keep an owner-held list of who can log in to
+Fly, Supabase, Twilio and Vercel. If only one person has access, recovery waits
+for that person.

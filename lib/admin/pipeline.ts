@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchTidelineActivity, type TidelineActivity } from "@/lib/tideline/service-api";
-import type { SalesLeadStatus } from "@/lib/admin/pipeline-constants";
+import { SALES_LEAD_PHOTO_BUCKET, type SalesLeadStatus } from "@/lib/admin/pipeline-constants";
 
 export interface SalesLead {
   id: string;
@@ -12,6 +12,9 @@ export interface SalesLead {
   notes: string | null;
   business_id: string | null;
   created_at: string;
+  photo_path: string | null;
+  /** Kartvizit/tabela fotoğrafı (AN), bir saatlik imzalı URL. */
+  photo_url?: string | null;
 }
 
 interface UsBusiness {
@@ -56,7 +59,7 @@ export async function getSalesPipeline(): Promise<SalesPipeline> {
   const [leadsRes, businessesRes] = await Promise.all([
     supabase
       .from("sales_leads")
-      .select("id, business_name, city, visited_on, status, contact, notes, business_id, created_at")
+      .select("id, business_name, city, visited_on, status, contact, notes, business_id, created_at, photo_path")
       .order("visited_on", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase
@@ -67,6 +70,12 @@ export async function getSalesPipeline(): Promise<SalesPipeline> {
   ]);
 
   const leads = (leadsRes.data ?? []) as SalesLead[];
+  const photoPaths = leads.map((l) => l.photo_path).filter((p): p is string => Boolean(p));
+  if (photoPaths.length) {
+    const { data: signed } = await supabase.storage.from(SALES_LEAD_PHOTO_BUCKET).createSignedUrls(photoPaths, 3600);
+    const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+    for (const lead of leads) lead.photo_url = lead.photo_path ? urlByPath.get(lead.photo_path) ?? null : null;
+  }
   const businesses = (businessesRes.data ?? []) as UsBusiness[];
   const leadByBusiness = new Map(leads.filter((l) => l.business_id).map((l) => [l.business_id!, l]));
 

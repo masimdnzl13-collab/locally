@@ -3,6 +3,12 @@
 # 20-envsubst-on-templates.sh so FRAME_ANCESTORS_CSP exists when templates render.
 # ALLOWED_FRAME_ANCESTORS is comma-separated (same as the API); CSP needs spaces.
 if [ -z "$(echo "${ALLOWED_FRAME_ANCESTORS:-}" | tr -d ' ,')" ]; then
+  # Production (fly.toml sets REQUIRE_FRAME_ANCESTORS=true): without it Locally cannot embed the
+  # dashboard, so refuse to start rather than serve a page that only localhost may frame.
+  if [ "${REQUIRE_FRAME_ANCESTORS:-}" = "true" ]; then
+    echo "Refusing to start: ALLOWED_FRAME_ANCESTORS is missing (set it to Locally's origin, e.g. fly secrets set ALLOWED_FRAME_ANCESTORS=https://locally.example.com)" >&2
+    exit 1
+  fi
   echo "ALLOWED_FRAME_ANCESTORS ayarlanmadı, sadece localhost'a izin veriliyor" >&2
   ALLOWED_FRAME_ANCESTORS="http://localhost:3001,http://localhost:5173"
 fi

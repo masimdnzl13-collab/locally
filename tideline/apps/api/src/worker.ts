@@ -1,13 +1,13 @@
 import { createDb } from "./database/db.js";
 import { migrate } from "./database/migrate.js";
-import { loadEnv } from "./config/env.js";
+import { loadEnvOrExit } from "./config/env.js";
 import { OutboxProcessor, startNotificationWorker } from "./notifications/outbox-worker.js";
 import { TwilioSmsProvider } from "./notifications/twilio-sms-provider.js";
 import type { MessagingProvider } from "./notifications/contracts.js";
 import { createAlertNotifier } from "./alerts/notifier.js";
 import { CostGuard, CostService, costRatesFromEnv, notifyAdminAction } from "./services/cost-service.js";
 
-const env = loadEnv();
+const env = loadEnvOrExit("worker");
 const db = createDb(env.DATABASE_URL);
 const provider: MessagingProvider =
   env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN

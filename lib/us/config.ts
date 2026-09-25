@@ -1,4 +1,4 @@
-// ABD pazarı (Tideline) genel sayfalarının tek kaynağı: /us, /terms, /qr.
+// ABD pazarı (Tideline) genel sayfalarının tek kaynağı: /us, /terms, /privacy, /qr.
 // Fiyat değişirse burası + Tideline'daki SUBSCRIPTION_PRICE_USD birlikte güncellenmeli
 // (maliyet uyarısı eşiği o fiyatın COST_ALERT_THRESHOLD_RATIO katıdır).
 export const US_MONTHLY_PRICE_USD = 199;
@@ -6,6 +6,9 @@ export const US_MONTHLY_PRICE_USD = 199;
 // Prompt D kayıt akışı (lib/onboarding-us) — sözleşme checkbox'ı /terms'e bağlanır.
 export const US_SIGNUP_HREF = "/kayit/us";
 export const US_TERMS_PATH = "/terms";
+// AO — gizlilik politikası + veri silme / erişim talebi formu.
+export const US_PRIVACY_PATH = "/privacy";
+export const US_PRIVACY_EFFECTIVE_DATE = "September 26, 2026";
 
 // lib/onboarding-us/signup.ts → AGREEMENT_VERSION ile aynı olmalı: kayıtta
 // kabul edilen sürüm, /terms'te yayınlanan metnin sürümüdür.
@@ -40,6 +43,6 @@ const US_PUBLIC_PREFIXES = ["/us", US_SIGNUP_HREF, US_QR_PATH];
 
 export function isUsPublicPath(pathname: string | null) {
   if (!pathname) return false;
-  if (pathname === US_TERMS_PATH) return true;
+  if (pathname === US_TERMS_PATH || pathname === US_PRIVACY_PATH) return true;
   return US_PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
