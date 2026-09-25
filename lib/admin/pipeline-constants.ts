@@ -11,3 +11,6 @@ export const SALES_LEAD_STATUS_LABELS: Record<SalesLeadStatus, string> = {
   reddetti: "Reddetti",
 };
 export const SALES_LEAD_STATUSES = Object.keys(SALES_LEAD_STATUS_LABELS) as SalesLeadStatus[];
+
+// AN — adayların kartvizit/tabela fotoğrafları (özel bucket, yalnızca admin).
+export const SALES_LEAD_PHOTO_BUCKET = "sales-lead-photos";

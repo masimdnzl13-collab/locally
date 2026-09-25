@@ -7,6 +7,10 @@ primary_region = "iad"
 [build]
   dockerfile = "Dockerfile"
 
+[env]
+  # docker/15-frame-ancestors.envsh: container refuses to start without ALLOWED_FRAME_ANCESTORS.
+  REQUIRE_FRAME_ANCESTORS = "true"
+
 [http_service]
   internal_port = 80
   force_https = true

@@ -13,11 +13,11 @@
 #   export STT_API_KEY=...               # Deepgram (TTS_API_KEY verilmezse aynısı)
 #   export AI_API_KEY=sk-ant-...
 #   export LOCALLY_ORIGIN=https://locally.example.com   # CORS + iframe izni
+#   export ALERT_WEBHOOK_URL=https://hooks.slack.com/...   # ya da RESEND_API_KEY + ALERT_EMAIL_TO + ALERT_EMAIL_FROM
 #   bash deploy/fly-deploy.sh
 #
 # Opsiyonel: FLY_API_APP / FLY_WEB_APP (uygulama adları; Fly'da global benzersiz),
-# FLY_ORG, FLY_REGION, API_DOMAIN / APP_DOMAIN (özel alan adı yoksa *.fly.dev),
-# ALERT_WEBHOOK_URL, RESEND_API_KEY, ALERT_EMAIL_TO, ALERT_EMAIL_FROM.
+# FLY_ORG, FLY_REGION, API_DOMAIN / APP_DOMAIN (özel alan adı yoksa *.fly.dev).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -41,6 +41,8 @@ for var in DATABASE_URL REDIS_URL JWT_SECRET TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKE
   [[ -n "${!var:-}" ]] || missing+=("$var")
 done
 ((${#missing[@]} == 0)) || die "eksik ortam değişkenleri: ${missing[*]}"
+# API üretimde uyarı kanalı olmadan açılmaz (config/env.ts productionEnvProblems).
+[[ -n "${ALERT_WEBHOOK_URL:-}" || ( -n "${RESEND_API_KEY:-}" && -n "${ALERT_EMAIL_TO:-}" && -n "${ALERT_EMAIL_FROM:-}" ) ]]   || die "uyarı kanalı yok: ALERT_WEBHOOK_URL ya da RESEND_API_KEY + ALERT_EMAIL_TO + ALERT_EMAIL_FROM ver"
 [[ "$JWT_SECRET" != *replace-with* ]] || die "JWT_SECRET yer tutucu; Locally'deki TIDELINE_JWT_SECRET değerini kullan."
 
 ensure_app() {

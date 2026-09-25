@@ -20,6 +20,8 @@ import { RestaurantBrainService } from "./services/restaurant-brain-service.js";
 import { StatsService } from "./services/stats-service.js";
 import { createVoiceRuntime, type VoiceRuntime } from "./voice/runtime.js";
 import { registerFormParser, registerTelephonyRoutes } from "./voice/telephony-routes.js";
+import { registerSmsInboundRoutes } from "./notifications/sms-inbound-routes.js";
+import { toE164 } from "./notifications/sms-keywords.js";
 import { validateTwilioSignature } from "./voice/twilio-provider.js";
 declare module "fastify" {
   interface FastifyRequest {
@@ -445,9 +447,18 @@ export function createApp(
           language: z.enum(["EN", "ES"]).default("EN"),
         })
         .parse(req.body);
+      // TCPA: only the customer can undo their own STOP (by texting START); the owner can't re-subscribe them.
+      const optedOut = (
+        await db.query<{ n: number }>(
+          "SELECT COUNT(*)::int AS n FROM customer_sms_preferences WHERE restaurant_id=$1 AND phone IN ($2,$3) AND consent=false AND consent_source<>'owner'",
+          [id, b.phone, toE164(b.phone)],
+        )
+      ).rows[0];
+      if (b.consent && Number(optedOut?.n ?? 0) > 0)
+        throw new AppError("CONFLICT", "This customer opted out by text (STOP); only they can resubscribe by texting START", 409);
       await db.query(
-        "INSERT INTO customer_sms_preferences(restaurant_id,phone,consent,language) VALUES($1,$2,$3,$4) ON CONFLICT(restaurant_id,phone) DO UPDATE SET consent=EXCLUDED.consent,language=EXCLUDED.language,updated_at=NOW()",
-        [id, b.phone, b.consent, b.language],
+        "INSERT INTO customer_sms_preferences(restaurant_id,phone,consent,language,consent_source,opted_out_at) VALUES($1,$2,$3,$4,'owner',CASE WHEN $3 THEN NULL ELSE NOW() END) ON CONFLICT(restaurant_id,phone) DO UPDATE SET consent=EXCLUDED.consent,language=EXCLUDED.language,consent_source=CASE WHEN customer_sms_preferences.consent=EXCLUDED.consent THEN customer_sms_preferences.consent_source ELSE 'owner' END,opted_out_at=CASE WHEN EXCLUDED.consent THEN NULL ELSE COALESCE(customer_sms_preferences.opted_out_at,NOW()) END,updated_at=NOW()",
+        [id, toE164(b.phone), b.consent, b.language],
       );
       return { ok: true };
     },
@@ -578,5 +589,7 @@ export function createApp(
   app.register(async (voice) => {
     registerTelephonyRoutes(voice, env, options.voice ?? createVoiceRuntime(env, db), telephonyMonitor);
   });
+  // Inbound texts to restaurant numbers: STOP/START/HELP (TCPA opt-out).
+  app.register(async (sms) => registerSmsInboundRoutes(sms, env, db));
   return app;
 }

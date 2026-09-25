@@ -3,3 +3,6 @@ dist/
 data/*.db
 *.log
 .env
+
+# restore-drill.sh yedekleri (müşteri verisi içerir)
+backups/

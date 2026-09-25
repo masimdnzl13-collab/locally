@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Target } from "lucide-react";
+import { Camera, Smartphone, Target } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LeadRowControls, NewLeadForm } from "@/components/admin/pipeline-controls";
 import { getSalesPipeline } from "@/lib/admin/pipeline";
@@ -32,10 +32,20 @@ export default async function AdminSalesPipelinePage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
-      <h1 className="mb-1 text-xl font-bold tracking-tight text-navy-900">İşletme Hattı</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
-        WAT saha turu: tanıtılan adaylar ve gerçekten kaydolan ABD işletmeleri tek listede.
-      </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="mb-1 text-xl font-bold tracking-tight text-navy-900">İşletme Hattı</h1>
+          <p className="text-sm text-muted-foreground">
+            WAT saha turu: tanıtılan adaylar ve gerçekten kaydolan ABD işletmeleri tek listede.
+          </p>
+        </div>
+        <Link
+          href="/admin/isletme-hatti/ekle"
+          className="flex h-10 items-center gap-2 rounded-md bg-navy-900 px-4 text-sm font-semibold text-white hover:bg-navy-800"
+        >
+          <Smartphone size={16} aria-hidden /> Sahada hızlı ekle
+        </Link>
+      </div>
 
       <section className="mb-6 rounded-lg border border-border bg-card p-5 shadow-card">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -119,7 +129,18 @@ export default async function AdminSalesPipelinePage() {
                       ) : (
                         <span className="font-semibold text-foreground">{row.name}</span>
                       )}
+                      {row.lead?.photo_url && (
+                        <a
+                          href={row.lead.photo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 inline-flex items-center gap-1 align-middle text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <Camera size={13} aria-hidden /> Foto
+                        </a>
+                      )}
                       {row.lead?.contact && <p className="text-xs text-muted-foreground">{row.lead.contact}</p>}
+                      {row.lead?.notes && <p className="max-w-xs truncate text-xs text-muted-foreground">{row.lead.notes}</p>}
                       {row.business && !linked && (
                         <p className="text-xs text-muted-foreground">Tideline restoranına eşlenmedi</p>
                       )}

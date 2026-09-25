@@ -8,6 +8,8 @@ export const RATE_LIMITS = {
   // Panel iframe'i oturum düşünce yeniden bağlanır; normal kullanım dakikada birkaç istek.
   tidelineSso: { limit: 20, windowSeconds: 60 },
   usSignup: { limit: 5, windowSeconds: 60 },
+  // /privacy talep formu: gerçek bir kişi birkaç talep gönderir, fazlası spam.
+  privacyRequest: { limit: 5, windowSeconds: 600 },
 } as const;
 
 // Vercel x-real-ip'i kendisi yazar; x-forwarded-for'un ilk girdisi yedek.

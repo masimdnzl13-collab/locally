@@ -8,6 +8,9 @@ const withPWA = withPWAInit({
 });
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  // instrumentation.ts: üretimde eksik ortam değişkeniyle sunucu açılmaz (AP).
+  experimental: { instrumentationHook: true },
+};
 
 export default withPWA(nextConfig);
