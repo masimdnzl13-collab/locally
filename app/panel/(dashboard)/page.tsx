@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getMyBusiness } from "@/lib/business/current";
 import { getDashboardMetrics, getRecentActivity } from "@/lib/panel/dashboard-queries";
 import { getHasAnyPackage, deriveOnboardingStatus } from "@/lib/business/onboarding";
-import { BUSINESS_CATEGORY_LABELS } from "@/lib/types";
+import { panelCopy } from "@/lib/panel/copy";
 import WeeklyBarChart from "@/components/panel/weekly-bar-chart";
 import OnboardingChecklist from "@/components/panel/onboarding-checklist";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -10,19 +10,22 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-function formatTL(n: number) {
-  return n.toLocaleString("tr-TR") + "₺";
+type Copy = ReturnType<typeof panelCopy>;
+
+function formatMoney(n: number, t: Copy) {
+  return n.toLocaleString(t.locale, { style: "currency", currency: t.currency, maximumFractionDigits: 0 });
 }
 
-function formatRelative(iso: string) {
+function formatRelative(iso: string, t: Copy) {
+  const d = t.dashboard;
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "az önce";
-  if (mins < 60) return `${mins} dk önce`;
+  if (mins < 1) return d.justNow;
+  if (mins < 60) return d.minutesAgo.replace("{n}", String(mins));
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} sa önce`;
+  if (hours < 24) return d.hoursAgo.replace("{n}", String(hours));
   const days = Math.floor(hours / 24);
-  return `${days} gün önce`;
+  return d.daysAgo.replace("{n}", String(days));
 }
 
 const ACTIVITY_ICON: Record<string, string> = {
@@ -37,26 +40,32 @@ export default async function PanelDashboardPage() {
 
   const [metrics, activity, hasPackage] = await Promise.all([
     getDashboardMetrics(business.id),
-    getRecentActivity(business.id),
+    getRecentActivity(business.id, business.market),
     getHasAnyPackage(business.id),
   ]);
   const onboardingStatus = deriveOnboardingStatus(business, hasPackage);
+  // ABD işletmeleri İngilizce görür (lib/panel/copy.ts). TR kurulum kontrol
+  // listesi (paket, QR standı, mahalle) ABD'de geçerli değil; onların kurulumu
+  // /kayit/us akışında (menü adımı dahil) tamamlanıyor.
+  const t = panelCopy(business.market);
+  const d = t.dashboard;
+  const isUs = business.market === "US";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-8">
-      {!onboardingStatus.completed && (
+      {!isUs && !onboardingStatus.completed && (
         <OnboardingChecklist business={business} status={onboardingStatus} />
       )}
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-muted-foreground">Hoş geldin,</p>
+          <p className="text-sm text-muted-foreground">{d.welcome}</p>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {business.name}
           </h1>
         </div>
         <Badge variant="teal">
-          ✓ Yayında · {BUSINESS_CATEGORY_LABELS[business.category]}
+          ✓ {d.live} · {t.categories[business.category]}
         </Badge>
       </div>
 
@@ -64,39 +73,39 @@ export default async function PanelDashboardPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground">Bu ay satış</p>
+            <p className="text-xs font-medium text-muted-foreground">{d.monthlySales}</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {metrics.monthlySalesCount}
             </p>
-            <p className="text-xs text-muted-foreground/80">{formatTL(metrics.monthlySalesAmount)}</p>
+            <p className="text-xs text-muted-foreground/80">{formatMoney(metrics.monthlySalesAmount, t)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground">Kullanılan hak</p>
+            <p className="text-xs font-medium text-muted-foreground">{d.redemptions}</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {metrics.totalRedemptions}
             </p>
-            <p className="text-xs text-muted-foreground/80">toplam QR okutma</p>
+            <p className="text-xs text-muted-foreground/80">{d.redemptionsHint}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground">Aktif paket</p>
+            <p className="text-xs font-medium text-muted-foreground">{d.activePackages}</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
               {metrics.activePackagesCount}
             </p>
-            <p className="text-xs text-muted-foreground/80">satışta</p>
+            <p className="text-xs text-muted-foreground/80">{d.activePackagesHint}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground">Bu akşam</p>
+            <p className="text-xs font-medium text-muted-foreground">{d.tonight}</p>
             <p className="mt-1 text-xl font-bold text-foreground">
-              {metrics.hasActiveFlashToday ? "Flaş var 🔥" : "Flaş yok"}
+              {metrics.hasActiveFlashToday ? d.flashOn : d.flashOff}
             </p>
             <Link href="/panel/bu-aksam" className="text-xs font-semibold text-teal-700 hover:underline">
-              {metrics.hasActiveFlashToday ? "Görüntüle" : "Oluştur"}
+              {metrics.hasActiveFlashToday ? d.view : d.create}
             </Link>
           </CardContent>
         </Card>
@@ -105,32 +114,32 @@ export default async function PanelDashboardPage() {
       {/* Haftalık QR grafiği */}
       <Card className="mt-6">
         <CardContent className="p-5">
-          <h2 className="mb-4 text-sm font-bold text-foreground">Son 7 gün QR okutma</h2>
+          <h2 className="mb-4 text-sm font-bold text-foreground">{d.weeklyChart}</h2>
           <WeeklyBarChart data={metrics.dailyRedemptions} />
         </CardContent>
       </Card>
 
       {/* Hızlı işlemler */}
       <div className="mt-6">
-        <h2 className="mb-3 text-sm font-bold text-foreground">Hızlı İşlemler</h2>
+        <h2 className="mb-3 text-sm font-bold text-foreground">{d.quickActions}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Link
             href="/panel/bu-aksam"
             className={cn(buttonVariants({ variant: "teal", size: "lg" }), "w-full")}
           >
-            🔥 Bu Akşam Flaşı Oluştur
+            {d.createFlash}
           </Link>
           <Link
             href="/panel/paketler/yeni"
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
           >
-            + Yeni Paket Ekle
+            {d.newPackage}
           </Link>
           <Link
             href="/panel/duyurular"
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
           >
-            📣 Duyuru Gönder
+            {d.sendAnnouncement}
           </Link>
         </div>
       </div>
@@ -138,12 +147,12 @@ export default async function PanelDashboardPage() {
       {/* Son hareketler */}
       <Card className="mt-6">
         <CardHeader className="pb-2">
-          <h2 className="text-sm font-bold text-foreground">Son Hareketler</h2>
+          <h2 className="text-sm font-bold text-foreground">{d.recentActivity}</h2>
         </CardHeader>
         <CardContent>
           {activity.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              İlk paketini ekle, satışlar ve hareketler burada görünecek.
+              {d.emptyActivity}
             </p>
           ) : (
             <ul className="divide-y divide-border">
@@ -151,7 +160,7 @@ export default async function PanelDashboardPage() {
                 <li key={item.id} className="flex items-center gap-3 py-2.5 text-sm">
                   <span className="text-lg">{ACTIVITY_ICON[item.type]}</span>
                   <span className="flex-1 text-foreground">{item.label}</span>
-                  <span className="text-xs text-muted-foreground">{formatRelative(item.at)}</span>
+                  <span className="text-xs text-muted-foreground">{formatRelative(item.at, t)}</span>
                 </li>
               ))}
             </ul>

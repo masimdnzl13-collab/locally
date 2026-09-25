@@ -5,7 +5,7 @@ import Link from "next/link";
 import { signInAction } from "@/lib/auth/actions";
 import SubmitButton from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
-import { US_SIGNUP_HREF } from "@/lib/us/config";
+import { US_FORGOT_PASSWORD_PATH, US_SIGNUP_HREF } from "@/lib/us/config";
 
 const COPY = {
   tr: {
@@ -13,6 +13,7 @@ const COPY = {
     emailPlaceholder: "sen@ornek.com",
     password: "Şifre",
     forgot: "Şifremi unuttum",
+    forgotHref: "/sifremi-unuttum",
     submit: "Giriş Yap",
     noAccount: "Hesabın yok mu?",
     signUp: "Kayıt ol",
@@ -23,6 +24,7 @@ const COPY = {
     emailPlaceholder: "you@restaurant.com",
     password: "Password",
     forgot: "Forgot password?",
+    forgotHref: US_FORGOT_PASSWORD_PATH,
     submit: "Log in",
     noAccount: "Don't have an account?",
     signUp: "Sign up",
@@ -63,7 +65,7 @@ export default function LoginForm({ next, locale = "tr" }: { next?: string; loca
           <label className="block text-sm font-medium text-foreground">
             {t.password}
           </label>
-          <Link href="/sifremi-unuttum" className="text-xs font-medium text-teal-700">
+          <Link href={t.forgotHref} className="text-xs font-medium text-teal-700">
             {t.forgot}
           </Link>
         </div>

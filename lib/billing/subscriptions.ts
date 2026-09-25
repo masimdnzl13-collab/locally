@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { releaseNumberForSubscription } from "@/lib/billing/number-release";
 import { getPaymentService } from "@/lib/payments";
 import type {
   CancelSubscriptionResult,
@@ -60,6 +61,16 @@ export async function cancelBusinessSubscription(
     subscriptionId: subscription.provider_subscription_id,
     atPeriodEnd: options.atPeriodEnd,
   });
+  // Hemen iptalde Twilio numarası da hemen serbest bırakılır (webhook'u
+  // beklemeden; test modunda webhook hiç gelmez). Dönem sonu iptalinde numara
+  // dönem bitene kadar aktif kalır — bkz. lib/billing/number-release.ts.
+  if (result.success && !options.atPeriodEnd) {
+    try {
+      await releaseNumberForSubscription(subscription.provider_subscription_id);
+    } catch (err) {
+      console.error("[billing] number release", businessId, (err as Error).message);
+    }
+  }
   if (result.success && options.atPeriodEnd) {
     await createServiceClient()
       .from("business_subscriptions")

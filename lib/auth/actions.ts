@@ -7,6 +7,7 @@ import { ensureProfile } from "@/lib/auth/ensure-profile";
 import { ensureBusinessForOwner } from "@/lib/business/ensure-business";
 import type { UserRole } from "@/lib/types";
 import { ACTIVE_ROLE_COOKIE, getEffectiveRoles } from "@/lib/auth/roles";
+import { US_RESET_PASSWORD_PATH } from "@/lib/us/config";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -182,15 +183,20 @@ export async function signOutAction() {
 
 export async function requestPasswordResetAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
+  // /us/forgot-password (ABD) aynı action'ı kullanır: İngilizce metin ve
+  // İngilizce sıfırlama sayfasına dönen bağlantı.
+  const en = formData.get("lang") === "en";
   if (!email) {
-    return { error: "E-posta gerekli." };
+    return { error: en ? "Email is required." : "E-posta gerekli." };
   }
 
   const supabase = createClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/sifre-sifirla`,
+    // PKCE: e-postadaki bağlantı ?code= ile döner; oturuma çeviren tek yer
+    // /auth/callback (exchangeCodeForSession), sonra next'e yönlendirir.
+    redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(en ? US_RESET_PASSWORD_PATH : "/sifre-sifirla")}`,
   });
 
   if (error) {
@@ -198,14 +204,21 @@ export async function requestPasswordResetAction(formData: FormData) {
   }
 
   return {
-    message: "Şifre sıfırlama bağlantısı e-postana gönderildi.",
+    message: en
+      ? "We've sent a password reset link to your email."
+      : "Şifre sıfırlama bağlantısı e-postana gönderildi.",
   };
 }
 
 export async function updatePasswordAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
+  const en = formData.get("lang") === "en";
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.` };
+    return {
+      error: en
+        ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+        : `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`,
+    };
   }
 
   const supabase = createClient();
@@ -215,7 +228,8 @@ export async function updatePasswordAction(formData: FormData) {
     return { error: error.message };
   }
 
-  redirect("/hesabim");
+  // ABD şifre sıfırlaması yalnızca işletme hesapları için (restoranlar).
+  redirect(en ? "/panel" : "/hesabim");
 }
 
 // Panelin Ayarlar sayfasındaki şifre değiştirme formu için — updatePasswordAction'dan
