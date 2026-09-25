@@ -1,9 +1,16 @@
 # Deploying Tideline to production
 
-The hosting platform has not been chosen yet. This document lays out two
-realistic options, **Fly.io** and **a VPS running Docker Compose**, step by
-step, and compares them on domains, TLS, scaling and day-to-day operations. It
-does not make the decision. Render and Railway are noted briefly at the end.
+**Decision: Fly.io** (see [First deploy on Fly.io](#first-deploy-on-flyio-temporary-domains)).
+It is the lowest-friction option for the pilot: TLS and the edge proxy are
+automatic, the single-API-instance rule maps onto one always-on machine, and the
+temporary `*.fly.dev` addresses are enough to point a Twilio number at the API
+before a real domain exists. The config lives in `apps/api/fly.toml` and
+`apps/web/fly.toml`.
+
+The rest of this document still lays out both realistic options, **Fly.io** and
+**a VPS running Docker Compose**, and compares them on domains, TLS, scaling and
+day-to-day operations, in case the decision is revisited. Render and Railway are
+noted briefly at the end.
 
 ## What Tideline needs from any host
 
@@ -57,6 +64,105 @@ half-working.
 
 Generate the secrets with `openssl rand -base64 48`.
 
+**`DATABASE_URL` must be a direct (session) connection, not a transaction
+pooler.** The single-instance guard holds a session-level Postgres advisory lock
+for the life of the process; behind PgBouncer in transaction mode (Neon's
+`-pooler` host, Supabase's port 6543 pooler) that lock is not tied to one server
+connection and the guard silently stops working. Use Fly Managed Postgres, or the
+non-pooled / "direct" connection string of an external provider.
+
+## First deploy on Fly.io (temporary domains)
+
+Goal: API and web reachable from the internet on `https://<app>.fly.dev`, so a
+real Twilio number can call the API (P0.6). A custom domain can be added later
+without redeploying the API (step 9); the web app is rebuilt because
+`VITE_API_URL` is baked in.
+
+You need: a Fly.io account with a payment method (`fly auth signup` /
+`fly auth login` — done by the account owner), and the Twilio, Deepgram and
+Anthropic keys. The app names below are the defaults in the `fly.toml` files;
+Fly app names are global, so if one is taken pick another and pass `-a <name>`
+everywhere (and use `https://<name>.fly.dev` in the URLs).
+
+Shortcut: `deploy/fly-deploy.sh` runs steps 2–6 in one go (idempotent; secrets
+are read from the environment and piped to `fly secrets import`). The manual
+steps below are the same thing spelled out.
+
+1. **Install flyctl and log in** (account owner): https://fly.io/docs/flyctl/install/ then `fly auth login`.
+2. **Create the apps:**
+   ```sh
+   fly apps create locally-tideline-api
+   fly apps create locally-tideline-web
+   ```
+3. **Postgres and Redis** in `iad`:
+   ```sh
+   fly mpg create      # Managed Postgres; pick region iad in the prompts
+   fly redis create    # Upstash Redis; pick region iad
+   ```
+   Or use an external Postgres 16 (direct URL, see above). Note the two
+   connection strings for step 4.
+4. **Secrets for the API** (the non-secret settings are already in `apps/api/fly.toml`):
+   ```sh
+   # Generate JWT_SECRET and SESSION_SECRET once (openssl rand -base64 48) and keep them in
+   # your password manager: JWT_SECRET must also go to Locally as TIDELINE_JWT_SECRET, and
+   # `fly secrets` cannot print a value back.
+   fly secrets set -a locally-tideline-api --stage \
+     DATABASE_URL='postgres://…' REDIS_URL='redis://…' \
+     JWT_SECRET='…' SESSION_SECRET='…' \
+     APP_URL=https://locally-tideline-web.fly.dev API_URL=https://locally-tideline-api.fly.dev \
+     VOICE_PUBLIC_URL=https://locally-tideline-api.fly.dev \
+     CORS_ORIGINS=https://locally-tideline-web.fly.dev,https://<locally-domain> \
+     ALLOWED_FRAME_ANCESTORS=https://<locally-domain> \
+     TWILIO_ACCOUNT_SID=AC… TWILIO_AUTH_TOKEN=… TWILIO_PHONE_NUMBER=+1… \
+     STT_API_KEY=… TTS_API_KEY=… AI_API_KEY=… \
+     ALERT_WEBHOOK_URL=…
+   ```
+   `VOICE_PUBLIC_URL` must be exactly the URL Twilio calls: Twilio signs that URL
+   and the API rejects webhooks whose signature does not match.
+5. **Deploy the API** (runs migrations on start):
+   ```sh
+   cd apps/api && fly deploy
+   fly scale count app=1 worker=1 -a locally-tideline-api   # never more than one "app" machine
+   ```
+6. **Deploy the web app:**
+   ```sh
+   fly secrets set -a locally-tideline-web --stage ALLOWED_FRAME_ANCESTORS=https://<locally-domain>
+   cd apps/web && fly deploy --build-arg VITE_API_URL=https://locally-tideline-api.fly.dev
+   ```
+7. **Verify from outside:**
+   ```sh
+   deploy/smoke-test.sh https://locally-tideline-api.fly.dev https://locally-tideline-web.fly.dev
+   ```
+   It checks `/health` and `/ready`, that the Twilio webhook is reachable and
+   rejects unsigned requests, that the media WebSocket upgrade passes Fly's
+   proxy, CORS for the web origin, the SPA routes, the `frame-ancestors` header,
+   and that the web bundle points at the API.
+8. **Point Locally at it** (Vercel env): `TIDELINE_API_URL=https://locally-tideline-api.fly.dev`,
+   `TIDELINE_WEB_URL=https://locally-tideline-web.fly.dev`, `TIDELINE_JWT_SECRET` (= step 4).
+9. **Custom domains later:** `fly certs add api.<domain> -a locally-tideline-api` and
+   `fly certs add app.<domain> -a locally-tideline-web`, create the DNS records Fly
+   prints, update the URL secrets from step 4 and the Twilio webhooks, and
+   redeploy the web app with the new `VITE_API_URL`.
+
+### Unlocking P0.6 (a real Twilio call)
+
+With the smoke test green:
+
+1. Twilio console → Phone Numbers → the number in `TWILIO_PHONE_NUMBER` →
+   Voice configuration: **A call comes in** → Webhook,
+   `https://locally-tideline-api.fly.dev/api/v1/telephony/twilio/incoming`, HTTP POST;
+   **Call status changes** → `https://locally-tideline-api.fly.dev/api/v1/telephony/twilio/status`.
+   (Numbers bought later through self-service provisioning get these URLs
+   automatically from `VOICE_PUBLIC_URL`.)
+2. Map that number to a restaurant whose Brain has hours and menu items (the
+   `/kayit/us` flow, or the admin queue in Locally).
+3. Keep `fly logs -a locally-tideline-api` open and call the number. Expect
+   `CALL_STARTED`, the media stream attaching, then transcripts and the AI's
+   replies in the log.
+4. If the call is answered with "We could not verify this call", the signature
+   check failed: `VOICE_PUBLIC_URL` does not exactly match the webhook URL
+   configured in Twilio.
+
 ---
 
 ## Option A: Fly.io
@@ -69,8 +175,8 @@ the edge proxy, and WebSockets work out of the box.
 1. **Install and log in:** `fly auth login`.
 2. **Create the apps.** Use one app for api + worker and one for web:
    ```sh
-   fly apps create tideline-api
-   fly apps create tideline-web
+   fly apps create locally-tideline-api
+   fly apps create locally-tideline-web
    ```
 3. **Database and Redis:**
    - Postgres: `fly mpg create` (Fly Managed Postgres), or any external
@@ -79,9 +185,10 @@ the edge proxy, and WebSockets work out of the box.
    - Redis: `fly redis create` (Upstash). Put the URL in `REDIS_URL`.
    - Pick the region closest to the restaurants and to Twilio's media edge.
      For the US East Coast that is `iad` or `ewr`.
-4. **Configure the API app** with `apps/api/fly.toml`:
+4. **Configure the API app** with `apps/api/fly.toml` (the committed file is the
+   source of truth; the excerpt below shows the essentials):
    ```toml
-   app = "tideline-api"
+   app = "locally-tideline-api"
    primary_region = "iad"
 
    [build]
@@ -112,7 +219,7 @@ the edge proxy, and WebSockets work out of the box.
 5. **Set secrets.** Fly stores them encrypted and injects them as environment
    variables:
    ```sh
-   fly secrets set -a tideline-api APP_ENV=production TELEPHONY_MODE=twilio \
+   fly secrets set -a locally-tideline-api APP_ENV=production TELEPHONY_MODE=twilio \
      AI_PROVIDER=anthropic STT_PROVIDER=deepgram TTS_PROVIDER=deepgram \
      DATABASE_URL=... REDIS_URL=... JWT_SECRET=... SESSION_SECRET=... \
      APP_URL=https://app.example.com API_URL=https://api.example.com \
@@ -122,11 +229,11 @@ the edge proxy, and WebSockets work out of the box.
    ```
 6. **Deploy:** `fly deploy` from `apps/api`. For the web app (`apps/web`):
    `fly deploy --build-arg VITE_API_URL=https://api.example.com`, with
-   `ALLOWED_FRAME_ANCESTORS` set as a secret or env on `tideline-web`.
+   `ALLOWED_FRAME_ANCESTORS` set as a secret or env on `locally-tideline-web`.
 7. **Custom domains and TLS:**
    ```sh
-   fly certs add api.example.com -a tideline-api
-   fly certs add app.example.com -a tideline-web
+   fly certs add api.example.com -a locally-tideline-api
+   fly certs add app.example.com -a locally-tideline-web
    ```
    Then create the DNS records Fly prints (A/AAAA to the app's IPs, or a
    CNAME to `<app>.fly.dev`). Fly issues and renews Let's Encrypt certificates
@@ -134,7 +241,7 @@ the edge proxy, and WebSockets work out of the box.
 
 ### Scaling on Fly
 
-- Vertical: `fly scale vm shared-cpu-2x --memory 1024 -a tideline-api` (a restart, so calls drop).
+- Vertical: `fly scale vm shared-cpu-2x --memory 1024 -a locally-tideline-api` (a restart, so calls drop).
 - Worker: `fly scale count worker=2`.
 - API: stays at one machine until call state is shared (see above). Fly's
   `fly-replay` header is one way to route a call's WebSocket back to the
