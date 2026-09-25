@@ -22,7 +22,7 @@ Live call state is held **in the API process's memory** (`VoiceSessionManager`
 keeps a `Map` of active sessions). The incoming-call webhook creates the session
 and the media WebSocket that follows must reach **the same process**. So:
 
-- **Run exactly one API instance.** Scale it vertically (more CPU/RAM). Adding
+- **Run exactly one API instance** (enforced: fixed `container_name` + a Postgres advisory lock at startup; see docs/ARCHITECTURE.md, "Single API instance"). Scale it vertically (more CPU/RAM). Adding
   a second instance behind a plain load balancer breaks calls whenever the
   webhook and the WebSocket land on different instances.
 - The worker has no such constraint and can run more than one copy.

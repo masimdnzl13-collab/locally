@@ -35,6 +35,10 @@ export const MARKET_PREF_COOKIE = "locally_market";
 // ABD kullanıcısının İngilizce giriş sayfası (/us altında olduğu için ayrıca
 // isUsPublicPath'e eklenmesi gerekmez).
 export const US_LOGIN_PATH = "/us/login";
+// İngilizce şifre sıfırlama: istek formu ve e-postadaki bağlantının döndüğü sayfa.
+// Supabase Auth → URL Configuration → Redirect URLs listesinde de olmalı.
+export const US_FORGOT_PASSWORD_PATH = "/us/forgot-password";
+export const US_RESET_PASSWORD_PATH = "/us/reset-password";
 
 // Bu yollar kendi İngilizce başlık/altlığını çizer; Türkçe NavBar/Footer gizlenir.
 // /qr bir yönlendirme ama yine de burada: hedefi ileride bir sayfaya dönerse

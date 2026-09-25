@@ -541,6 +541,10 @@ export function createApp(
     res.status(created ? 201 : 200);
     return { restaurant: { id: restaurant.id, name: restaurant.name }, phone: phone ?? null };
   });
+  // Locally calls this when a subscription ends (immediately, or at period end). Idempotent.
+  app.post("/api/v1/internal/provisioning/restaurants/:restaurantId/release-number", internal, async (req) =>
+    phones.release(z.string().uuid().parse((req.params as { restaurantId: string }).restaurantId)),
+  );
   app.get("/api/v1/internal/provisioning/phone-numbers/pending", internal, async () => ({ numbers: await phones.pending() }));
   app.post("/api/v1/internal/provisioning/phone-numbers/:numberId/retry", internal, async (req) => ({
     phone: await phones.retry(z.string().uuid().parse((req.params as { numberId: string }).numberId)),

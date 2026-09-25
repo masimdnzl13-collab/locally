@@ -5,7 +5,13 @@ import { updatePasswordAction } from "@/lib/auth/actions";
 import SubmitButton from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 
-export default function ResetPasswordForm() {
+const COPY = {
+  tr: { label: "Yeni Şifre", placeholder: "En az 8 karakter", submit: "Şifreyi Güncelle", pending: "Bir saniye..." },
+  en: { label: "New password", placeholder: "At least 8 characters", submit: "Update password", pending: "One moment..." },
+} as const;
+
+export default function ResetPasswordForm({ locale = "tr" }: { locale?: keyof typeof COPY }) {
+  const t = COPY[locale];
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -19,16 +25,17 @@ export default function ResetPasswordForm() {
 
   return (
     <form action={handleSubmit} className="space-y-4">
+      {locale === "en" && <input type="hidden" name="lang" value="en" />}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-foreground">
-          Yeni Şifre
+          {t.label}
         </label>
         <Input
           type="password"
           name="password"
           required
           minLength={8}
-          placeholder="En az 8 karakter"
+          placeholder={t.placeholder}
         />
       </div>
 
@@ -38,7 +45,7 @@ export default function ResetPasswordForm() {
         </p>
       )}
 
-      <SubmitButton pending={isPending}>Şifreyi Güncelle</SubmitButton>
+      <SubmitButton pending={isPending} pendingLabel={t.pending}>{t.submit}</SubmitButton>
     </form>
   );
 }
