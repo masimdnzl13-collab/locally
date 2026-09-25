@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { panelNavItems, tidelineNavItem } from "@/lib/panel-nav-items";
+import { panelNavItems, tidelineNavItem, tidelineReportNavItem } from "@/lib/panel-nav-items";
 import { hasTidelineAccess } from "@/lib/tideline/access";
 import { signOutAction } from "@/lib/auth/actions";
 import type { Business } from "@/lib/types";
@@ -25,7 +25,7 @@ export default function PanelShell({
   // Tideline bir modül sekmesi olarak "Ayarlar"ın hemen önüne girer; marka
   // (üst bar / sol menü başlığı) her durumda "Locally" kalır.
   const navItems = hasTidelineAccess(business)
-    ? [...panelNavItems.slice(0, -1), tidelineNavItem, panelNavItems[panelNavItems.length - 1]]
+    ? [...panelNavItems.slice(0, -1), tidelineNavItem, tidelineReportNavItem, panelNavItems[panelNavItems.length - 1]]
     : panelNavItems;
 
   return (

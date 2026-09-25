@@ -20,7 +20,7 @@ import { createNumberPurchaser, PhoneProvisioningService, type NumberPurchaser }
 import { RestaurantBrainService } from "./services/restaurant-brain-service.js";
 import { StatsService } from "./services/stats-service.js";
 import { createVoiceRuntime, type VoiceRuntime } from "./voice/runtime.js";
-import { registerFormParser, registerTelephonyRoutes } from "./voice/telephony-routes.js";
+import { registerFormParser, registerTelephonyRoutes, twilioRateLimit } from "./voice/telephony-routes.js";
 import { registerSmsInboundRoutes } from "./notifications/sms-inbound-routes.js";
 import { toE164 } from "./notifications/sms-keywords.js";
 import { validateTwilioSignature } from "./voice/twilio-provider.js";
@@ -189,6 +189,7 @@ export function createApp(
   app.register(websocket);
   registerFormParser(app);
   app.setErrorHandler((err, req, res) => {
+    const status = (err as { statusCode?: unknown }).statusCode;
     const appError =
       err instanceof AppError
         ? err
@@ -196,7 +197,11 @@ export function createApp(
           ? new AppError("VALIDATION_ERROR", "Invalid request", 400, {
               fields: err.flatten(),
             })
-          : new AppError("INTERNAL_ERROR", "An unexpected error occurred", 500);
+          : // Framework/plugin client errors (429 rate limit, 413 body too large, 415...) keep their
+            // status: turning them into 500s hid rate limiting and tripped the 5xx telephony alert.
+            typeof status === "number" && status >= 400 && status < 500
+            ? new AppError(status === 429 ? "RATE_LIMITED" : "BAD_REQUEST", status === 429 ? "Too many requests" : "Invalid request", status)
+            : new AppError("INTERNAL_ERROR", "An unexpected error occurred", 500);
     req.log.error(
       {
         err,
@@ -470,7 +475,7 @@ export function createApp(
   );
   app.post(
     "/api/v1/notifications/twilio/status",
-    { config: { rateLimit: { max: 120, timeWindow: "1 minute" } } },
+    { config: twilioRateLimit("MessageSid", 30) },
     async (req, reply) => {
       if (!validTwilioSignature(env, req))
         return reply.code(403).send({
@@ -555,6 +560,26 @@ export function createApp(
       assignNumberBody.parse(req.body).phoneNumber,
     ),
   }));
+  // Locally's module switch: when a restaurant's "tideline" module is turned off (season over,
+  // subscription ended, admin), Locally sets it INACTIVE here and the incoming-call webhook stops
+  // sending calls to the AI (forwards to the restaurant's own line, or plays the closed message).
+  app.post("/api/v1/internal/restaurants/:restaurantId/status", internal, async (req) => {
+    const restaurantId = z.string().uuid().parse((req.params as { restaurantId: string }).restaurantId);
+    const { active } = z.object({ active: z.boolean() }).parse(req.body);
+    const row = (await db.query<{ id: string; status: string }>(
+      "UPDATE restaurants SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING id,status",
+      [restaurantId, active ? "ACTIVE" : "INACTIVE"],
+    )).rows[0];
+    if (!row) throw new AppError("NOT_FOUND", "Restaurant not found", 404);
+    return { restaurantId: row.id, status: row.status };
+  });
+  // Owner-facing weekly report in Locally's panel (/panel/rapor). Same service-token channel as
+  // the admin pipeline's activity endpoint; read-only.
+  app.get("/api/v1/internal/restaurants/:restaurantId/weekly-report", internal, async (req) => {
+    const restaurantId = z.string().uuid().parse((req.params as { restaurantId: string }).restaurantId);
+    if (!(await repos.restaurantExists(restaurantId))) throw new AppError("NOT_FOUND", "Restaurant not found", 404);
+    return runWithTenant(restaurantId, () => stats.weeklyReport(restaurantId));
+  });
   app.get("/api/v1/internal/restaurants/:restaurantId/brain-readiness", internal, async (req) =>
     brain.readiness(z.object({ restaurantId: z.string().uuid() }).parse(req.params).restaurantId),
   );

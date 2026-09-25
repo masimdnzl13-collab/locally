@@ -132,6 +132,35 @@ export function assignTidelineNumber(numberId: string, phoneNumber: string) {
   );
 }
 
+export interface TidelineWeeklyReport {
+  days: number;
+  calls: number;
+  convertedCalls: number;
+  orders: number;
+  reservations: number;
+  avgDurationSeconds: number | null;
+  topIntents: { intent: string; conversations: number }[];
+}
+
+// İşletme sahibinin haftalık raporu (/panel/rapor): son 7 günde gelen çağrılar,
+// siparişe/rezervasyona dönenler, ortalama süre, en çok sorulan 3 konu.
+export function fetchTidelineWeeklyReport(restaurantId: string) {
+  return callTideline<TidelineWeeklyReport>(
+    `/api/v1/internal/restaurants/${encodeURIComponent(restaurantId)}/weekly-report`,
+    { timeoutMs: READ_TIMEOUT_MS }
+  );
+}
+
+// Locally'deki "tideline" modülü kapanınca/açılınca Tideline'daki restoranın
+// durumunu eşler: INACTIVE iken gelen aramalar AI'ye hiç gitmez (restoranın
+// kendi hattına yönlendirilir ya da kapalı mesajı çalınır).
+export function setTidelineRestaurantActive(restaurantId: string, active: boolean) {
+  return callTideline<{ restaurantId: string; status: string }>(
+    `/api/v1/internal/restaurants/${encodeURIComponent(restaurantId)}/status`,
+    { method: "POST", body: { active } }
+  );
+}
+
 // Abonelik bitince restoranın Twilio numarasını serbest bırakır (Tideline
 // tarafı idempotent). failed dolu dönerse numara hâlâ aktiftir — tekrar denenmeli.
 export function releaseTidelineRestaurantNumber(restaurantId: string) {

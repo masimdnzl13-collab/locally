@@ -2,6 +2,33 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notificationService, smsProviderFor, isEmailConfigured } from "@/lib/notifications/service";
 import { winterModuleActivatedTemplate } from "@/lib/notifications/templates/seasonal-modules";
 import type { BusinessMarket, BusinessModule } from "@/lib/types";
+import { setTidelineRestaurantActive } from "@/lib/tideline/service-api";
+
+// "tideline" modülü Locally'de açılıp kapandığında Tideline'daki restoran da
+// ACTIVE/INACTIVE yapılır — aksi halde modül (ya da sezon) kapalıyken telefon
+// AI'yi çalıştırmaya devam ederdi. Başarısız eşlemeler loglanır; modül
+// değişikliği geri alınmaz (tekrar kaydetmek eşlemeyi yeniden dener).
+async function syncTidelineStatus(
+  supabase: ReturnType<typeof createServiceClient>,
+  businessIds: string[],
+  active: boolean
+): Promise<string[]> {
+  if (businessIds.length === 0) return [];
+  const { data } = await supabase
+    .from("businesses")
+    .select("id, tideline_restaurant_id")
+    .in("id", businessIds);
+  const failures: string[] = [];
+  for (const b of (data ?? []) as { id: string; tideline_restaurant_id: string | null }[]) {
+    if (!b.tideline_restaurant_id) continue;
+    const result = await setTidelineRestaurantActive(b.tideline_restaurant_id, active);
+    if (!result.ok) {
+      console.error("[modules] tideline status sync", b.id, result.error);
+      failures.push(b.id);
+    }
+  }
+  return failures;
+}
 
 // P7 — sezonluk modül geçişi. Hem admin paneli (/admin/moduller) hem de
 // 1 Ekim cron işi (/api/cron/seasonal-modules) buradan geçer. Ekleme/çıkarma
@@ -75,6 +102,7 @@ export async function addModule(
 
   const changed = ((data ?? []) as { business_id: string }[]).map((r) => r.business_id);
   if (changed.length === 0) return { changed, notified: 0, notificationFailures: 0 };
+  if (module === "tideline") await syncTidelineStatus(supabase, changed, true);
 
   // Bildirim metni yalnızca kış modülü için var; başka bir modül eklenirse
   // (ör. admin elle tideline açarsa) değişiklik yine loglanır ama mesaj gitmez.
@@ -130,6 +158,7 @@ export async function removeModule(
   if (error) throw new Error(error.message);
 
   const changed = ((data ?? []) as { business_id: string }[]).map((r) => r.business_id);
+  if (module === "tideline") await syncTidelineStatus(supabase, changed, false);
   if (changed.length) {
     await supabase.from("business_module_events").insert(
       changed.map((id) => ({

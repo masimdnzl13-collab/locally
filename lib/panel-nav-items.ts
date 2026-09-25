@@ -13,6 +13,7 @@ import {
   Settings,
   ListChecks,
   PhoneCall,
+  BarChart3,
 } from "lucide-react";
 
 export const panelNavItems = [
@@ -34,3 +35,5 @@ export const panelNavItems = [
 // Yalnızca hasTidelineAccess(business) olan (US pazarı + tideline modülü +
 // eşlenmiş restoran) işletmelerde menüye eklenir — bkz. PanelShell.
 export const tidelineNavItem = { href: "/panel/tideline", label: "Tideline", icon: PhoneCall } as const;
+// Tideline sekmesinin hemen yanında: işletme sahibinin haftalık özeti (bkz. app/panel/(dashboard)/rapor).
+export const tidelineReportNavItem = { href: "/panel/rapor", label: "Haftalık Rapor", icon: BarChart3 } as const;

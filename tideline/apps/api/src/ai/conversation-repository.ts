@@ -74,7 +74,6 @@ export class ConversationRepository {
   async brain(restaurantId: string): Promise<Brain | undefined> {
     const base = (await this.db.query<{ greeting: Record<string,string>; seasonal_status: string; seasonal_closed_message: Record<string,string>; ai_instructions?: string }>(
       'SELECT greeting,"seasonal_status",seasonal_closed_message,ai_instructions FROM restaurant_brain WHERE restaurant_id=$1', [restaurantId])).rows[0];
-    if (!base) return undefined;
     const [restaurant, hours, categories, items, policies, settings, closures] = await Promise.all([
       this.db.query<{ name: string; timezone: string }>('SELECT name,timezone FROM restaurants WHERE id=$1',[restaurantId]),
       this.db.query('SELECT weekday,start_time::text "startTime",end_time::text "endTime" FROM business_hours WHERE restaurant_id=$1 ORDER BY weekday,start_time',[restaurantId]),
@@ -84,8 +83,14 @@ export class ConversationRepository {
       this.db.query('SELECT parking,directions,reservation_rules "reservationRules",escalation,ai_configuration "aiConfiguration" FROM restaurant_settings WHERE restaurant_id=$1',[restaurantId]),
       this.db.query('SELECT closure_date "closureDate",start_time::text "startTime",end_time::text "endTime",reason FROM special_closures WHERE restaurant_id=$1 AND active=true ORDER BY closure_date,start_time',[restaurantId]),
     ]);
+    // The restaurant itself must exist; its restaurant_brain row is optional. Nothing creates that
+    // row for self-serve restaurants (provisioning, POST /restaurants), and treating "no row" as
+    // "no Brain" failed every call on the caller's first sentence. Missing row = in season, no
+    // custom greeting/closed message; hours, menu and policies come from their own tables.
+    if (!restaurant.rows[0]) return undefined;
+    const brainRow = base ?? { greeting: {}, seasonal_status: "ACTIVE", seasonal_closed_message: {}, ai_instructions: undefined };
     const setting = settings.rows[0] ?? {};
-    return { restaurantName: restaurant.rows[0]?.name, timezone: restaurant.rows[0]?.timezone, greeting: base.greeting, hours: { weekly: hours.rows, closures: closures.rows }, menu: items.rows.map((item) => ({ ...item, category: categories.rows.find((c: { id: string })=>c.id===item.categoryId)?.name })), policies: { restaurant: policies.rows, ...setting }, seasonalStatus: base.seasonal_status, seasonalClosedMessage: base.seasonal_closed_message, humanTransfer: setting.escalation ?? {}, aiInstructions: setting.aiConfiguration?.instructions ?? base.ai_instructions };
+    return { restaurantName: restaurant.rows[0]?.name, timezone: restaurant.rows[0]?.timezone, greeting: brainRow.greeting, hours: { weekly: hours.rows, closures: closures.rows }, menu: items.rows.map((item) => ({ ...item, category: categories.rows.find((c: { id: string })=>c.id===item.categoryId)?.name })), policies: { restaurant: policies.rows, ...setting }, seasonalStatus: brainRow.seasonal_status, seasonalClosedMessage: brainRow.seasonal_closed_message, humanTransfer: setting.escalation ?? {}, aiInstructions: setting.aiConfiguration?.instructions ?? brainRow.ai_instructions };
   }
   async messages(conversationId: string): Promise<ProviderMessage[]> {
     return (
