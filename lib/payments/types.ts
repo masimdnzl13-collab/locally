@@ -1,4 +1,4 @@
-export type PaymentProviderName = "test" | "iyzico" | "stripe";
+export type PaymentProviderName = "test" | "iyzico" | "stripe" | "paypal";
 
 export interface ChargeInput {
   amount: number;
@@ -12,11 +12,13 @@ export interface ChargeResult {
   error?: string;
 }
 
-// Abonelik ödeme sayfası sağlayıcıda (Stripe Checkout) açılır: kart bilgisi
+// Abonelik ödeme sayfası sağlayıcıda (PayPal onay sayfası; eskiden Stripe
+// Checkout) açılır: kart bilgisi
 // hiçbir zaman Locally sunucusundan geçmez. Abonelik gerçekten başladığında
 // sağlayıcı webhook'u "subscription.activated" olayıyla haber verir.
 export interface CreateSubscriptionInput {
   businessId: string;
+  // Sağlayıcının plan/fiyat kimliği: PayPal'da billing plan (P-...), Stripe'ta price_...
   priceId: string;
   customerEmail?: string;
   successUrl: string;
@@ -55,9 +57,12 @@ export type SubscriptionSummaryResult =
   | { success: false; error: string };
 
 // Tek seferlik ödeme (ör. etkinlik bileti): sağlayıcının barındırdığı ödeme
-// sayfası (Stripe Checkout, mode: "payment"). Ödeme gerçekten alındığında
-// webhook "one_time.completed" olayıyla haber verir; reference, ödemenin hangi
-// kayda (bilet vb.) ait olduğunu webhook'a taşır.
+// sayfası (PayPal Orders onay sayfası; Stripe'ta Checkout, mode: "payment").
+// Ödeme gerçekten alındığında webhook "one_time.completed" olayıyla haber
+// verir; reference, ödemenin hangi kayda (bilet vb.) ait olduğunu webhook'a
+// taşır. PayPal'da alıcının onayı parayı henüz çekmez: "one_time.approved"
+// gelir, uygulama kaydın hâlâ geçerli olduğunu doğrulayıp
+// captureOneTimeCheckout ile tahsil eder.
 export type OneTimeReference = { kind: "event_ticket"; id: string };
 
 export interface CreateOneTimeCheckoutInput {
@@ -77,14 +82,22 @@ export type CreateOneTimeCheckoutResult =
   | { success: true; simulated: boolean; checkoutUrl: string; sessionId: string }
   | { success: false; error: string };
 
+// Onaylanmış tek seferlik ödemenin tahsili. İdempotent: zaten tahsil edilmişse
+// mevcut tahsilatı döner. paid=false → alıcının ödeme yöntemi reddedildi.
+export type CaptureOneTimeResult =
+  | { success: true; paid: boolean; paymentId: string | null; amount: number; currency: string }
+  | { success: false; error: string };
+
 // Sağlayıcıya özgü webhook olayları bu ortak şekle çevrilir; uygulama kodu
-// (bkz. app/api/webhooks/stripe) yalnızca bununla konuşur.
+// (bkz. app/api/webhooks/paypal, app/api/webhooks/stripe) yalnızca bununla konuşur.
 export type PaymentWebhookEvent = { eventId: string; rawType: string } & (
   | {
       type: "subscription.activated";
       businessId: string;
       subscriptionId: string;
       customerId: string | null;
+      // Sağlayıcı aktivasyonda dönemi biliyorsa (PayPal: next_billing_time).
+      currentPeriodEnd?: string | null;
     }
   | {
       type: "payment.succeeded";
@@ -105,6 +118,7 @@ export type PaymentWebhookEvent = { eventId: string; rawType: string } & (
       currency: string;
       paid: boolean;
     }
+  | { type: "one_time.approved"; sessionId: string; reference: OneTimeReference }
   | { type: "one_time.expired"; sessionId: string; reference: OneTimeReference }
   | { type: "ignored" }
 );
@@ -122,6 +136,9 @@ export interface PaymentService {
   createOneTimeCheckout(input: CreateOneTimeCheckoutInput): Promise<CreateOneTimeCheckoutResult>;
   // Yarım kalan bir ödeme sayfasını kapatır (aynı bilet için ikinci ödeme olmasın).
   expireOneTimeCheckout(sessionId: string): Promise<void>;
+  // "one_time.approved" sonrası ödemeyi çeker (PayPal Orders capture). Ödemeyi
+  // kendisi tahsil eden sağlayıcılarda (Stripe Checkout) desteklenmez.
+  captureOneTimeCheckout(sessionId: string): Promise<CaptureOneTimeResult>;
   // rawBody imza doğrulaması için ayrıştırılmamış gövde olmalı.
   handleWebhook(rawBody: string, headers: Headers): Promise<WebhookResult>;
 }

@@ -298,8 +298,8 @@ export async function purchaseEventTicketAction(
 
   const business = event.businesses as unknown as { market: BusinessMarket } | null;
 
-  // ABD: bilet her zaman Stripe Checkout'ta (mode: "payment") ödenir — kart
-  // bilgisi Locally'den geçmez, bilet webhook ödemeyi onaylayınca QR alır
+  // ABD: bilet her zaman PayPal onay sayfasında (Orders v2) ödenir — kart
+  // bilgisi Locally'den geçmez, bilet ödeme tahsil edilince QR alır
   // (bkz. lib/events/ticket-payments.ts). TR pilot modu (kapıda ödeme) ABD'yi
   // kapsamaz; DB de ABD ücretli etkinliğine istemciden bilet açılmasını engeller.
   if (business?.market === "US") {

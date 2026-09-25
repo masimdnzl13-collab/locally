@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { getTicketPaymentStatus, getTicketWithQr } from "@/lib/events/queries";
+import { confirmUsTicketReturn } from "@/lib/events/ticket-payments";
 import { generateQrDataUrl } from "@/lib/qr";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -11,10 +12,15 @@ export default async function BiletHazirPage({
   searchParams,
   params,
 }: {
-  searchParams: { ticket?: string };
+  // PayPal onaydan sonra ?token=<sipariş id>&PayerID=... ekler.
+  searchParams: { ticket?: string; token?: string };
   params: { id: string };
 }) {
   if (!searchParams.ticket) redirect(`/etkinlik/${params.id}`);
+
+  // Onaylanan ödemeyi webhook'u beklemeden tahsil et (bilet hâlâ bu sipariş
+  // için bekliyorsa; idempotent, sayfa yenilemelerinde tekrar çekmez).
+  if (searchParams.token) await confirmUsTicketReturn(searchParams.ticket, searchParams.token);
 
   const ticket = await getTicketWithQr(searchParams.ticket);
   if (!ticket) {

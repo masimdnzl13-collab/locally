@@ -47,7 +47,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           The Service is a monthly subscription, currently <strong>${US_MONTHLY_PRICE_USD} per month per location</strong>,
           plus any applicable taxes. The first payment is charged when you sign up; after that, your subscription renews
           automatically every month and is charged to your payment method on file at the start of each billing period.
-          Payments are processed by our payment provider (Stripe); we do not store your full card details.
+          Payments are processed by our payment provider (PayPal); we do not store your card or PayPal account details.
         </p>
         <p>
           If a payment fails, we will notify you and retry. If payment is still outstanding 14 days after the due date,
@@ -154,7 +154,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
         <p>
           <strong>Service providers.</strong> We share data only with providers that help us run the Service, under
           confidentiality and data-protection obligations — for example telephony and text messaging (Twilio), speech
-          recognition and voice (Deepgram), AI language models (Anthropic), payments (Stripe) and hosting. These
+          recognition and voice (Deepgram), AI language models (Anthropic), payments (PayPal) and hosting. These
           providers process data on our behalf, not for their own marketing.
         </p>
         <p>

@@ -3,6 +3,7 @@ import { getStripeClient } from "@/lib/stripe/client";
 import type {
   CancelSubscriptionInput,
   CancelSubscriptionResult,
+  CaptureOneTimeResult,
   ChargeInput,
   ChargeResult,
   CreateOneTimeCheckoutInput,
@@ -17,6 +18,11 @@ import type {
   WebhookResult,
 } from "@/lib/payments/types";
 
+// ESKİ ABD sağlayıcısı — AKTİF DEĞİL. ABD pazarı PayPal'a geçti (bkz.
+// lib/payments/paypal-provider.ts, lib/payments/index.ts); bu dosya aynı
+// PaymentService arayüzünün referans uygulaması olarak ve olası bir geri dönüş
+// için duruyor. Aşağıdaki açıklamalar Stripe aktifken geçerliydi.
+//
 // ABD pazarı (businesses.market = 'US') ödeme sağlayıcısı. STRIPE_SECRET_KEY
 // yoksa gerçek API'ye hiç gidilmez, simüle edilir (lib/iyzico ile aynı desen);
 // sk_test_ anahtarıyla Stripe'ın test modunda gerçek API çağrıları yapılır.
@@ -187,6 +193,11 @@ class StripePaymentProvider implements PaymentService {
     } catch {
       // Zaten tamamlanmış ya da süresi dolmuş oturum: yapılacak bir şey yok.
     }
+  }
+
+  // Checkout ödemeyi kendisi tahsil eder; "one_time.approved" hiç üretilmez.
+  async captureOneTimeCheckout(): Promise<CaptureOneTimeResult> {
+    return { success: false, error: "Stripe Checkout ödemeyi kendisi tahsil eder." };
   }
 
   async getSubscriptionSummary(subscriptionId: string): Promise<SubscriptionSummaryResult> {

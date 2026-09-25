@@ -10,8 +10,10 @@ import type {
 import { applyTicketPaymentEvent } from "@/lib/events/ticket-payments";
 import type { BusinessMarket } from "@/lib/types";
 
+export type BillingProvider = "paypal" | "stripe" | "iyzico";
+
 // İşletme aboneliği akışları. Sağlayıcı businesses.market'e göre seçilir
-// (TR → iyzico, US → Stripe). Bu fonksiyonlar yetki kontrolü YAPMAZ —
+// (TR → iyzico, US → PayPal). Bu fonksiyonlar yetki kontrolü YAPMAZ —
 // çağıran server action, kullanıcının işletmenin sahibi olduğunu (bkz.
 // getMyBusiness) doğrulamış olmalı.
 
@@ -54,6 +56,17 @@ export async function cancelBusinessSubscription(
 
   if (!subscription) return { success: false, error: "Aktif abonelik bulunamadı." };
 
+  // Dönem sonu iptalinde işaret sağlayıcıya gitmeden ÖNCE yazılır: PayPal'da
+  // ertelenmiş iptal yok, abonelik hemen iptal edilir ve
+  // BILLING.SUBSCRIPTION.CANCELLED birkaç saniye içinde gelir. Webhook bu
+  // işareti görünce aboneliği dönem sonuna kadar açık tutar ("deferred").
+  if (options.atPeriodEnd) {
+    await createServiceClient()
+      .from("business_subscriptions")
+      .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
+      .eq("provider_subscription_id", subscription.provider_subscription_id);
+  }
+
   // Durum burada değil, sağlayıcının "subscription.canceled" webhook'unda
   // güncellenir — tek doğruluk kaynağı sağlayıcı kalsın. "Dönem sonunda"
   // iptalde abonelik dönem bitene kadar aktif kalır; yalnızca işaretlenir.
@@ -71,10 +84,10 @@ export async function cancelBusinessSubscription(
       console.error("[billing] number release", businessId, (err as Error).message);
     }
   }
-  if (result.success && options.atPeriodEnd) {
+  if (!result.success && options.atPeriodEnd) {
     await createServiceClient()
       .from("business_subscriptions")
-      .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
+      .update({ cancel_at_period_end: false, updated_at: new Date().toISOString() })
       .eq("provider_subscription_id", subscription.provider_subscription_id);
   }
   return result;
@@ -82,7 +95,7 @@ export async function cancelBusinessSubscription(
 
 export interface BusinessBilling {
   market: BusinessMarket;
-  provider: "stripe" | "iyzico";
+  provider: BillingProvider;
   subscription: {
     status: "active" | "past_due" | "canceled";
     cancelAtPeriodEnd: boolean;
@@ -103,7 +116,7 @@ export interface BusinessBilling {
  * getMyBusiness ile doğrulamış olmalı.
  */
 export async function getBusinessBilling(businessId: string, market: BusinessMarket): Promise<BusinessBilling> {
-  const provider = market === "US" ? "stripe" : "iyzico";
+  const provider: BillingProvider = market === "US" ? "paypal" : "iyzico";
   const { data: row } = await createServiceClient()
     .from("business_subscriptions")
     .select("provider_subscription_id, status, cancel_at_period_end, current_period_end, last_payment_at, canceled_at")
@@ -114,8 +127,11 @@ export async function getBusinessBilling(businessId: string, market: BusinessMar
 
   if (!row) return { market, provider, subscription: null, live: null, liveError: null, simulated: false };
 
+  const periodEnded = row.current_period_end ? new Date(row.current_period_end) <= new Date() : true;
   const subscription = {
-    status: row.status as "active" | "past_due" | "canceled",
+    // Dönem sonu iptali: dönem bitince (PayPal'da bunu bildiren bir olay yok)
+    // abonelik bitmiş sayılır.
+    status: (row.cancel_at_period_end && periodEnded ? "canceled" : row.status) as "active" | "past_due" | "canceled",
     cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
     currentPeriodEnd: row.current_period_end as string | null,
     lastPaymentAt: row.last_payment_at as string | null,
@@ -126,6 +142,16 @@ export async function getBusinessBilling(businessId: string, market: BusinessMar
   }
 
   const live = await getPaymentService(market).getSubscriptionSummary(row.provider_subscription_id);
+  if (live.success && subscription.cancelAtPeriodEnd) {
+    // PayPal'da abonelik iptal anında "canceled" görünür ve dönem bilgisi
+    // kaybolur; ödenmiş dönem yerel kayıttan gösterilir.
+    live.summary = {
+      ...live.summary,
+      status: subscription.status,
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: live.summary.currentPeriodEnd ?? subscription.currentPeriodEnd,
+    };
+  }
   return live.success
     ? { market, provider, subscription, live: live.summary, liveError: null, simulated: live.simulated }
     : { market, provider, subscription, live: null, liveError: live.error, simulated: false };
@@ -135,10 +161,15 @@ export async function getBusinessBilling(businessId: string, market: BusinessMar
 // business_subscriptions'a, tek seferlik ödemeler (etkinlik bileti) bilete
 // yansır. Olay payment_events'e önce yazılır; aynı olay tekrar gelirse insert
 // benzersizlik ihlaline düşer ve işlenmeden atlanır.
+//
+// "deferred": dönem sonu iptali işaretli bir aboneliğin iptal olayı dönem
+// bitmeden geldi (PayPal iptali hemen bildirir). Abonelik dönem sonuna kadar
+// açık kalır; numara serbest bırakma gibi bitiş işleri çağıranda YAPILMAZ —
+// dönem bitince günlük iş (/api/cron/tideline-number-release) halleder.
 export async function applyPaymentWebhookEvent(
-  provider: "stripe" | "iyzico",
+  provider: BillingProvider,
   event: PaymentWebhookEvent
-): Promise<"applied" | "duplicate" | "ignored"> {
+): Promise<"applied" | "deferred" | "duplicate" | "ignored"> {
   if (event.type === "ignored") return "ignored";
 
   const supabase = createServiceClient();
@@ -155,10 +186,10 @@ export async function applyPaymentWebhookEvent(
   }
 
   try {
-    if (event.type === "one_time.completed" || event.type === "one_time.expired") {
+    if (event.type === "one_time.completed" || event.type === "one_time.expired" || event.type === "one_time.approved") {
       await applyTicketPaymentEvent(event);
-    } else {
-      await applyToSubscription(supabase, provider, event);
+    } else if ((await applyToSubscription(supabase, provider, event)) === "deferred") {
+      return "deferred";
     }
   } catch (err) {
     // Log satırı kalırsa sağlayıcının yeniden denemesi "duplicate" sayılıp
@@ -175,9 +206,9 @@ export async function applyPaymentWebhookEvent(
 
 async function applyToSubscription(
   supabase: ReturnType<typeof createServiceClient>,
-  provider: "stripe" | "iyzico",
-  event: Exclude<PaymentWebhookEvent, { type: "ignored" | "one_time.completed" | "one_time.expired" }>
-): Promise<void> {
+  provider: BillingProvider,
+  event: Exclude<PaymentWebhookEvent, { type: "ignored" | "one_time.completed" | "one_time.expired" | "one_time.approved" }>
+): Promise<"deferred" | void> {
   const now = new Date().toISOString();
 
   switch (event.type) {
@@ -189,6 +220,8 @@ async function applyToSubscription(
           provider_customer_id: event.customerId,
           provider_subscription_id: event.subscriptionId,
           status: "active",
+          // undefined → kolon hiç gönderilmez, mevcut değer korunur.
+          current_period_end: event.currentPeriodEnd ?? undefined,
           updated_at: now,
         },
         { onConflict: "provider_subscription_id" }
@@ -220,6 +253,20 @@ async function applyToSubscription(
       break;
     }
     case "subscription.canceled": {
+      const { data: row, error: readError } = await supabase
+        .from("business_subscriptions")
+        .select("cancel_at_period_end, current_period_end")
+        .eq("provider_subscription_id", event.subscriptionId)
+        .maybeSingle();
+      if (readError) throw new Error(readError.message);
+      if (row?.cancel_at_period_end && row.current_period_end && new Date(row.current_period_end) > new Date()) {
+        const { error } = await supabase
+          .from("business_subscriptions")
+          .update({ canceled_at: now, updated_at: now })
+          .eq("provider_subscription_id", event.subscriptionId);
+        if (error) throw new Error(error.message);
+        return "deferred";
+      }
       const { error } = await supabase
         .from("business_subscriptions")
         .update({ status: "canceled", canceled_at: now, updated_at: now })

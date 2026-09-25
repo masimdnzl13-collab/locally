@@ -84,7 +84,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(db.current!.tables.payment_events).toHaveLength(1);
     expect(db.current!.calls.filter((c) => c.table === "business_subscriptions")).toHaveLength(1);
     expect(hooks.completeSignup).toHaveBeenCalledTimes(1);
-    expect(hooks.completeSignup).toHaveBeenCalledWith("biz-1", "sub_1");
+    expect(hooks.completeSignup).toHaveBeenCalledWith("biz-1", "sub_1", "stripe");
   });
 
   it("releases the Twilio number once when a subscription-deleted event is delivered twice", async () => {

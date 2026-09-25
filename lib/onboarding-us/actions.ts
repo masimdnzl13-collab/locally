@@ -7,7 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ensureProfile } from "@/lib/auth/ensure-profile";
 import { uniqueSlug } from "@/lib/business/slug";
 import { startBusinessSubscription } from "@/lib/billing/subscriptions";
-import { getStripeClient } from "@/lib/stripe/client";
+import { isPayPalConfigured } from "@/lib/paypal/client";
 import { US_STATES } from "@/lib/onboarding-us/us-states";
 import { clientIp, rateLimit } from "@/lib/security/rate-limit";
 import {
@@ -35,7 +35,7 @@ function normalizeUsPhone(input: string): string | null {
 
 // P6 — ABD restoranları için self-servis kayıt, 1. adım: hesap + işletme.
 // businesses satırı burada market='US', active_modules='{}' olarak oluşur
-// (Stripe Checkout işletme kimliğiyle açıldığı için ödemeden önce var olmalı);
+// (PayPal aboneliği işletme kimliğiyle açıldığı için ödemeden önce var olmalı);
 // tideline modülü ödeme tamamlanınca açılır (bkz. lib/onboarding-us/complete.ts).
 // market/active_modules'ü yalnızca servis rolü yazabildiği için (guard
 // trigger) insert servis istemcisiyle yapılır.
@@ -147,7 +147,7 @@ export async function startUsSignupAction(formData: FormData): Promise<{ error: 
   redirect("/kayit/us/odeme");
 }
 
-// 2. adım: ödeme. Prompt C'nin Stripe akışına bağlı — STRIPE_SECRET_KEY yoksa
+// 2. adım: ödeme. PayPal Subscriptions — PAYPAL_CLIENT_ID/SECRET yoksa
 // sağlayıcı ödemeyi simüle eder ve doğrudan dönüş sayfasına (?simulated=1)
 // yönlendirir (test modu).
 export async function startUsCheckoutAction(): Promise<{ error: string } | void> {
@@ -156,24 +156,20 @@ export async function startUsCheckoutAction(): Promise<{ error: string } | void>
   const { signup } = current;
   if (signup.status !== "awaiting_payment") redirect("/kayit/us/durum");
 
-  let stripeConfigured: boolean;
-  try {
-    stripeConfigured = getStripeClient() !== null;
-  } catch (err) {
-    return { error: (err as Error).message };
-  }
-  const priceId = process.env.STRIPE_US_PRICE_ID;
-  if (stripeConfigured && !priceId) {
-    return { error: "Payments are not fully configured yet (STRIPE_US_PRICE_ID). Please try again later." };
+  // PayPal billing plan kimliği (P-...), bkz. .env.example.
+  const planId = process.env.PAYPAL_US_PLAN_ID;
+  if (isPayPalConfigured() && !planId) {
+    return { error: "Payments are not fully configured yet (PAYPAL_US_PLAN_ID). Please try again later." };
   }
 
   const { data: owner } = await createServiceClient().auth.admin.getUserById(signup.owner_id);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const result = await startBusinessSubscription({
     businessId: signup.business_id,
-    priceId: priceId ?? "price_test_mode",
+    priceId: planId ?? "plan_test_mode",
     customerEmail: owner?.user?.email ?? undefined,
-    successUrl: `${siteUrl}/kayit/us/durum?session_id={CHECKOUT_SESSION_ID}`,
+    // PayPal dönüşte ?subscription_id=... ekler (bkz. /kayit/us/durum).
+    successUrl: `${siteUrl}/kayit/us/durum`,
     cancelUrl: `${siteUrl}/kayit/us/odeme?canceled=1`,
   });
   if (!result.success) return { error: result.error };
