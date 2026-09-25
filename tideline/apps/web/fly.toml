@@ -1,0 +1,35 @@
+# Fly.io config for the Tideline web dashboard (static build behind nginx).
+# See DEPLOYMENT.md "Option A: Fly.io". Deploy from this directory:
+#   fly deploy --build-arg VITE_API_URL=https://<api-app>.fly.dev
+# VITE_API_URL is baked into the bundle at build time, so a new API domain means a
+# rebuild. The default below matches the temporary API address from fly.toml in ../api.
+app = "tideline-web"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+  [build.args]
+    VITE_API_URL = "https://tideline-api.fly.dev"
+
+# CSP frame-ancestors (docker/15-frame-ancestors.envsh): the Locally origin(s) allowed to
+# embed this dashboard in an iframe. Set it with
+#   fly secrets set -a tideline-web ALLOWED_FRAME_ANCESTORS=https://<locally-domain>
+# Unset → only localhost may embed it (the container logs a warning at start).
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  # Static files only: a stopped machine restarts on the next request in about a second.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/"
+    interval = "30s"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
