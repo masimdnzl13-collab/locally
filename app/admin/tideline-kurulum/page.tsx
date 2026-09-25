@@ -1,4 +1,5 @@
 import { PhoneOff, PlugZap } from "lucide-react";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PendingNumberActions, RetryActivationButton } from "@/components/admin/tideline-setup-actions";
@@ -19,6 +20,7 @@ function formatDate(iso: string) {
 // İşletme sahibi bu süre boyunca "kurulumunuz 24 saat içinde tamamlanacak"
 // ekranını görür (/kayit/us/durum).
 export default async function AdminTidelineSetupPage() {
+  await requireAdmin("/admin/tideline-kurulum");
   const supabase = createClient();
 
   const [{ data: unlinked }, pendingNumbers] = await Promise.all([

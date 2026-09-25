@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { Target } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LeadRowControls, NewLeadForm } from "@/components/admin/pipeline-controls";
@@ -18,6 +19,7 @@ function daysUntil(deadline: string) {
 }
 
 export default async function AdminSalesPipelinePage() {
+  await requireAdmin("/admin/isletme-hatti");
   const pipeline = await getSalesPipeline();
   const { signedUp } = pipeline;
   const remaining = Math.max(0, PIPELINE_GOAL - signedUp);

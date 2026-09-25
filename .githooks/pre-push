@@ -1,0 +1,50 @@
+#!/bin/sh
+# Locally + Tideline (aynı repo) — main'e doğrudan push'a karşı güvenlik ağı.
+# Kurulum: `npm install` (package.json "prepare") ya da elle:
+#   git config core.hooksPath .githooks
+# Kural için bkz. CONTRIBUTING.md: her görev ayrı branch'te, main'e yalnızca PR ile.
+#
+# Bilinçli bir istisna gerekiyorsa (ör. acil düzeltme):
+#   ALLOW_MAIN_PUSH=1 git push origin main
+
+protected_ref="refs/heads/main"
+
+[ "$ALLOW_MAIN_PUSH" = "1" ] && exit 0
+
+pushes_main=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "$protected_ref" ]; then
+    pushes_main="yes"
+  fi
+done
+
+[ -z "$pushes_main" ] && exit 0
+
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+cat >&2 <<MSG
+
+  ⚠  main'e doğrudan push ediyorsun, emin misin?
+
+  Önerilen akış (CONTRIBUTING.md):
+    git switch -c p-<görev-adi>          # ör. p-us-onboarding
+    git push -u origin HEAD
+    gh pr create --base main --fill
+
+MSG
+
+# Onay yalnızca gerçek bir terminalde sorulabilir. Terminal yoksa (CI,
+# arka plan işleri, AI oturumları) sessizce geçmek yerine reddedilir.
+if ! (: </dev/tty) 2>/dev/null; then
+  echo "  Etkileşimli terminal yok → push reddedildi. Bilinçli istisna için: ALLOW_MAIN_PUSH=1 git push" >&2
+  exit 1
+fi
+
+printf "  Yine de main'e push etmek için 'main' yaz (şu anki branch: %s): " "$branch" >&2
+read -r answer </dev/tty
+if [ "$answer" = "main" ]; then
+  exit 0
+fi
+
+echo "  Push iptal edildi." >&2
+exit 1

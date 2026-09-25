@@ -6,34 +6,13 @@ import { createClient } from "@/lib/supabase/server";
 import { initializeCheckout, refundPayment } from "@/lib/iyzico/service";
 import { finalizeCheckout } from "@/lib/purchases/checkout";
 import { PILOT_MODE } from "@/lib/config/pilot";
-import { getEffectiveRoles } from "@/lib/auth/roles";
-import type { UserRole } from "@/lib/types";
+import { getAdminContext } from "@/lib/auth/require-admin";
 
 function clientIp(): string {
   const forwarded = headers().get("x-forwarded-for");
   return forwarded?.split(",")[0]?.trim() || "85.34.78.112";
 }
 
-async function requireAdminUser() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, additional_roles")
-    .eq("id", user.id)
-    .single();
-
-  const effectiveRoles = getEffectiveRoles({
-    role: (profile?.role as UserRole) ?? "user",
-    additional_roles: profile?.additional_roles as UserRole[] | null,
-  });
-
-  return effectiveRoles.includes("admin") ? supabase : null;
-}
 
 export async function initiatePackageCheckoutAction(
   formData: FormData
@@ -262,8 +241,9 @@ export async function adminApproveRefundAction(
   const purchaseId = String(formData.get("purchaseId") ?? "");
   if (!purchaseId) return { error: "Satın alma bulunamadı." };
 
-  const supabase = await requireAdminUser();
-  if (!supabase) return { error: "Bu işlem için admin yetkisi gerekli." };
+  const admin = await getAdminContext("action:adminApproveRefund");
+  if (!admin) return { error: "Bu işlem için admin yetkisi gerekli." };
+  const { supabase } = admin;
 
   const { data: purchase } = await supabase
     .from("purchases")
@@ -297,8 +277,9 @@ export async function adminRejectRefundAction(
   const reason = String(formData.get("reason") ?? "").trim();
   if (!purchaseId) return { error: "Satın alma bulunamadı." };
 
-  const supabase = await requireAdminUser();
-  if (!supabase) return { error: "Bu işlem için admin yetkisi gerekli." };
+  const admin = await getAdminContext("action:adminRejectRefund");
+  if (!admin) return { error: "Bu işlem için admin yetkisi gerekli." };
+  const { supabase } = admin;
 
   const { error } = await supabase.rpc("reject_refund", {
     p_purchase_id: purchaseId,

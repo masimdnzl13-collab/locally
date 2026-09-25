@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { createClient } from "@/lib/supabase/server";
 import ModuleSwitcher, { type ModuleRow } from "@/components/admin/module-switcher";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ function formatDateTime(iso: string) {
 // tüm ABD işletmeleri için otomatik yapar. Bildirim metni:
 // lib/notifications/templates/seasonal-modules.ts.
 export default async function AdminModulesPage({ searchParams }: { searchParams: { pazar?: string } }) {
+  await requireAdmin("/admin/moduller");
   const market = MARKETS.some((m) => m.value === searchParams.pazar) ? searchParams.pazar! : "US";
   const supabase = createClient();
 

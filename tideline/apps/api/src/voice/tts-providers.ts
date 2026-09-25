@@ -5,8 +5,11 @@ const isLocale = (voice: string) => /^[a-z]{2}(-[A-Z]{2})?$/.test(voice);
 
 async function audioResponse(response: Response, provider: string): Promise<TtsAudio> {
   if (!response.ok) {
-    const detail = (await response.text().catch(() => "")).slice(0, 200);
-    throw new Error(`${provider} TTS failed with HTTP ${response.status}: ${detail}`);
+    // Only the provider's error code, never the body: TTS error bodies can echo the text being
+    // spoken (the assistant's reply, i.e. order contents), and this message reaches logs.
+    const body = (await response.json().catch(() => null)) as { err_code?: unknown; detail?: { status?: unknown } } | null;
+    const code = typeof body?.err_code === "string" ? body.err_code : typeof body?.detail?.status === "string" ? body.detail.status : undefined;
+    throw new Error(`${provider} TTS failed with HTTP ${response.status}${code ? ` (${code.slice(0, 64)})` : ""}`);
   }
   return {
     buffer: Buffer.from(await response.arrayBuffer()),
