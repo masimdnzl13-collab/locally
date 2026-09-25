@@ -132,6 +132,15 @@ export function assignTidelineNumber(numberId: string, phoneNumber: string) {
   );
 }
 
+// Abonelik bitince restoranın Twilio numarasını serbest bırakır (Tideline
+// tarafı idempotent). failed dolu dönerse numara hâlâ aktiftir — tekrar denenmeli.
+export function releaseTidelineRestaurantNumber(restaurantId: string) {
+  return callTideline<{
+    released: { id: string; phoneNumber: string | null }[];
+    failed: { id: string; phoneNumber: string | null; error: string }[];
+  }>(`/api/v1/internal/provisioning/restaurants/${encodeURIComponent(restaurantId)}/release-number`, { method: "POST" });
+}
+
 export interface TidelineBrainReadiness {
   hoursDays: number;
   menuItems: number;
