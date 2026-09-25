@@ -4,7 +4,7 @@ import {
   provisionTidelineRestaurant,
   type TidelineBrainReadiness,
 } from "@/lib/tideline/service-api";
-import { US_SIGNUP_COLUMNS, type UsSignup } from "@/lib/onboarding-us/signup";
+import { US_SIGNUP_COLUMNS, type UsPaymentMode, type UsSignup } from "@/lib/onboarding-us/signup";
 
 // Ödeme sonrası kurulum: tideline modülünü açar ve Tideline'dan restoran +
 // Twilio numarası ister. İdempotent — ödeme dönüş sayfası her yenilendiğinde,
@@ -28,7 +28,7 @@ export function isMenuReady(readiness: TidelineBrainReadiness) {
   return readiness.hoursDays >= MIN_HOURS_DAYS && readiness.menuItems >= MIN_MENU_ITEMS;
 }
 
-export async function markUsSignupPaid(businessId: string, payment: { mode: "stripe" | "test"; ref: string }) {
+export async function markUsSignupPaid(businessId: string, payment: { mode: UsPaymentMode; ref: string }) {
   await createServiceClient()
     .from("us_onboarding")
     .update({
@@ -41,7 +41,7 @@ export async function markUsSignupPaid(businessId: string, payment: { mode: "str
     .eq("status", "awaiting_payment");
 }
 
-// Stripe modunda ödemenin kanıtı webhook'un yazdığı aktif abonelik satırıdır
+// Gerçek ödemede (PayPal) ödemenin kanıtı webhook'un yazdığı aktif abonelik satırıdır
 // (bkz. lib/billing/subscriptions.ts) — dönüş URL'ine güvenilmez.
 export async function findActiveSubscriptionRef(businessId: string): Promise<string | null> {
   const { data } = await createServiceClient()
@@ -116,13 +116,18 @@ export async function activateUsSignup(businessId: string): Promise<UsSignup | n
   return fresh as unknown as UsSignup | null;
 }
 
-// Stripe webhook'u (checkout.session.completed → subscription.activated)
+// Sağlayıcı webhook'u (PayPal BILLING.SUBSCRIPTION.ACTIVATED →
+// subscription.activated)
 // kurulumu kullanıcının durum sayfasına dönmesini beklemeden tamamlar:
 // ödemeyi işaretler, tideline modülünü açar, Tideline restoran + numara
 // kurulumunu tetikler. ABD kaydı olmayan işletmeler için hiçbir şey yapmaz.
 // Durum sayfası aynı adımları idempotent olarak yine dener; buradaki bir
 // hata kullanıcıyı tıkamaz.
-export async function completeUsSignupFromWebhook(businessId: string, subscriptionId: string) {
-  await markUsSignupPaid(businessId, { mode: "stripe", ref: subscriptionId });
+export async function completeUsSignupFromWebhook(
+  businessId: string,
+  subscriptionId: string,
+  provider: Exclude<UsPaymentMode, "test"> = "paypal"
+) {
+  await markUsSignupPaid(businessId, { mode: provider, ref: subscriptionId });
   return activateUsSignup(businessId);
 }

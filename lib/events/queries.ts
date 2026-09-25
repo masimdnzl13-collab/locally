@@ -233,7 +233,7 @@ export async function getMyTickets(userId: string): Promise<MyTicket[]> {
   }
 }
 
-// Stripe'tan dönüşte webhook henüz gelmemiş olabilir: bilet "pending" iken QR
+// Ödeme sağlayıcısından (PayPal) dönüşte webhook henüz gelmemiş olabilir: bilet "pending" iken QR
 // yoktur. Bilet sayfası bu durumda bekleme ekranı gösterir (RLS: yalnız sahibi).
 export async function getTicketPaymentStatus(ticketId: string): Promise<string | null> {
   try {

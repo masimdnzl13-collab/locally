@@ -1,15 +1,25 @@
 import { createDb } from "./database/db.js";
 import { migrate } from "./database/migrate.js";
-import { loadEnv } from "./config/env.js";
+import { loadEnvOrExit } from "./config/env.js";
 import { createApp } from "./app.js";
 import { resolveFrameAncestors } from "./config/frame-ancestors.js";
+import { acquireSingletonLock } from "./database/singleton-lock.js";
 
 // The API entrypoint serves the authenticated dashboard API and the Twilio voice
 // routes (incoming webhook, media WebSocket, status callback) from one process.
-const env = loadEnv();
+const env = loadEnvOrExit("api");
 if (resolveFrameAncestors(env.ALLOWED_FRAME_ANCESTORS).isDefault)
   console.warn("ALLOWED_FRAME_ANCESTORS ayarlanmadı, sadece localhost'a izin veriliyor");
 const start = async () => {
+  // One API instance only (in-memory call state) — held for the process lifetime, taken before
+  // migrations so a second instance neither migrates nor serves calls. See singleton-lock.ts.
+  const lockDb = createDb(env.DATABASE_URL);
+  const singleton = await acquireSingletonLock(lockDb, {
+    onLost: (error) => {
+      console.error(JSON.stringify({ event: "singleton_lock_lost", error: error.message }));
+      process.exit(1);
+    },
+  });
   const migrationDb = createDb(env.DATABASE_URL);
   try {
     await migrate(migrationDb);
@@ -20,6 +30,8 @@ const start = async () => {
   const app = createApp(env, db);
   app.addHook("onClose", async () => {
     await db.end();
+    await singleton.release().catch(() => {});
+    await lockDb.end();
   });
   const shutdown = async (signal: string) => {
     app.log.info({ event: "api_shutdown", signal }, "API shutdown started");

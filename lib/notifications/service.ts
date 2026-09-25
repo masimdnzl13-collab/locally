@@ -1,4 +1,5 @@
 import type { NotificationService, SendEmailInput, SendResult, SendSmsInput } from "@/lib/notifications/types";
+import { isSmsOptedOut, isUsNumber, recordSmsConsent } from "@/lib/notifications/sms-opt-out";
 
 // Netgsm / Twilio (SMS) ve Resend (e-posta) anahtarları ortam değişkenlerinde
 // tanımlıysa gerçek sağlayıcıya gönderir; tanımlı değilse gönderimi
@@ -7,11 +8,12 @@ import type { NotificationService, SendEmailInput, SendResult, SendSmsInput } fr
 //
 // SMS sağlayıcısı numaraya göre seçilir: ABD (+1) numaraları Twilio'dan,
 // diğerleri (TR) Netgsm'den gider — Netgsm yurt dışına gönderemiyor.
+//
+// AM — STOP diyen numaraya (sms_opt_outs) hiçbir SMS gitmez. Kontrol burada,
+// tek noktada: sezonluk bildirim, duyuru, gelecekte eklenecek her SMS türü
+// bu fonksiyondan geçer. Twilio 21610 ("alıcı STOP dedi") dönerse numara
+// listeye yazılır, bir sonraki gönderim hiç denenmez.
 
-function isUsNumber(to: string) {
-  const digits = to.replace(/\D/g, "");
-  return to.trim().startsWith("+1") || (digits.length === 11 && digits.startsWith("1"));
-}
 
 export function smsProviderFor(to: string): { provider: "twilio" | "netgsm"; configured: boolean } {
   if (isUsNumber(to)) {
@@ -36,6 +38,21 @@ export function isEmailConfigured() {
 
 class LocallyNotificationService implements NotificationService {
   async sendSms(input: SendSmsInput): Promise<SendResult> {
+    let optedOut: boolean;
+    try {
+      optedOut = await isSmsOptedOut(input.to);
+    } catch (err) {
+      // Liste okunamıyorsa gerçek gönderim yapılmaz (yasal risk göndermemekten büyük);
+      // sağlayıcı yapılandırılmamışsa (test modu) zaten hiçbir şey gitmiyor.
+      if (smsProviderFor(input.to).configured) {
+        console.error("[sms] opt-out listesi okunamadı, gönderim durduruldu:", err instanceof Error ? err.message : err);
+        return { success: false, simulated: false, error: "SMS gönderilmedi: opt-out listesi okunamadı" };
+      }
+      optedOut = false;
+    }
+    if (optedOut) {
+      return { success: false, simulated: false, suppressed: true, error: "Alıcı SMS almayı durdurdu (STOP)" };
+    }
     return isUsNumber(input.to) ? this.sendTwilioSms(input) : this.sendNetgsmSms(input);
   }
 
@@ -60,6 +77,11 @@ class LocallyNotificationService implements NotificationService {
 
       const data = await res.json().catch(() => null);
       if (!res.ok) {
+        if (data?.code === 21610) {
+          // Kişi bu numaraya STOP demiş ve webhook'umuz kaçırmış: listeye yaz, bir daha deneme.
+          await recordSmsConsent(to, { optedOut: true, source: "carrier" }).catch(() => undefined);
+          return { success: false, simulated: false, suppressed: true, error: "Alıcı SMS almayı durdurdu (STOP)" };
+        }
         return { success: false, simulated: false, error: `Twilio hata: ${res.status} ${data?.message ?? ""}`.trim() };
       }
       return { success: true, simulated: false, providerRef: String(data?.sid ?? "") };

@@ -1,9 +1,16 @@
 # Deploying Tideline to production
 
-The hosting platform has not been chosen yet. This document lays out two
-realistic options, **Fly.io** and **a VPS running Docker Compose**, step by
-step, and compares them on domains, TLS, scaling and day-to-day operations. It
-does not make the decision. Render and Railway are noted briefly at the end.
+**Decision: Fly.io** (see [First deploy on Fly.io](#first-deploy-on-flyio-temporary-domains)).
+It is the lowest-friction option for the pilot: TLS and the edge proxy are
+automatic, the single-API-instance rule maps onto one always-on machine, and the
+temporary `*.fly.dev` addresses are enough to point a Twilio number at the API
+before a real domain exists. The config lives in `apps/api/fly.toml` and
+`apps/web/fly.toml`.
+
+The rest of this document still lays out both realistic options, **Fly.io** and
+**a VPS running Docker Compose**, and compares them on domains, TLS, scaling and
+day-to-day operations, in case the decision is revisited. Render and Railway are
+noted briefly at the end.
 
 ## What Tideline needs from any host
 
@@ -22,7 +29,7 @@ Live call state is held **in the API process's memory** (`VoiceSessionManager`
 keeps a `Map` of active sessions). The incoming-call webhook creates the session
 and the media WebSocket that follows must reach **the same process**. So:
 
-- **Run exactly one API instance.** Scale it vertically (more CPU/RAM). Adding
+- **Run exactly one API instance** (enforced: fixed `container_name` + a Postgres advisory lock at startup; see docs/ARCHITECTURE.md, "Single API instance"). Scale it vertically (more CPU/RAM). Adding
   a second instance behind a plain load balancer breaks calls whenever the
   webhook and the WebSocket land on different instances.
 - The worker has no such constraint and can run more than one copy.
@@ -42,16 +49,119 @@ Required: `DATABASE_URL`, `JWT_SECRET` (**must equal Locally's
 `AI_API_KEY`, and the two domains (`APP_DOMAIN`, `API_DOMAIN`), which become
 `APP_URL`, `API_URL` and `VOICE_PUBLIC_URL`.
 
-Recommended: `ALLOWED_FRAME_ANCESTORS` (Locally's origin, so the dashboard can be
-embedded in the Locally panel), plus `ALERT_WEBHOOK_URL`, or `RESEND_API_KEY` +
-`ALERT_EMAIL_TO` + `ALERT_EMAIL_FROM`, so telephony and cost alerts reach you.
+Also required in production: `ALLOWED_FRAME_ANCESTORS` (Locally's origin, so the
+dashboard can be embedded in the Locally panel), `REDIS_URL`, and an alert channel:
+`ALERT_WEBHOOK_URL`, or `RESEND_API_KEY` + `ALERT_EMAIL_TO` + `ALERT_EMAIL_FROM`.
 
-In production the API refuses to start with mock providers, `localhost` CORS
-origins, placeholder secrets or unsigned Twilio webhooks (see
-`apps/api/src/config/env.ts`). A misconfigured deploy fails at startup instead of
-running half-working.
+In production the API and worker refuse to start when anything above is missing,
+still a placeholder, `localhost`, a mock provider or unsigned Twilio webhooks, and
+print **every** problem at once (`productionEnvProblems` in
+`apps/api/src/config/env.ts`). The web image fails to build without
+`VITE_API_URL`, and its container refuses to start without
+`ALLOWED_FRAME_ANCESTORS` when `REQUIRE_FRAME_ANCESTORS=true` (set in
+`apps/web/fly.toml`). A misconfigured deploy fails at startup instead of running
+half-working.
 
 Generate the secrets with `openssl rand -base64 48`.
+
+**`DATABASE_URL` must be a direct (session) connection, not a transaction
+pooler.** The single-instance guard holds a session-level Postgres advisory lock
+for the life of the process; behind PgBouncer in transaction mode (Neon's
+`-pooler` host, Supabase's port 6543 pooler) that lock is not tied to one server
+connection and the guard silently stops working. Use Fly Managed Postgres, or the
+non-pooled / "direct" connection string of an external provider.
+
+## First deploy on Fly.io (temporary domains)
+
+Goal: API and web reachable from the internet on `https://<app>.fly.dev`, so a
+real Twilio number can call the API (P0.6). A custom domain can be added later
+without redeploying the API (step 9); the web app is rebuilt because
+`VITE_API_URL` is baked in.
+
+You need: a Fly.io account with a payment method (`fly auth signup` /
+`fly auth login` — done by the account owner), and the Twilio, Deepgram and
+Anthropic keys. The app names below are the defaults in the `fly.toml` files;
+Fly app names are global, so if one is taken pick another and pass `-a <name>`
+everywhere (and use `https://<name>.fly.dev` in the URLs).
+
+Shortcut: `deploy/fly-deploy.sh` runs steps 2–6 in one go (idempotent; secrets
+are read from the environment and piped to `fly secrets import`). The manual
+steps below are the same thing spelled out.
+
+1. **Install flyctl and log in** (account owner): https://fly.io/docs/flyctl/install/ then `fly auth login`.
+2. **Create the apps:**
+   ```sh
+   fly apps create locally-tideline-api
+   fly apps create locally-tideline-web
+   ```
+3. **Postgres and Redis** in `iad`:
+   ```sh
+   fly mpg create      # Managed Postgres; pick region iad in the prompts
+   fly redis create    # Upstash Redis; pick region iad
+   ```
+   Or use an external Postgres 16 (direct URL, see above). Note the two
+   connection strings for step 4.
+4. **Secrets for the API** (the non-secret settings are already in `apps/api/fly.toml`):
+   ```sh
+   # Generate JWT_SECRET and SESSION_SECRET once (openssl rand -base64 48) and keep them in
+   # your password manager: JWT_SECRET must also go to Locally as TIDELINE_JWT_SECRET, and
+   # `fly secrets` cannot print a value back.
+   fly secrets set -a locally-tideline-api --stage \
+     DATABASE_URL='postgres://…' REDIS_URL='redis://…' \
+     JWT_SECRET='…' SESSION_SECRET='…' \
+     APP_URL=https://locally-tideline-web.fly.dev API_URL=https://locally-tideline-api.fly.dev \
+     VOICE_PUBLIC_URL=https://locally-tideline-api.fly.dev \
+     CORS_ORIGINS=https://locally-tideline-web.fly.dev,https://<locally-domain> \
+     ALLOWED_FRAME_ANCESTORS=https://<locally-domain> \
+     TWILIO_ACCOUNT_SID=AC… TWILIO_AUTH_TOKEN=… TWILIO_PHONE_NUMBER=+1… \
+     STT_API_KEY=… TTS_API_KEY=… AI_API_KEY=… \
+     ALERT_WEBHOOK_URL=…
+   ```
+   `VOICE_PUBLIC_URL` must be exactly the URL Twilio calls: Twilio signs that URL
+   and the API rejects webhooks whose signature does not match.
+5. **Deploy the API** (runs migrations on start):
+   ```sh
+   cd apps/api && fly deploy
+   fly scale count app=1 worker=1 -a locally-tideline-api   # never more than one "app" machine
+   ```
+6. **Deploy the web app:**
+   ```sh
+   fly secrets set -a locally-tideline-web --stage ALLOWED_FRAME_ANCESTORS=https://<locally-domain>
+   cd apps/web && fly deploy --build-arg VITE_API_URL=https://locally-tideline-api.fly.dev
+   ```
+7. **Verify from outside:**
+   ```sh
+   deploy/smoke-test.sh https://locally-tideline-api.fly.dev https://locally-tideline-web.fly.dev
+   ```
+   It checks `/health` and `/ready`, that the Twilio webhook is reachable and
+   rejects unsigned requests, that the media WebSocket upgrade passes Fly's
+   proxy, CORS for the web origin, the SPA routes, the `frame-ancestors` header,
+   and that the web bundle points at the API.
+8. **Point Locally at it** (Vercel env): `TIDELINE_API_URL=https://locally-tideline-api.fly.dev`,
+   `TIDELINE_WEB_URL=https://locally-tideline-web.fly.dev`, `TIDELINE_JWT_SECRET` (= step 4).
+9. **Custom domains later:** `fly certs add api.<domain> -a locally-tideline-api` and
+   `fly certs add app.<domain> -a locally-tideline-web`, create the DNS records Fly
+   prints, update the URL secrets from step 4 and the Twilio webhooks, and
+   redeploy the web app with the new `VITE_API_URL`.
+
+### Unlocking P0.6 (a real Twilio call)
+
+With the smoke test green:
+
+1. Twilio console → Phone Numbers → the number in `TWILIO_PHONE_NUMBER` →
+   Voice configuration: **A call comes in** → Webhook,
+   `https://locally-tideline-api.fly.dev/api/v1/telephony/twilio/incoming`, HTTP POST;
+   **Call status changes** → `https://locally-tideline-api.fly.dev/api/v1/telephony/twilio/status`.
+   (Numbers bought later through self-service provisioning get these URLs
+   automatically from `VOICE_PUBLIC_URL`.)
+2. Map that number to a restaurant whose Brain has hours and menu items (the
+   `/kayit/us` flow, or the admin queue in Locally).
+3. Keep `fly logs -a locally-tideline-api` open and call the number. Expect
+   `CALL_STARTED`, the media stream attaching, then transcripts and the AI's
+   replies in the log.
+4. If the call is answered with "We could not verify this call", the signature
+   check failed: `VOICE_PUBLIC_URL` does not exactly match the webhook URL
+   configured in Twilio.
 
 ---
 
@@ -65,8 +175,8 @@ the edge proxy, and WebSockets work out of the box.
 1. **Install and log in:** `fly auth login`.
 2. **Create the apps.** Use one app for api + worker and one for web:
    ```sh
-   fly apps create tideline-api
-   fly apps create tideline-web
+   fly apps create locally-tideline-api
+   fly apps create locally-tideline-web
    ```
 3. **Database and Redis:**
    - Postgres: `fly mpg create` (Fly Managed Postgres), or any external
@@ -75,9 +185,10 @@ the edge proxy, and WebSockets work out of the box.
    - Redis: `fly redis create` (Upstash). Put the URL in `REDIS_URL`.
    - Pick the region closest to the restaurants and to Twilio's media edge.
      For the US East Coast that is `iad` or `ewr`.
-4. **Configure the API app** with `apps/api/fly.toml`:
+4. **Configure the API app** with `apps/api/fly.toml` (the committed file is the
+   source of truth; the excerpt below shows the essentials):
    ```toml
-   app = "tideline-api"
+   app = "locally-tideline-api"
    primary_region = "iad"
 
    [build]
@@ -108,7 +219,7 @@ the edge proxy, and WebSockets work out of the box.
 5. **Set secrets.** Fly stores them encrypted and injects them as environment
    variables:
    ```sh
-   fly secrets set -a tideline-api APP_ENV=production TELEPHONY_MODE=twilio \
+   fly secrets set -a locally-tideline-api APP_ENV=production TELEPHONY_MODE=twilio \
      AI_PROVIDER=anthropic STT_PROVIDER=deepgram TTS_PROVIDER=deepgram \
      DATABASE_URL=... REDIS_URL=... JWT_SECRET=... SESSION_SECRET=... \
      APP_URL=https://app.example.com API_URL=https://api.example.com \
@@ -118,11 +229,11 @@ the edge proxy, and WebSockets work out of the box.
    ```
 6. **Deploy:** `fly deploy` from `apps/api`. For the web app (`apps/web`):
    `fly deploy --build-arg VITE_API_URL=https://api.example.com`, with
-   `ALLOWED_FRAME_ANCESTORS` set as a secret or env on `tideline-web`.
+   `ALLOWED_FRAME_ANCESTORS` set as a secret or env on `locally-tideline-web`.
 7. **Custom domains and TLS:**
    ```sh
-   fly certs add api.example.com -a tideline-api
-   fly certs add app.example.com -a tideline-web
+   fly certs add api.example.com -a locally-tideline-api
+   fly certs add app.example.com -a locally-tideline-web
    ```
    Then create the DNS records Fly prints (A/AAAA to the app's IPs, or a
    CNAME to `<app>.fly.dev`). Fly issues and renews Let's Encrypt certificates
@@ -130,7 +241,7 @@ the edge proxy, and WebSockets work out of the box.
 
 ### Scaling on Fly
 
-- Vertical: `fly scale vm shared-cpu-2x --memory 1024 -a tideline-api` (a restart, so calls drop).
+- Vertical: `fly scale vm shared-cpu-2x --memory 1024 -a locally-tideline-api` (a restart, so calls drop).
 - Worker: `fly scale count worker=2`.
 - API: stays at one machine until call state is shared (see above). Fly's
   `fly-replay` header is one way to route a call's WebSocket back to the
@@ -234,11 +345,109 @@ and **Caddy**, which terminates TLS and gets certificates automatically.
 
 1. `curl https://API_DOMAIN/ready` → `{"status":"ready"}`.
 2. In the Twilio console, set the phone number's **Voice webhook** to
-   `https://API_DOMAIN/api/v1/telephony/twilio/incoming` (POST) and the
-   **status callback** to `https://API_DOMAIN/api/v1/telephony/twilio/status`.
+   `https://API_DOMAIN/api/v1/telephony/twilio/incoming` (POST), the
+   **status callback** to `https://API_DOMAIN/api/v1/telephony/twilio/status`, and
+   the **Messaging webhook** ("A message comes in") to
+   `https://API_DOMAIN/api/v1/telephony/twilio/sms` (POST) so STOP/START texts are
+   recorded (TCPA). Numbers bought through provisioning get all three
+   automatically; `node scripts/twilio-sms-webhooks.mjs` (repo root) checks every
+   number on the account and fixes the SMS webhook with `--apply`.
 3. In Locally's environment, set `TIDELINE_API_URL=https://API_DOMAIN`,
    `TIDELINE_WEB_URL=https://APP_DOMAIN` and `TIDELINE_JWT_SECRET` (same value
    as Tideline's `JWT_SECRET`).
 4. Add an external uptime monitor on `https://API_DOMAIN/ready`. The built-in
    telephony alert cannot fire if the whole process is down.
 5. Place a test call and watch `docker compose logs -f api` or `fly logs`.
+
+---
+
+## Disaster recovery (Felaket kurtarma)
+
+Calls, transcripts, orders and reservations exist only in Tideline's Postgres;
+restaurants, owners, subscriptions and the sales pipeline only in Locally's
+Supabase database. Without a backup that can be restored, losing either one
+cannot be undone.
+
+### What is backed up (checked 2026-09-26)
+
+| Data | Where | Automatic backup | Status |
+|---|---|---|---|
+| Tideline: calls, transcripts, orders, reservations, SMS opt-outs | Postgres on the chosen host (Fly Managed Postgres or external) | Fly MPG: daily backups + point-in-time recovery | **Not verified yet:** Fly CLI was not logged in where this was written. Check it with the list below. |
+| Locally: businesses, users, subscriptions, pipeline, privacy requests | Supabase project `locally` (`flgkzywlbrpqnarseyww`, Frankfurt) | Free plan: none. Pro: daily, 7 days; PITR is a paid add-on | **No restorable backup exists.** `supabase backups list` shows PITR off and no backup timestamps. Upgrade to Pro (or add PITR) before launch. |
+| Redis (Upstash) | Notification queue | Not needed | The `outbox_events` table in Postgres is the source of truth; the worker re-queues pending events. |
+| Secrets, Twilio numbers | Fly secrets, Vercel env, Twilio console | Not data | Keep a copy of every secret in a password manager; Fly/Vercel don't show them back. |
+
+### Monthly check (5 minutes)
+
+- Supabase: `supabase backups list --project-ref flgkzywlbrpqnarseyww`
+  should show a backup from the last 24 hours (Dashboard → Database → Backups).
+- Fly: Dashboard → Managed Postgres → the cluster → Backups should show a recent
+  daily backup (`fly mpg --help` for the CLI equivalent). With an external
+  provider, check its backup page.
+- Restore drill, below: at least every quarter and after any large migration.
+
+### Restore drill (the real test)
+
+`deploy/restore-drill.sh` takes a logical backup (`pg_dump`), restores it into an
+**empty** Postgres and compares every table's row count and the latest migration.
+It exits 1 on any difference.
+
+```sh
+# With Docker (starts and removes a scratch postgres:16):
+SOURCE_DATABASE_URL='postgresql://<admin-user>:...@<host>/<db>' bash deploy/restore-drill.sh
+# Without Docker: local pg_dump/pg_restore/psql 16 and an empty database you created:
+SOURCE_DATABASE_URL=... TARGET_DATABASE_URL=postgresql://.../empty_db PG_BIN=/path/to/pgsql/bin \
+  bash deploy/restore-drill.sh
+```
+
+Use an admin connection that bypasses RLS: the tables use `FORCE ROW LEVEL
+SECURITY`, so an ordinary role cannot dump them. The dump file stays in
+`backups/` (git-ignored). It holds customer data: delete it or keep it encrypted.
+
+Last run: 2026-09-26, local Postgres 16.14, all migrations through
+`023_sms_opt_out.sql` plus the development seed: 42 tables and 144 rows restored
+identically, all 28 RLS policies and forced-RLS tables back, and the API's
+migrator found nothing pending on the restored copy. Dump 1 s, restore 2 s. A
+drill against production data has **not** been run yet; run it once the
+production database exists.
+
+Locally (Supabase) depends on its `auth` and `storage` schemas, so a plain
+`pg_restore` into vanilla Postgres is not a meaningful test. On Pro, use
+Dashboard → Database → Backups → "Restore to a new project" to test restoring
+to a separate project.
+
+### If data is lost or corrupted (bad migration, accidental delete)
+
+1. **Stop writes:** `fly scale count app=0 worker=0 -a <api-app>`. Calls go
+   unanswered, so tell restaurants to forward to their own line.
+2. **Pick the restore point:** the last moment before the incident (PITR), or
+   the latest daily backup.
+3. **Restore into a new database, never over the damaged one:** Fly MPG
+   restore to a new cluster, or `pg_restore --no-owner` a dump into an empty
+   database. Keep the damaged database for comparison.
+4. **Point the app at it:** `fly secrets set DATABASE_URL=... -a <api-app>`,
+   then `fly scale count app=1 worker=1`. Check `curl https://API_DOMAIN/ready`
+   and place a test call.
+5. **Locally:** Supabase Dashboard → Database → Backups → Restore (Pro/PITR).
+   This restores the project in place, and Locally is down while it runs.
+6. Write down what was lost: the time between the restore point and the
+   incident. Affected restaurants may need to re-enter orders from that window.
+
+### If the server crashes
+
+- Fly restarts crashed machines by itself. The database is separate, so no data
+  is lost; only calls in progress drop.
+- A bad deploy: `fly releases -a <api-app>` and redeploy the previous image
+  (`fly deploy --image <previous-image> -a <api-app>`).
+- The machine won't start: `fly logs -a <api-app>`. A missing environment
+  variable is printed as a list at startup (see "Secrets and settings").
+- Region or provider outage: create the apps in another region
+  (`deploy/fly-deploy.sh` with `FLY_REGION`), restore the latest backup there,
+  then update DNS and the Twilio webhooks.
+
+### Targets
+
+With daily backups up to 24 hours of data can be lost (RPO); with PITR, minutes.
+Aim to be back within 1 hour (RTO). Keep an owner-held list of who can log in to
+Fly, Supabase, Twilio and Vercel. If only one person has access, recovery waits
+for that person.

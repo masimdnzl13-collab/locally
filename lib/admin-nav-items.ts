@@ -10,6 +10,7 @@ import {
   Snowflake,
   PhoneCall,
   Target,
+  Lock,
 } from "lucide-react";
 
 export const adminNavItems = [
@@ -22,6 +23,7 @@ export const adminNavItems = [
   { href: "/admin/moduller", label: "Sezon Modülleri", icon: Snowflake },
   { href: "/admin/icerik", label: "İçerik Gözetimi", icon: ShieldAlert },
   { href: "/admin/iadeler", label: "İade Talepleri", icon: Undo2 },
+  { href: "/admin/gizlilik-talepleri", label: "Gizlilik Talepleri", icon: Lock },
   { href: "/admin/bekleme-listesi", label: "Bekleme Listesi", icon: Mail },
   { href: "/admin/eski-veri", label: "Eski Örnek Veri", icon: Archive },
 ] as const;

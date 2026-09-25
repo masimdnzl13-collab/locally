@@ -3,9 +3,15 @@ import type { FastifyBaseLogger } from "fastify";
 import type { Env } from "../config/env.js";
 import type { Db } from "../database/db.js";
 import { AppError } from "../domain/errors.js";
+import { redactPii } from "../observability.js";
 
 export interface PurchasedNumber { phoneNumber: string; sid: string }
-export interface NumberPurchaser { purchase(input: { areaCode?: string; friendlyName: string }): Promise<PurchasedNumber> }
+export interface NumberPurchaser {
+  purchase(input: { areaCode?: string; friendlyName: string }): Promise<PurchasedNumber>;
+  // Resolves when Twilio no longer bills us for the number (including "already gone": 404).
+  release(input: { sid: string | null; phoneNumber: string }): Promise<void>;
+}
+export interface ReleaseResult { released: { id: string; phoneNumber: string | null }[]; failed: { id: string; phoneNumber: string | null; error: string }[] }
 export type PhoneAssignment =
   | { status: "active"; id: string; phoneNumber: string }
   | { status: "pending_manual"; id: string; phoneNumber: null; failureReason: string };
@@ -21,7 +27,7 @@ const areaCodeOf = (phone?: string | null) => {
 
 // Twilio "Available Phone Numbers" + "Incoming Phone Numbers" APIs: find a voice+SMS capable US
 // local number (preferring the restaurant's own area code), buy it, and point its voice webhooks
-// at this API so calls route straight into the receptionist.
+// and SMS webhooks at this API so calls route straight into the receptionist and STOP texts are honoured.
 export class TwilioNumberPurchaser implements NumberPurchaser {
   private readonly auth: string;
   constructor(private readonly accountSid: string, authToken: string, private readonly publicUrl: string) {
@@ -55,10 +61,31 @@ export class TwilioNumberPurchaser implements NumberPurchaser {
         VoiceMethod: "POST",
         StatusCallback: new URL("/api/v1/telephony/twilio/status", this.publicUrl).toString(),
         StatusCallbackMethod: "POST",
+        // Inbound texts (STOP/START/HELP) → customer_sms_preferences; see notifications/sms-inbound-routes.ts.
+        SmsUrl: new URL("/api/v1/telephony/twilio/sms", this.publicUrl).toString(),
+        SmsMethod: "POST",
       }),
     });
     if (!bought.sid || !bought.phone_number) throw new Error("Twilio did not return the purchased number");
     return { phoneNumber: bought.phone_number, sid: bought.sid };
+  }
+  async release(input: { sid: string | null; phoneNumber: string }): Promise<void> {
+    // Manually assigned numbers have no stored SID: look it up by number on this account.
+    let sid = input.sid;
+    if (!sid) {
+      const found = await this.twilio<{ incoming_phone_numbers?: { sid: string }[] }>(
+        `/IncomingPhoneNumbers.json?${new URLSearchParams({ PhoneNumber: input.phoneNumber })}`,
+      );
+      sid = found.incoming_phone_numbers?.[0]?.sid ?? null;
+      if (!sid) return; // not on this Twilio account: nothing is being billed here
+    }
+    const response = await fetch(TWILIO_API + this.accountSid + `/IncomingPhoneNumbers/${encodeURIComponent(sid)}.json`, {
+      method: "DELETE",
+      headers: { Authorization: this.auth },
+    });
+    if (response.ok || response.status === 404) return;
+    const data = (await response.json().catch(() => ({}))) as { message?: string; code?: number };
+    throw new Error(`Twilio ${response.status}${data.code ? ` (${data.code})` : ""}: ${data.message ?? "release failed"}`);
   }
 }
 
@@ -74,7 +101,7 @@ export class PhoneProvisioningService {
 
   async current(restaurantId: string): Promise<PhoneAssignment | undefined> {
     const row = (await this.db.query<{ id: string; phone_number: string | null; status: string; failure_reason: string | null }>(
-      "SELECT id,phone_number,status,failure_reason FROM restaurant_phone_numbers WHERE restaurant_id=$1 ORDER BY (status='active') DESC, created_at ASC LIMIT 1",
+      "SELECT id,phone_number,status,failure_reason FROM restaurant_phone_numbers WHERE restaurant_id=$1 AND status<>'released' ORDER BY (status='active') DESC, created_at ASC LIMIT 1",
       [restaurantId],
     )).rows[0];
     if (!row) return undefined;
@@ -106,6 +133,40 @@ export class PhoneProvisioningService {
     await this.pendingRow(numberId);
     await this.activate(numberId, phoneNumber, null);
     return { status: "active", id: numberId, phoneNumber };
+  }
+
+  // Subscription ended: stop paying Twilio for this restaurant's number(s). Idempotent — only
+  // active/pending rows are touched, so a retried call (webhook + daily job) is a no-op. A row
+  // whose Twilio release fails stays active and is reported, so the caller retries later.
+  async release(restaurantId: string): Promise<ReleaseResult> {
+    const rows = (await this.db.query<{ id: string; phone_number: string | null; status: string; provider_sid: string | null }>(
+      "SELECT id,phone_number,status,provider_sid FROM restaurant_phone_numbers WHERE restaurant_id=$1 AND status IN ('active','pending_manual')",
+      [restaurantId],
+    )).rows;
+    const result: ReleaseResult = { released: [], failed: [] };
+    for (const row of rows) {
+      if (row.status === "active" && row.phone_number) {
+        if (!this.purchaser) {
+          result.failed.push({ id: row.id, phoneNumber: row.phone_number, error: "Automatic Twilio release is disabled (TELEPHONY_MODE is not twilio or credentials are missing)" });
+          continue;
+        }
+        try {
+          await this.purchaser.release({ sid: row.provider_sid, phoneNumber: row.phone_number });
+        } catch (error) {
+          const message = redactPii(error instanceof Error ? error.message : String(error)).slice(0, 300);
+          this.log.warn({ restaurantId, numberId: row.id, error: message }, "twilio number release failed");
+          result.failed.push({ id: row.id, phoneNumber: row.phone_number, error: message });
+          continue;
+        }
+      }
+      await this.db.query(
+        "UPDATE restaurant_phone_numbers SET status='released',active=FALSE,released_at=NOW(),released_phone_number=phone_number,phone_number=NULL,updated_at=NOW() WHERE id=$1",
+        [row.id],
+      );
+      result.released.push({ id: row.id, phoneNumber: row.phone_number });
+    }
+    if (result.released.length) this.log.info({ restaurantId, released: result.released.length }, "restaurant phone numbers released");
+    return result;
   }
 
   async pending(): Promise<PendingNumber[]> {
@@ -151,7 +212,7 @@ export class PhoneProvisioningService {
         // A number bought but not recorded is still ours on Twilio; keep its SID in the reason so
         // an admin can attach it instead of buying a second one.
         failureReason = purchased ? `Purchased ${purchased.phoneNumber} (${purchased.sid}) but could not save it: ${message}` : message;
-        this.log.warn({ restaurantId: restaurant.id, error: message }, "twilio number provisioning failed; queued for manual assignment");
+        this.log.warn({ restaurantId: restaurant.id, error: redactPii(message) }, "twilio number provisioning failed; queued for manual assignment");
       }
     }
     failureReason = failureReason.slice(0, 500);

@@ -1,4 +1,4 @@
-import type { MessagingProvider } from "./contracts.js";
+import { SmsProviderError, type MessagingProvider } from "./contracts.js";
 export class TwilioSmsProvider implements MessagingProvider {
   constructor(
     private accountSid: string,
@@ -30,9 +30,10 @@ export class TwilioSmsProvider implements MessagingProvider {
       sid?: string;
       status?: string;
       message?: string;
+      code?: number;
     };
     if (!response.ok || !data.sid)
-      throw new Error(data.message ?? "Twilio SMS failed");
+      throw new SmsProviderError(data.message ?? "Twilio SMS failed", data.code === undefined ? undefined : String(data.code));
     return {
       providerMessageId: data.sid,
       providerStatus: data.status ?? "queued",

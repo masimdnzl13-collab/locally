@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Db } from "../database/db.js";
-import type { MessagingProvider, NotificationEvent } from "./contracts.js";
+import { SmsProviderError, TWILIO_UNSUBSCRIBED, type MessagingProvider, type NotificationEvent } from "./contracts.js";
+import { setSmsConsent, smsPreference } from "./sms-consent.js";
+import { runWithTenant } from "../database/tenant-context.js";
 import { render } from "./templates.js";
 import { safeError } from "../observability.js";
 export class NotificationService {
@@ -31,12 +33,8 @@ export class NotificationService {
       );
       return;
     }
-    const preference = (
-      await this.db.query<{ consent: boolean; language: "EN" | "ES" }>(
-        "SELECT consent,language FROM customer_sms_preferences WHERE restaurant_id=$1 AND phone=$2",
-        [e.restaurant_id, phone],
-      )
-    ).rows[0];
+    // Checked at send time, not when the event was queued: a STOP that arrives in between still wins.
+    const preference = await runWithTenant(e.restaurant_id, () => smsPreference(this.db, e.restaurant_id, phone));
     if (preference && !preference.consent) {
       await this.db.query(
         "UPDATE outbox_events SET status='PROCESSED',processed_at=NOW() WHERE id=$1",
@@ -94,6 +92,15 @@ export class NotificationService {
       );
       return n;
     } catch (error) {
+      if (error instanceof SmsProviderError && error.code === TWILIO_UNSUBSCRIBED) {
+        // The customer texted STOP and Twilio knows it even if our webhook missed it: record the
+        // opt-out and stop retrying — every retry would be refused the same way.
+        await runWithTenant(e.restaurant_id, () => setSmsConsent(this.db, { restaurantId: e.restaurant_id, phone, consent: false, source: "carrier" }));
+        await this.db.query("UPDATE messages SET status='FAILED',error_message='recipient unsubscribed',error_code=$2,updated_at=NOW() WHERE id=$1", [activeMessageId, TWILIO_UNSUBSCRIBED]);
+        await this.db.query("UPDATE notifications SET status='SUPPRESSED',error_message='recipient unsubscribed' WHERE id=$1", [n.id]);
+        await this.db.query("UPDATE outbox_events SET status='PROCESSED',processed_at=NOW() WHERE id=$1", [eventId]);
+        return { status: "SUPPRESSED" };
+      }
       const message = "notification provider failure";
       await this.db.query(
         "UPDATE messages SET status='FAILED',error_message=$2,error_code='PROVIDER_ERROR',updated_at=NOW() WHERE id=$1",

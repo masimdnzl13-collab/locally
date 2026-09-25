@@ -5,6 +5,7 @@ import websocket from "@fastify/websocket";
 import Fastify, { type FastifyRequest } from "fastify";
 import { z, ZodError } from "zod";
 import type { Env } from "./config/env.js";
+import { serializeLoggedError } from "./observability.js";
 import { frameAncestorsHeader, resolveFrameAncestors } from "./config/frame-ancestors.js";
 import type { Db } from "./database/db.js";
 import { enterTenant, runWithTenant } from "./database/tenant-context.js";
@@ -19,7 +20,9 @@ import { createNumberPurchaser, PhoneProvisioningService, type NumberPurchaser }
 import { RestaurantBrainService } from "./services/restaurant-brain-service.js";
 import { StatsService } from "./services/stats-service.js";
 import { createVoiceRuntime, type VoiceRuntime } from "./voice/runtime.js";
-import { registerFormParser, registerTelephonyRoutes } from "./voice/telephony-routes.js";
+import { registerFormParser, registerTelephonyRoutes, twilioRateLimit } from "./voice/telephony-routes.js";
+import { registerSmsInboundRoutes } from "./notifications/sms-inbound-routes.js";
+import { toE164 } from "./notifications/sms-keywords.js";
 import { validateTwilioSignature } from "./voice/twilio-provider.js";
 declare module "fastify" {
   interface FastifyRequest {
@@ -113,8 +116,12 @@ export function createApp(
       level: env.LOG_LEVEL,
       redact: [
         "req.headers.authorization", "req.headers.cookie", "req.headers.x-api-key", "req.headers.x-service-token", "req.body.password", "req.body.token", "req.body.assertion", "req.body.accessToken", "req.body.recording", "req.body.transcript",
+        // Twilio webhooks and customer-facing bodies: caller numbers, speech, order contents.
+        "req.body.From", "req.body.To", "req.body.Caller", "req.body.Called", "req.body.SpeechResult", "req.body.Body",
+        "req.body.phone", "req.body.customerPhone", "req.body.customerName", "req.body.items", "req.body.notes", "req.body.contactPhone",
         "res.headers.set-cookie",
       ],
+      serializers: { err: serializeLoggedError, error: serializeLoggedError },
     },
     genReqId: (req) => {
       const input = req.headers["x-request-id"];
@@ -177,11 +184,15 @@ export function createApp(
   app.register(cors, {
     origin: env.CORS_ORIGINS.split(",").map((x) => x.trim()),
     credentials: true,
+    // @fastify/cors only allows GET/HEAD/POST by default; the web app (a different
+    // origin) also edits the Brain with PUT/PATCH/DELETE.
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
   });
   app.register(rateLimit, { global: false });
   app.register(websocket);
   registerFormParser(app);
   app.setErrorHandler((err, req, res) => {
+    const status = (err as { statusCode?: unknown }).statusCode;
     const appError =
       err instanceof AppError
         ? err
@@ -189,7 +200,11 @@ export function createApp(
           ? new AppError("VALIDATION_ERROR", "Invalid request", 400, {
               fields: err.flatten(),
             })
-          : new AppError("INTERNAL_ERROR", "An unexpected error occurred", 500);
+          : // Framework/plugin client errors (429 rate limit, 413 body too large, 415...) keep their
+            // status: turning them into 500s hid rate limiting and tripped the 5xx telephony alert.
+            typeof status === "number" && status >= 400 && status < 500
+            ? new AppError(status === 429 ? "RATE_LIMITED" : "BAD_REQUEST", status === 429 ? "Too many requests" : "Invalid request", status)
+            : new AppError("INTERNAL_ERROR", "An unexpected error occurred", 500);
     req.log.error(
       {
         err,
@@ -445,16 +460,25 @@ export function createApp(
           language: z.enum(["EN", "ES"]).default("EN"),
         })
         .parse(req.body);
+      // TCPA: only the customer can undo their own STOP (by texting START); the owner can't re-subscribe them.
+      const optedOut = (
+        await db.query<{ n: number }>(
+          "SELECT COUNT(*)::int AS n FROM customer_sms_preferences WHERE restaurant_id=$1 AND phone IN ($2,$3) AND consent=false AND consent_source<>'owner'",
+          [id, b.phone, toE164(b.phone)],
+        )
+      ).rows[0];
+      if (b.consent && Number(optedOut?.n ?? 0) > 0)
+        throw new AppError("CONFLICT", "This customer opted out by text (STOP); only they can resubscribe by texting START", 409);
       await db.query(
-        "INSERT INTO customer_sms_preferences(restaurant_id,phone,consent,language) VALUES($1,$2,$3,$4) ON CONFLICT(restaurant_id,phone) DO UPDATE SET consent=EXCLUDED.consent,language=EXCLUDED.language,updated_at=NOW()",
-        [id, b.phone, b.consent, b.language],
+        "INSERT INTO customer_sms_preferences(restaurant_id,phone,consent,language,consent_source,opted_out_at) VALUES($1,$2,$3,$4,'owner',CASE WHEN $3 THEN NULL ELSE NOW() END) ON CONFLICT(restaurant_id,phone) DO UPDATE SET consent=EXCLUDED.consent,language=EXCLUDED.language,consent_source=CASE WHEN customer_sms_preferences.consent=EXCLUDED.consent THEN customer_sms_preferences.consent_source ELSE 'owner' END,opted_out_at=CASE WHEN EXCLUDED.consent THEN NULL ELSE COALESCE(customer_sms_preferences.opted_out_at,NOW()) END,updated_at=NOW()",
+        [id, toE164(b.phone), b.consent, b.language],
       );
       return { ok: true };
     },
   );
   app.post(
     "/api/v1/notifications/twilio/status",
-    { config: { rateLimit: { max: 120, timeWindow: "1 minute" } } },
+    { config: twilioRateLimit("MessageSid", 30) },
     async (req, reply) => {
       if (!validTwilioSignature(env, req))
         return reply.code(403).send({
@@ -525,6 +549,10 @@ export function createApp(
     res.status(created ? 201 : 200);
     return { restaurant: { id: restaurant.id, name: restaurant.name }, phone: phone ?? null };
   });
+  // Locally calls this when a subscription ends (immediately, or at period end). Idempotent.
+  app.post("/api/v1/internal/provisioning/restaurants/:restaurantId/release-number", internal, async (req) =>
+    phones.release(z.string().uuid().parse((req.params as { restaurantId: string }).restaurantId)),
+  );
   app.get("/api/v1/internal/provisioning/phone-numbers/pending", internal, async () => ({ numbers: await phones.pending() }));
   app.post("/api/v1/internal/provisioning/phone-numbers/:numberId/retry", internal, async (req) => ({
     phone: await phones.retry(z.string().uuid().parse((req.params as { numberId: string }).numberId)),
@@ -535,6 +563,26 @@ export function createApp(
       assignNumberBody.parse(req.body).phoneNumber,
     ),
   }));
+  // Locally's module switch: when a restaurant's "tideline" module is turned off (season over,
+  // subscription ended, admin), Locally sets it INACTIVE here and the incoming-call webhook stops
+  // sending calls to the AI (forwards to the restaurant's own line, or plays the closed message).
+  app.post("/api/v1/internal/restaurants/:restaurantId/status", internal, async (req) => {
+    const restaurantId = z.string().uuid().parse((req.params as { restaurantId: string }).restaurantId);
+    const { active } = z.object({ active: z.boolean() }).parse(req.body);
+    const row = (await db.query<{ id: string; status: string }>(
+      "UPDATE restaurants SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING id,status",
+      [restaurantId, active ? "ACTIVE" : "INACTIVE"],
+    )).rows[0];
+    if (!row) throw new AppError("NOT_FOUND", "Restaurant not found", 404);
+    return { restaurantId: row.id, status: row.status };
+  });
+  // Owner-facing weekly report in Locally's panel (/panel/rapor). Same service-token channel as
+  // the admin pipeline's activity endpoint; read-only.
+  app.get("/api/v1/internal/restaurants/:restaurantId/weekly-report", internal, async (req) => {
+    const restaurantId = z.string().uuid().parse((req.params as { restaurantId: string }).restaurantId);
+    if (!(await repos.restaurantExists(restaurantId))) throw new AppError("NOT_FOUND", "Restaurant not found", 404);
+    return runWithTenant(restaurantId, () => stats.weeklyReport(restaurantId));
+  });
   app.get("/api/v1/internal/restaurants/:restaurantId/brain-readiness", internal, async (req) =>
     brain.readiness(z.object({ restaurantId: z.string().uuid() }).parse(req.params).restaurantId),
   );
@@ -578,5 +626,7 @@ export function createApp(
   app.register(async (voice) => {
     registerTelephonyRoutes(voice, env, options.voice ?? createVoiceRuntime(env, db), telephonyMonitor);
   });
+  // Inbound texts to restaurant numbers: STOP/START/HELP (TCPA opt-out).
+  app.register(async (sms) => registerSmsInboundRoutes(sms, env, db));
   return app;
 }

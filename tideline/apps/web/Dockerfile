@@ -3,9 +3,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-# Vite bakes the API origin into the bundle at build time (src/api.ts).
-ARG VITE_API_URL=http://localhost:3000
+# Vite bakes the API origin into the bundle at build time (src/api.ts). No default on purpose:
+# an image built without --build-arg VITE_API_URL would silently call localhost, so the build
+# fails instead (vite.config.ts, REQUIRE_VITE_API_URL). Local compose passes localhost explicitly.
+ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+ENV REQUIRE_VITE_API_URL=true
 RUN npm run build
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html

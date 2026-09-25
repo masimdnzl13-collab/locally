@@ -13,6 +13,8 @@ export type PhoneRestaurant = {
   timezone: string;
   voiceConfig: Record<string, unknown>;
   phoneNumber: string;
+  /** restaurants.phone_number: the restaurant's own line (not the AI number). */
+  contactPhone: string | null;
 };
 export type CallRow = {
   id: string;
@@ -61,7 +63,7 @@ export class VoiceRepository {
   ): Promise<PhoneRestaurant | undefined> {
     return (
       await this.db.query<PhoneRestaurant>(
-        `SELECT r.id "restaurantId",r.name "restaurantName",r.status,r.timezone,r.voice_config "voiceConfig",p.phone_number "phoneNumber" FROM restaurant_phone_numbers p JOIN restaurants r ON r.id=p.restaurant_id WHERE p.phone_number=$1 AND p.active=true`,
+        `SELECT r.id "restaurantId",r.name "restaurantName",r.status,r.timezone,r.voice_config "voiceConfig",p.phone_number "phoneNumber",r.phone_number "contactPhone" FROM restaurant_phone_numbers p JOIN restaurants r ON r.id=p.restaurant_id WHERE p.phone_number=$1 AND p.active=true`,
         [phone],
       )
     ).rows[0];

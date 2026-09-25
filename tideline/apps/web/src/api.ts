@@ -76,7 +76,8 @@ export async function api<T>(path: string, options: RequestInit = {}, token?: st
     response = await fetch(`${base}${path}`, {
       ...options,
       headers: {
-        "content-type": "application/json",
+        // Only with a body: Fastify rejects an empty body declared as JSON (e.g. DELETE).
+        ...(options.body != null ? { "content-type": "application/json" } : {}),
         ...(options.headers ?? {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },

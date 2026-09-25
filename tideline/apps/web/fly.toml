@@ -1,0 +1,31 @@
+# Fly.io — Tideline dashboard (statik React + nginx). VITE_API_URL build
+# anında gömülür: deploy/fly-deploy.sh `--build-arg VITE_API_URL=...` verir.
+# ALLOWED_FRAME_ANCESTORS (Locally'nin origin'i) konteyner açılırken okunur.
+app = "locally-tideline-web"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # docker/15-frame-ancestors.envsh: container refuses to start without ALLOWED_FRAME_ANCESTORS.
+  REQUIRE_FRAME_ANCESTORS = "true"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  # Statik site: boştayken durabilir, ilk istekte kalkar.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

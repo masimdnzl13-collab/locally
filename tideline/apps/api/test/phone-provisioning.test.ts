@@ -26,7 +26,7 @@ async function setup(numberPurchaser: NumberPurchaser | null) {
   await db.query(`CREATE TABLE restaurant_phone_numbers (id UUID PRIMARY KEY, restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
     phone_number TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'AI', active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(phone_number))`);
-  await migrate(db as never, undefined, (name) => name === "019_phone_provisioning.sql");
+  await migrate(db as never, undefined, (name) => name === "019_phone_provisioning.sql" || name === "022_phone_release.sql");
   const app = createApp(env, db as never, { numberPurchaser });
   await app.ready();
   closers.push(async () => { await app.close(); await db.end(); });
@@ -46,7 +46,7 @@ describe("automatic phone number provisioning", () => {
 
   it("creates the restaurant and assigns a purchased number, idempotently", async () => {
     const purchase = vi.fn(async () => ({ phoneNumber: "+14155550100", sid: "PN1" }));
-    const { app, db } = await setup({ purchase });
+    const { app, db } = await setup({ purchase, release: vi.fn() });
     const first = await provision(app, { externalRef: "biz-1", name: "Crème Brûlée Café", contactPhone: "(415) 555-0199", state: "CA" });
     expect(first.statusCode).toBe(201);
     expect(first.json().phone).toMatchObject({ status: "active", phoneNumber: "+14155550100" });
@@ -62,7 +62,7 @@ describe("automatic phone number provisioning", () => {
 
   it("still creates the restaurant when the purchase fails and queues the number for manual assignment", async () => {
     const purchase = vi.fn(async () => { throw new Error("Twilio 400 (21631): No payment method"); });
-    const { app, db } = await setup({ purchase });
+    const { app, db } = await setup({ purchase, release: vi.fn() });
     const res = await provision(app, { externalRef: "biz-2", name: "Harbor Grill" });
     expect(res.statusCode).toBe(201);
     expect(res.json().phone).toMatchObject({ status: "pending_manual", phoneNumber: null });
@@ -90,6 +90,50 @@ describe("automatic phone number provisioning", () => {
   });
 });
 
+describe("releasing a restaurant's number when its subscription ends", () => {
+  const release = async (app: Awaited<ReturnType<typeof setup>>["app"], restaurantId: string) =>
+    (await app.inject({ method: "POST", url: `/api/v1/internal/provisioning/restaurants/${restaurantId}/release-number`, headers: { "x-service-token": await assertion() } })).json();
+
+  it("releases the Twilio number once, frees it for reuse, and a new subscription gets a fresh number", async () => {
+    const purchase = vi.fn().mockResolvedValueOnce({ phoneNumber: "+14155550100", sid: "PN1" }).mockResolvedValueOnce({ phoneNumber: "+14155550111", sid: "PN2" });
+    const releaseFn = vi.fn(async () => {});
+    const { app, db } = await setup({ purchase, release: releaseFn });
+    const restaurantId = (await provision(app, { externalRef: "biz-r1", name: "Harbor" })).json().restaurant.id;
+
+    const first = await release(app, restaurantId);
+    expect(first).toEqual({ released: [{ id: expect.any(String), phoneNumber: "+14155550100" }], failed: [] });
+    expect(releaseFn).toHaveBeenCalledWith({ sid: "PN1", phoneNumber: "+14155550100" });
+    expect((await db.query("SELECT status,active,phone_number,released_phone_number FROM restaurant_phone_numbers")).rows).toEqual([
+      { status: "released", active: false, phone_number: null, released_phone_number: "+14155550100" },
+    ]);
+
+    // Webhook + daily job may both fire: the second call touches nothing.
+    expect(await release(app, restaurantId)).toEqual({ released: [], failed: [] });
+    expect(releaseFn).toHaveBeenCalledTimes(1);
+
+    // Re-subscribing (same externalRef) provisions a new number instead of reusing the released row.
+    const again = await provision(app, { externalRef: "biz-r1", name: "Harbor" });
+    expect(again.json().phone).toMatchObject({ status: "active", phoneNumber: "+14155550111" });
+  });
+
+  it("keeps the number active and reports the failure when Twilio refuses, so the caller retries", async () => {
+    const { app, db } = await setup({ purchase: vi.fn(async () => ({ phoneNumber: "+14155550100", sid: "PN1" })), release: vi.fn(async () => { throw new Error("Twilio 500: try again"); }) });
+    const restaurantId = (await provision(app, { externalRef: "biz-r2", name: "Grill" })).json().restaurant.id;
+    const out = await release(app, restaurantId);
+    expect(out.released).toEqual([]);
+    expect(out.failed).toEqual([{ id: expect.any(String), phoneNumber: "+14155550100", error: "Twilio 500: try again" }]);
+    expect((await db.query("SELECT status,active FROM restaurant_phone_numbers")).rows).toEqual([{ status: "active", active: true }]);
+  });
+
+  it("closes a pending_manual row without calling Twilio", async () => {
+    const releaseFn = vi.fn(async () => {});
+    const { app } = await setup({ purchase: vi.fn(async () => { throw new Error("no numbers"); }), release: releaseFn });
+    const restaurantId = (await provision(app, { externalRef: "biz-r3", name: "Diner" })).json().restaurant.id;
+    expect((await release(app, restaurantId)).released).toHaveLength(1);
+    expect(releaseFn).not.toHaveBeenCalled();
+  });
+});
+
 describe("TwilioNumberPurchaser", () => {
   it("prefers the area code, falls back nationally, and wires the voice webhooks", async () => {
     const calls: { url: string; body?: string }[] = [];
@@ -111,5 +155,27 @@ describe("TwilioNumberPurchaser", () => {
   it("surfaces Twilio errors so the caller can queue the number", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ code: 20003, message: "Authenticate" }), { status: 401 })));
     await expect(new TwilioNumberPurchaser("AC1", "bad", "https://x.example.com").purchase({ friendlyName: "X" })).rejects.toThrow("Twilio 401 (20003): Authenticate");
+  });
+});
+
+describe("TwilioNumberPurchaser.release", () => {
+  it("deletes by SID, looks the SID up for manually assigned numbers, and treats 404 as already released", async () => {
+    const calls: { url: string; method: string }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: { method?: string }) => {
+      calls.push({ url, method: init?.method ?? "GET" });
+      if (url.includes("IncomingPhoneNumbers.json?PhoneNumber=")) return new Response(JSON.stringify({ incoming_phone_numbers: [{ sid: "PN7" }] }));
+      if (url.endsWith("/PN404.json")) return new Response("", { status: 404 });
+      return new Response(null, { status: 204 });
+    }));
+    const twilio = new TwilioNumberPurchaser("AC1", "tok", "https://voice.example.com");
+    await twilio.release({ sid: "PN1", phoneNumber: "+14155550100" });
+    await twilio.release({ sid: null, phoneNumber: "+14155550101" });
+    await twilio.release({ sid: "PN404", phoneNumber: "+14155550102" });
+    expect(calls).toEqual([
+      { url: "https://api.twilio.com/2010-04-01/Accounts/AC1/IncomingPhoneNumbers/PN1.json", method: "DELETE" },
+      { url: "https://api.twilio.com/2010-04-01/Accounts/AC1/IncomingPhoneNumbers.json?PhoneNumber=%2B14155550101", method: "GET" },
+      { url: "https://api.twilio.com/2010-04-01/Accounts/AC1/IncomingPhoneNumbers/PN7.json", method: "DELETE" },
+      { url: "https://api.twilio.com/2010-04-01/Accounts/AC1/IncomingPhoneNumbers/PN404.json", method: "DELETE" },
+    ]);
   });
 });

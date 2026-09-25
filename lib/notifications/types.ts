@@ -13,6 +13,8 @@ export interface SendResult {
   success: boolean;
   providerRef?: string;
   simulated: boolean;
+  /** Alıcı SMS almayı durdurmuş (STOP); gönderim hiç denenmedi. */
+  suppressed?: boolean;
   error?: string;
 }
 

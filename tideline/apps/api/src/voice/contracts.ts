@@ -1,5 +1,5 @@
 export type CallStatus = 'RINGING'|'IN_PROGRESS'|'COMPLETED'|'FAILED'|'NO_ANSWER'|'BUSY'|'TRANSFERRED';
-export type CallEventType = 'CALL_STARTED'|'CALL_ANSWERED'|'LANGUAGE_DETECTED'|'SPEECH_STARTED'|'SPEECH_ENDED'|'AI_RESPONSE_STARTED'|'AI_RESPONSE_ENDED'|'TOOL_CALLED'|'TOOL_COMPLETED'|'HUMAN_TRANSFER_REQUESTED'|'CALL_ENDED'|'ERROR'|'MEDIA_STREAM_STARTED'|'MEDIA_STREAM_STOPPED';
+export type CallEventType = 'CALL_STARTED'|'CALL_ANSWERED'|'LANGUAGE_DETECTED'|'SPEECH_STARTED'|'SPEECH_ENDED'|'AI_RESPONSE_STARTED'|'AI_RESPONSE_ENDED'|'TOOL_CALLED'|'TOOL_COMPLETED'|'HUMAN_TRANSFER_REQUESTED'|'CALL_ENDED'|'ERROR'|'MEDIA_STREAM_STARTED'|'MEDIA_STREAM_STOPPED'|'FAILURE_MESSAGE_PLAYED';
 export type Language = 'en'|'es';
 export type CallSession = { id:string; callId:string; restaurantId:string; state:string; language?:Language; activeIntent?:string; startedAt:Date; endedAt?:Date; terminationReason?:string };
 export type VoiceTurnContext = { restaurantId:string; callId:string; sessionId:string; language:Language; transcript:string; conversationState:Record<string,unknown>; restaurantContext:Record<string,unknown>; currentIntent?:string };
@@ -23,5 +23,8 @@ export interface TelephonyProvider {
   transfer(input:{providerCallId:string; targetNumber:string}):Promise<void>;
   /** Ends a live call. */
   hangup?(providerCallId:string):Promise<void>;
+  /** Replaces the live call's TwiML: speak `message` with the provider's own voice, then dial
+   * `transferNumber` if given, otherwise hang up. Used when our own pipeline has failed. */
+  sayAndEnd?(input:{providerCallId:string; message:string; language:Language; transferNumber?:string}):Promise<void>;
 }
 export interface TelephonyTransferService { transferToHuman(session:CallSession, targetNumber:string):Promise<void>; }

@@ -44,6 +44,9 @@ const schema = z.object({
     .enum(["true", "false", "1", "0"])
     .default("true")
     .transform((value) => value === "true" || value === "1"),
+  // Who answers STOP/START/HELP texts: "twilio" (its built-in opt-out replies, on by default for
+  // long codes) or "app" (our TwiML reply; only when Twilio's default handling is turned off).
+  SMS_OPT_OUT_REPLIES: z.enum(["twilio", "app"]).default("twilio"),
   TELEPHONY_MODE: z.enum(["twilio", "test"]).default("test"),
   VOICE_PUBLIC_URL: z.string().url().optional(),
   VOICE_STREAM_PATH: z.string().default("/api/v1/telephony/twilio/media"),
@@ -105,13 +108,67 @@ const emptyToUndefined = (input: NodeJS.ProcessEnv | Record<string, unknown>) =>
     Object.entries(input).filter(([, value]) => value !== ""),
   );
 export type Env = z.infer<typeof schema>;
+const isLocal = (url: string | undefined) => !url || /\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:|\/|$)/.test(url);
+const isPlaceholder = (value: string | undefined) => !value || /replace-with|your-public-api|example\.com|xxxxxxxx/i.test(value);
+
+/**
+ * Everything production needs to actually work, checked together so one start-up failure lists
+ * every missing or unusable variable (Prompt AP). Anything here that is merely "unset" in
+ * development falls back to mocks/test mode; in production that fallback would be a silently
+ * broken service (calls not answered, alerts going nowhere, the Locally iframe refused), so the
+ * API and worker refuse to start instead.
+ */
+export function productionEnvProblems(env: Env, input: Record<string, unknown>): string[] {
+  const problems: string[] = [];
+  const need = (key: string, ok: boolean, why: string) => {
+    if (!ok) problems.push(`${key}: ${why}`);
+  };
+  const raw = (key: string) => (typeof input[key] === "string" ? (input[key] as string).trim() : "");
+
+  need("JWT_SECRET", !isPlaceholder(env.JWT_SECRET), "still the example placeholder; use the same value as Locally's TIDELINE_JWT_SECRET");
+  need("SESSION_SECRET", Boolean(env.SESSION_SECRET) && !isPlaceholder(env.SESSION_SECRET), "missing or placeholder (at least 32 random characters)");
+  need("CORS_ORIGINS", !env.CORS_ORIGINS.includes("*") && !env.CORS_ORIGINS.split(",").some((o) => isLocal(o.trim())), "must list the real https origins (no *, no localhost)");
+  need("ALLOWED_FRAME_ANCESTORS", Boolean(raw("ALLOWED_FRAME_ANCESTORS")), "missing; without it only localhost may embed Tideline and the Locally panel tab stays blank");
+  need("APP_URL", !isLocal(env.APP_URL), "missing or localhost; set the dashboard's public https URL");
+  need("API_URL", !isLocal(env.API_URL), "missing or localhost; set this API's public https URL");
+  need("REDIS_URL", Boolean(raw("REDIS_URL")) && !isLocal(env.REDIS_URL), "missing or localhost; the notification queue (confirmation texts) needs a real Redis");
+  need("TELEPHONY_MODE", env.TELEPHONY_MODE === "twilio", "must be twilio (test mode answers no real calls)");
+  need("TWILIO_ACCOUNT_SID", Boolean(env.TWILIO_ACCOUNT_SID) && !isPlaceholder(env.TWILIO_ACCOUNT_SID), "missing or placeholder");
+  need("TWILIO_AUTH_TOKEN", Boolean(env.TWILIO_AUTH_TOKEN) && !isPlaceholder(env.TWILIO_AUTH_TOKEN), "missing or placeholder");
+  need("TWILIO_PHONE_NUMBER", /^\+1\d{10}$/.test(env.TWILIO_PHONE_NUMBER ?? ""), "missing or not a US E.164 number (+1XXXXXXXXXX)");
+  need("TWILIO_VALIDATE_SIGNATURES", env.TWILIO_VALIDATE_SIGNATURES, "must be true (unsigned Twilio webhooks would be accepted)");
+  need("VOICE_PUBLIC_URL", Boolean(env.VOICE_PUBLIC_URL) && !isLocal(env.VOICE_PUBLIC_URL) && !isPlaceholder(env.VOICE_PUBLIC_URL), "missing, localhost or placeholder; Twilio must reach this API over https");
+  need("STT_PROVIDER", env.STT_PROVIDER !== "mock", "cannot be mock");
+  need("STT_API_KEY", Boolean(env.STT_API_KEY), "missing");
+  need("TTS_PROVIDER", env.TTS_PROVIDER !== "mock", "cannot be mock");
+  need("TTS_API_KEY", Boolean(env.TTS_API_KEY), "missing");
+  need("AI_PROVIDER", env.AI_PROVIDER !== "mock", "cannot be mock");
+  need("AI_API_KEY", Boolean(env.AI_API_KEY || raw("ANTHROPIC_API_KEY")), "missing (or set ANTHROPIC_API_KEY)");
+  const emailAlerts = Boolean(env.RESEND_API_KEY && env.ALERT_EMAIL_TO && env.ALERT_EMAIL_FROM);
+  need(
+    "ALERT_WEBHOOK_URL / ALERT_EMAIL_*",
+    Boolean(env.ALERT_WEBHOOK_URL) || emailAlerts,
+    "no alert channel; set ALERT_WEBHOOK_URL, or RESEND_API_KEY + ALERT_EMAIL_TO + ALERT_EMAIL_FROM (otherwise telephony and cost alerts are only logged)",
+  );
+  return problems;
+}
+
 export function loadEnv(input: NodeJS.ProcessEnv | Record<string, unknown> = process.env): Env {
-  const parsed = schema.safeParse(emptyToUndefined(input));
+  const cleaned = emptyToUndefined(input);
+  const parsed = schema.safeParse(cleaned);
   if (!parsed.success)
     throw new Error(
-      `Invalid environment configuration: ${parsed.error.issues.map((x) => x.path.join(".")).join(", ")}`,
+      `Invalid environment configuration:\n${parsed.error.issues.map((x) => `  - ${x.path.join(".") || "(root)"}: ${x.message}`).join("\n")}`,
     );
   const env = parsed.data;
+  // Production first: its list covers the single checks below, and reports every problem at once.
+  if (env.APP_ENV === "production") {
+    const problems = productionEnvProblems(env, cleaned);
+    if (problems.length)
+      throw new Error(
+        `Production environment is incomplete (${problems.length} problem${problems.length === 1 ? "" : "s"}):\n${problems.map((p) => `  - ${p}`).join("\n")}`,
+      );
+  }
   if (
     env.TELEPHONY_MODE === "twilio" &&
     (!env.TWILIO_AUTH_TOKEN || !env.TWILIO_ACCOUNT_SID || !env.VOICE_PUBLIC_URL)
@@ -123,38 +180,17 @@ export function loadEnv(input: NodeJS.ProcessEnv | Record<string, unknown> = pro
     throw new Error(`STT_API_KEY is required for STT_PROVIDER=${env.STT_PROVIDER}`);
   if (env.TTS_PROVIDER !== "mock" && !env.TTS_API_KEY)
     throw new Error(`TTS_API_KEY is required for TTS_PROVIDER=${env.TTS_PROVIDER}`);
-  if (env.APP_ENV === "production") {
-    if (
-      env.JWT_SECRET.includes("replace-with") ||
-      env.SESSION_SECRET?.includes("replace-with") ||
-      env.CORS_ORIGINS.includes("*") ||
-      env.CORS_ORIGINS.split(",").some((origin) => origin.includes("localhost"))
-    )
-      throw new Error(
-        "Production secrets and explicit non-local CORS_ORIGINS are required",
-      );
-    if (!env.SESSION_SECRET)
-      throw new Error("Production SESSION_SECRET is required");
-    if (env.TELEPHONY_MODE !== "twilio" || !env.TWILIO_PHONE_NUMBER)
-      throw new Error(
-        "Production voice requires Twilio credentials, TWILIO_PHONE_NUMBER, VOICE_PUBLIC_URL, and TELEPHONY_MODE=twilio",
-      );
-    if (!env.TWILIO_VALIDATE_SIGNATURES)
-      throw new Error("Production requires TWILIO_VALIDATE_SIGNATURES=true");
-    if (
-      env.STT_PROVIDER === "mock" ||
-      env.TTS_PROVIDER === "mock" ||
-      env.AI_PROVIDER === "mock"
-    )
-      throw new Error(
-        "Production STT_PROVIDER, TTS_PROVIDER, and AI_PROVIDER cannot be mock",
-      );
-    if (!env.AI_API_KEY && !input.ANTHROPIC_API_KEY)
-      throw new Error(
-        "Production AI_API_KEY (or ANTHROPIC_API_KEY) is required for the configured AI provider",
-      );
-  }
   // Fail at startup on a malformed origin instead of emitting a broken CSP.
   resolveFrameAncestors(env.ALLOWED_FRAME_ANCESTORS);
   return env;
+}
+
+/** Entry points (server, worker): print what is wrong, without a stack trace, and exit non-zero. */
+export function loadEnvOrExit(processName: string): Env {
+  try {
+    return loadEnv();
+  } catch (error) {
+    console.error(`\n[${processName}] Refusing to start. ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
 }
