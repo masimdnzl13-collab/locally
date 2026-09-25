@@ -95,6 +95,13 @@ export class TwilioTelephonyProvider implements TelephonyProvider {
   async hangup(providerCallId: string): Promise<void> {
     await this.updateCall(providerCallId, { Status: "completed" });
   }
+  async sayAndEnd(input: { providerCallId: string; message: string; language: "en" | "es"; transferNumber?: string }): Promise<void> {
+    const voiceLanguage = input.language === "es" ? "es-US" : "en-US";
+    const then = input.transferNumber ? `<Dial>${esc(input.transferNumber)}</Dial>` : "<Hangup/>";
+    await this.updateCall(input.providerCallId, {
+      Twiml: `<Response><Say language="${voiceLanguage}">${esc(input.message)}</Say>${then}</Response>`,
+    });
+  }
 }
 /** Test mode: never calls Twilio. */
 export class TestTelephonyProvider extends TwilioTelephonyProvider {
@@ -103,4 +110,5 @@ export class TestTelephonyProvider extends TwilioTelephonyProvider {
   }
   override async transfer(): Promise<void> {}
   override async hangup(): Promise<void> {}
+  override async sayAndEnd(): Promise<void> {}
 }

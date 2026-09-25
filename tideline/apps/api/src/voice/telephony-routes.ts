@@ -6,6 +6,22 @@ import type { VoiceRuntime } from "./runtime.js";
 import { validateTwilioSignature } from "./twilio-provider.js";
 import type { TelephonyErrorMonitor } from "../alerts/telephony-monitor.js";
 type RawData = Buffer | string | Buffer[];
+/**
+ * Rate limits for Twilio webhooks, keyed by a field of the (form) body instead of the client IP.
+ * Every Twilio webhook comes from Twilio's own small IP pool, so a per-IP limit is effectively ONE
+ * limit shared by every restaurant: the load test (load/voice-load.ts) found the 61st call in a
+ * minute, across all restaurants, failing. Keyed per restaurant number / per call, a limit only
+ * bounds one line. Runs at preHandler so the form body is parsed; signatures are validated in the
+ * handler, per-caller abuse is handled by the caller throttle.
+ */
+export const twilioRateLimit = (field: string, max: number) => ({
+  rateLimit: {
+    max,
+    timeWindow: "1 minute",
+    hook: "preHandler" as const,
+    keyGenerator: (req: FastifyRequest) => `twilio:${field}:${String((req.body as Record<string, unknown> | undefined)?.[field] ?? req.ip)}`,
+  },
+});
 
 const xml = (body: string) =>
   `<?xml version="1.0" encoding="UTF-8"?><Response><Say>${body.replace(/[<>&]/g, "")}</Say><Hangup/></Response>`;
@@ -66,6 +82,11 @@ export function registerTelephonyRoutes(
   monitor?: TelephonyErrorMonitor,
 ) {
   const { repo, telephony, manager } = runtime;
+  // Failed calls (AI/STT/TTS errors, timeouts) count toward the same "telephony is failing"
+  // alert as 5xx webhooks, so a provider outage that keeps dropping calls pages someone.
+  if (monitor && manager)
+    manager.onFailure = (failure) =>
+      monitor.record({ route: `voice-session:${failure.stage}`, reason: failure.reason });
   const streamPath = env.VOICE_STREAM_PATH || "/api/v1/telephony/twilio/media";
   registerFormParser(app);
   // Encapsulated to this plugin: only voice routes feed the telephony failure counter.
@@ -130,7 +151,7 @@ export function registerTelephonyRoutes(
   });
   app.post(
     "/api/v1/telephony/twilio/incoming",
-    { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
+    { config: twilioRateLimit("To", 60) },
     async (request, reply) => {
       enterTenant(undefined);
       if (!twilioRequestIsValid(env, request))
@@ -149,8 +170,16 @@ export function registerTelephonyRoutes(
         greetingEn?: string;
         transferNumber?: string;
       };
+      // INACTIVE = the AI is switched off for this restaurant (Locally module/season off). No AI,
+      // no call record: forward to the restaurant's own line if it has one, else the closed message.
       if (restaurant.status !== "ACTIVE")
-        return reply.type("text/xml").send(xml(config.closedMessage ?? "Thank you for calling. We are currently closed."));
+        return reply
+          .type("text/xml")
+          .send(
+            config.transferNumber
+              ? `<?xml version="1.0" encoding="UTF-8"?><Response><Dial>${config.transferNumber.replace(/[^\d+]/g, "")}</Dial></Response>`
+              : xml(config.closedMessage ?? "Thank you for calling. We are currently closed."),
+          );
       // Abuse guard: every AI call costs Claude + STT + TTS. A caller who already
       // reached the limit is answered with a fixed message and never reaches the AI.
       // Throttled calls are not recorded, so the number is released as soon as its
@@ -193,6 +222,9 @@ export function registerTelephonyRoutes(
         ...restaurantContext,
         providerCallId: providerId,
         callerPhone: parsed.data.From,
+        // Used only by the graceful-failure message. Never the AI number itself (that would loop).
+        fallbackPhone: restaurant.contactPhone && restaurant.contactPhone !== called ? restaurant.contactPhone : undefined,
+        transferNumber: config.transferNumber,
       });
       const greeting =
         config.greetingEn ??
@@ -210,7 +242,7 @@ export function registerTelephonyRoutes(
   );
   app.post(
     "/api/v1/telephony/twilio/status",
-    { config: { rateLimit: { max: 120, timeWindow: "1 minute" } } },
+    { config: twilioRateLimit("CallSid", 30) },
     async (request, reply) => {
       enterTenant(undefined);
       if (!twilioRequestIsValid(env, request)) return reply.code(403).send();

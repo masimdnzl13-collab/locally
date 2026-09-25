@@ -161,4 +161,57 @@ export class StatsService {
       )
     ).rows;
   }
+
+  /**
+   * The owner-facing weekly summary shown in Locally's panel (/panel/rapor): what the AI did for
+   * this restaurant in the last `days` days. Read-only and restaurant-scoped; callers run it
+   * inside the restaurant's tenant context.
+   *  - calls: all AI-handled calls started in the window
+   *  - convertedCalls: calls that produced at least one order or reservation (originating_call_id)
+   *  - topIntents: what callers asked about, counted once per conversation, ignoring
+   *    greetings/goodbyes/unclassified turns
+   */
+  async weeklyReport(restaurantId: string, days = 7) {
+    const since = `${days} days`;
+    const [calls, converted, orders, reservations, intents] = await Promise.all([
+      this.db.query<{ total: string; avg_duration: string | null }>(
+        `SELECT count(*) AS total, avg(duration_seconds) FILTER (WHERE duration_seconds IS NOT NULL) AS avg_duration
+         FROM calls WHERE restaurant_id=$1 AND started_at > NOW() - $2::interval`,
+        [restaurantId, since],
+      ),
+      this.db.query<{ total: string }>(
+        `SELECT count(*) AS total FROM calls c
+         WHERE c.restaurant_id=$1 AND c.started_at > NOW() - $2::interval
+           AND (EXISTS (SELECT 1 FROM orders o WHERE o.originating_call_id=c.id)
+             OR EXISTS (SELECT 1 FROM reservations r WHERE r.originating_call_id=c.id))`,
+        [restaurantId, since],
+      ),
+      this.db.query<{ total: string }>(
+        "SELECT count(*) AS total FROM orders WHERE restaurant_id=$1 AND originating_call_id IS NOT NULL AND created_at > NOW() - $2::interval",
+        [restaurantId, since],
+      ),
+      this.db.query<{ total: string }>(
+        "SELECT count(*) AS total FROM reservations WHERE restaurant_id=$1 AND originating_call_id IS NOT NULL AND created_at > NOW() - $2::interval",
+        [restaurantId, since],
+      ),
+      this.db.query<{ intent: string; conversations: string }>(
+        `SELECT t.intent, count(DISTINCT t.conversation_id) AS conversations
+         FROM conversation_turns t JOIN conversations c ON c.id=t.conversation_id
+         WHERE c.restaurant_id=$1 AND t.created_at > NOW() - $2::interval
+           AND t.intent NOT IN ('GREETING','GOODBYE','UNKNOWN')
+         GROUP BY t.intent ORDER BY conversations DESC, t.intent ASC LIMIT 3`,
+        [restaurantId, since],
+      ),
+    ]);
+    const avg = calls.rows[0]?.avg_duration;
+    return {
+      days,
+      calls: Number(calls.rows[0]?.total ?? 0),
+      convertedCalls: Number(converted.rows[0]?.total ?? 0),
+      orders: Number(orders.rows[0]?.total ?? 0),
+      reservations: Number(reservations.rows[0]?.total ?? 0),
+      avgDurationSeconds: avg ? Math.round(Number(avg)) : null,
+      topIntents: intents.rows.map((r) => ({ intent: r.intent, conversations: Number(r.conversations) })),
+    };
+  }
 }

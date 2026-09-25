@@ -13,9 +13,12 @@ export class ReceptionistInstructionBuilder {
     context: string;
   }) {
     const safe = (input.businessInstructions ?? '').replace(/(?:ignore|override).{0,100}(?:safety|instructions)|invent|fabricate/gi, '').slice(0, 800);
-    const zone = input.timezone || 'UTC';
-    const local = DateTime.fromJSDate(input.now ?? new Date()).setZone(zone);
-    const today = local.isValid ? local.toFormat("cccc yyyy-MM-dd HH:mm") : DateTime.utc().toFormat("cccc yyyy-MM-dd HH:mm");
+    const instant = DateTime.fromJSDate(input.now ?? new Date());
+    const requested = instant.setZone(input.timezone || 'UTC');
+    // An invalid zone falls back to UTC for the same instant (and says so), never to a mislabeled clock.
+    const local = requested.isValid ? requested : instant.toUTC();
+    const zone = requested.isValid ? input.timezone || 'UTC' : 'UTC';
+    const today = local.toFormat("cccc yyyy-MM-dd HH:mm");
     const pending = input.state.pendingAction
       ? `A ${input.state.pendingAction.tool} proposal is awaiting the caller's answer: ${JSON.stringify(input.state.pendingAction.arguments)}. If the caller clearly agrees, call confirm_pending_action. If they decline or want changes, call cancel_pending_action (then propose again with the corrected details if needed).`
       : 'No action is awaiting confirmation.';
