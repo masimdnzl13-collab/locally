@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPaymentService } from "@/lib/payments";
 import { applyPaymentWebhookEvent } from "@/lib/billing/subscriptions";
 import { completeUsSignupFromWebhook } from "@/lib/onboarding-us/complete";
+import { releaseNumberForSubscription } from "@/lib/billing/number-release";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,15 @@ export async function POST(request: Request) {
         await completeUsSignupFromWebhook(event.businessId, event.subscriptionId);
       } catch (err) {
         console.error("[stripe-webhook] onboarding", event.businessId, (err as Error).message);
+      }
+    }
+    if (outcome === "applied" && event.type === "subscription.canceled") {
+      // Stripe bunu hemen iptalde hemen, dönem sonu iptalinde dönem bitince
+      // gönderir. Hata Stripe'a 500 dönmez; günlük iş yeniden dener.
+      try {
+        await releaseNumberForSubscription(event.subscriptionId);
+      } catch (err) {
+        console.error("[stripe-webhook] number release", event.subscriptionId, (err as Error).message);
       }
     }
     return NextResponse.json({ received: true, outcome });

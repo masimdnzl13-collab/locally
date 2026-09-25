@@ -5,6 +5,7 @@
     { "path": "/api/cron/package-lifecycle", "schedule": "0 2 * * *" },
     { "path": "/api/cron/daily-summary", "schedule": "30 2 * * *" },
     { "path": "/api/cron/thursday-newsletter", "schedule": "0 12 * * 4" },
-    { "path": "/api/cron/seasonal-modules", "schedule": "0 6 1 10 *" }
+    { "path": "/api/cron/seasonal-modules", "schedule": "0 6 1 10 *" },
+    { "path": "/api/cron/tideline-number-release", "schedule": "15 3 * * *" }
   ]
 }
